@@ -25,8 +25,10 @@ Campus-Link：面向**重庆工程学院计算机专业学生**的垂直交流�
 | `docs/next-steps.md` | 阻塞项（B1/B2 名册、B3 根仓库远程托管）与并行项，"现在该干什么"入口 |
 | `docs/change-log.md` | **变更台账（CR-xxx）**。任何影响范围 / 排期 / 技术选型 / 架构 / 工程结构的改动，实施前先在此登记并做影响评估（范围 / 排期 / 质量），CR 编号写入 commit message |
 | `docs/tailoring-waivers.md` | 流程偏离与让步放行记录（W-xxx / T-xxx）；新增偏离须登记于此，不得只在对话里说明 |
-| `docs/reviews/gate-*.md` | 三道已过评审门的纪要（立项 / 需求 / 设计），含未闭环行动项——其中 **A3-1 是 Sprint 2 开工阻断项** |
-| `docs/design/tech-design.md` | 技术方案与 ADR-001~012，技术选型以它为准。⚠️ §2.4 末"包命名约定"与 ADR-012 四层架构冲突（缺陷 **D-1**，待修），**分包结构以 ADR-012 与本文件"架构与编码约定"为准** |
+| `docs/reviews/gate-*.md` | 三道已过评审门的纪要（立项 / 需求 / 设计），含未闭环行动项——设计门 **A3-1（Sprint 2 开工阻断项）、A3-3、A3-4 已闭环**（[CR-017](docs/change-log.md) / [CR-019](docs/change-log.md)）；仍未闭环的是 A3-2（v0.3/v0.4 追认，**材料已备齐待签署**）、A3-5~A3-8 |
+| `docs/reviews/retro-review-design-v03-v04.md` | 技术方案 v0.3/v0.4 的**追认评审材料**（A3-2）：已核实的证据 + 架构评审意见 **F-1~F-7**（其中 **F-2「后端无架构守护测试」**与写代码直接相关）+ 待签署的结论页 |
+| `docs/design/tech-design.md` | 技术方案与 ADR-001~012，技术选型以它为准。§2.4 为 **ADR-012 四层架构**与依赖方向说明（原 D-1~D-7 七项文档缺陷已于 2026-09-11 修正，见 [CR-017](docs/change-log.md)） |
+| `docs/design/api/README.md` | **API 契约快照**（`openapi.json` + 主链路请求/响应示例 + 与技术方案 §5 的逐条差异）。springdoc 从运行中的后端导出的**只读副本**：接口契约变更后须按该文档 §2 的命令**再生成**；快照当前**不声明错误响应与鉴权**（缺口 N-1 / N-2），前端错误处理与权限判断须以 `GlobalExceptionHandler`、`ResultCode` 与技术方案 §5 为准，**不能只读快照**（见该文档 §6） |
 | `docs/requirements/prd.md` | 需求基线（含学籍核验 F-ACC-004 升 P0） |
 | `docs/development/sprint-1.md` | Sprint 1 任务状态与出口自查 |
 
@@ -66,7 +68,7 @@ npm run build
 
 ## 架构与编码约定
 
-- 后端为**模块化单体 + DDD 分层（ADR-012）**：限界上下文 `module/{account,board,...}`，上下文内四层 `domain`（聚合根/值对象/领域服务/端口 gateway/领域事件）→ `application`（用例编排 + Command）→ `infrastructure`（MyBatis-Plus 仓储、Redis、通知等适配器）→ `web`（Controller + VO）；依赖方向：web/infrastructure → application → domain，**端口定义在 domain、实现在 infrastructure（DIP）**；跨上下文只允许调用对方 application 服务；MyBatis-Plus Mapper 统一放 `*.mapper` 包（`@MapperScan("com.campuslink.**.mapper")`）；
+- 后端为**模块化单体 + DDD 分层（ADR-012）**：限界上下文 `module/{account,board,...}`，上下文内四层 `domain`（聚合根/值对象/领域服务/端口 gateway/领域事件）→ `application`（用例编排 + Command）→ `infrastructure`（MyBatis-Plus 仓储、Redis、通知等适配器）→ `web`（Controller + VO）；依赖方向：web/infrastructure → application → domain，**端口定义在 domain、实现在 infrastructure（DIP）**；跨上下文只允许调用对方 application 服务；MyBatis-Plus Mapper 统一放 `*.mapper` 包（`@MapperScan("com.campuslink.**.mapper")`；**实际值还含 `com.campuslink.common.audit`**，因 `AuditMapper` 不在 `.mapper` 包下——追认评审 **F-3**）；**⚠️ 四层与跨上下文规则当前无任何机器强制**（无 ArchUnit 等架构守护测试，`@MapperScan` 为宽松通配，写错包也能扫到），新增上下文时**必须人工自查依赖方向**；该敞口记为追认评审 **F-2**，处置待发起人签署 [追认纪要](docs/reviews/retro-review-design-v03-v04.md) §4 后确定；
 - 统一响应 `ApiResponse{code,message,data,traceId}`，错误码分段（1xxx 通用 / 2xxx 账号 / 21xx 学籍 / 3xxx 帖子 / 4xxx 权限 / 5xxx 安全机审），见技术方案第 5 节；**数据库结构变更一律新增 Flyway 迁移** `src/main/resources/db/migration/V<n>__<描述>.sql`（**已执行的迁移不可修改**，回滚靠新增前向迁移，规范见该目录 README），**纯数据增删走** `backend/scripts/data/D<序号>__<描述>.py`（PyMySQL，默认 dry-run）；禁止 Hibernate 自动建表；
 - **敏感信息**（邮箱/手机号/学号）：明文一律 AES-GCM 加密存 `*_enc`，等值查询用 HMAC 哈希 `*_hash`；任何接口不得返回 `*_enc` / `*_hash`；密钥只从环境变量读取（`APP_HASH_KEY` / `APP_CRYPT_KEY`），**源码、示例、测试不得写入可用凭据字面量**；
 - **学籍核验**：学号须 9 位数字、姓名须为中文名或外文名格式（`VerifyStudentCommand` 校验 + `StudentId` 值对象不变量）；三种失败（学号不存在/姓名不匹配/已注册）统一提示，防名册枚举；`app.roster.bypass` 仅限开发联调，**生产必须为 false**（上线检查清单项）；
@@ -79,6 +81,7 @@ npm run build
 - **单测**：`mvn verify` 必须全绿；`MarkdownRendererTest` 的 6 个 XSS 回归用例是论坛安全生命线，渲染/白名单相关改动必须先补用例再改实现；
 - **联调冒烟**：新链路合入前必须真实起栈（本机原生 MySQL / Redis + 后端 + 前端，见"常用命令"）并**用浏览器打开 `http://localhost:5173` 实测**，不能只依赖单测；
 - **数据库结构变更必须随附新的 Flyway 迁移** `db/migration/V<n>__<描述>.sql`，不得手工改库、不得依赖 Hibernate 自动建表；`mvn verify` 不校验迁移可执行性（无集成测试），故结构变更后须真实启动一次确认迁移成功。
+- **接口契约变更必须重生成 OpenAPI 快照** `docs/design/api/openapi.json`：凡改了 Controller 的路径 / HTTP 方法 / 入参出参类型 / 校验注解，或改了 `ApiResponse` 外壳、`OpenApiConfig`，都须起后端后按 [api/README.md](docs/design/api/README.md) §2 的命令重抓并格式化，然后看 `git diff`——**非空即契约已变**，须同步技术方案 §5 接口表与该 README 的端点清单/示例。快照是静态副本、**无任何机器校验**（CI 起不了栈，无法加"重新生成并 diff"步骤），漂移只能靠这条约定拦住；过期快照比没有快照更危险，因为前端会把它当契约真相。
 
 ## 文档与流程约定
 

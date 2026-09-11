@@ -2,20 +2,21 @@
 
 | 文档信息 | 内容 |
 |---------|------|
-| 文档版本 | v0.4（草案） |
+| 文档版本 | v0.5（草案） |
 | 状态 | 草案 |
 | 维护人 | 技术负责人（发起人兼任） |
-| 评审状态 | **仅 v0.1 经评审**：有条件通过（发起人简化评审，2026-08-30；UI 稿为遗留行动项，开发并行补齐）。v0.2 技术栈反转由发起人同日决议，自述"设计评审会补充确认"但**实际未召开会议**；**v0.3（JDK 21 + Boot 4.1）与 v0.4（账号上下文 DDD 重构，ADR-012）从未经任何形式评审**，且 v0.4 已落地实现——逐项核对与追认安排见[设计门纪要](../reviews/gate-3-design.md)、[W-02](../tailoring-waivers.md) |
+| 评审状态 | **仅 v0.1 经评审**：有条件通过（发起人简化评审，2026-08-30；UI 稿为遗留行动项，开发并行补齐）。v0.2 技术栈反转由发起人同日决议，自述"设计评审会补充确认"但**实际未召开会议**；**v0.3（JDK 21 + Boot 4.1）与 v0.4（账号上下文 DDD 重构，ADR-012）从未经任何形式评审**，且 v0.4 已落地实现——逐项核对见[设计门纪要](../reviews/gate-3-design.md)、[W-02](../tailoring-waivers.md)；**追认材料已于 2026-09-11 备齐并归档**（[v0.3/v0.4 追认纪要](../reviews/retro-review-design-v03-v04.md)，[CR-018](../change-log.md)），**待发起人签署，签署前 v0.3 / v0.4 仍属未评审** |
 | 关联阶段 | 设计（阶段三） |
-| 关联文档 | [PRD](../requirements/prd.md) · [项目章程](../initiation/project-charter.md) · [设计门纪要](../reviews/gate-3-design.md) · [变更台账](../change-log.md) |
-| 最后更新 | 2026-09-07 |
+| 关联文档 | [PRD](../requirements/prd.md) · [项目章程](../initiation/project-charter.md) · [设计门纪要](../reviews/gate-3-design.md) · [v0.3/v0.4 追认纪要](../reviews/retro-review-design-v03-v04.md) · [变更台账](../change-log.md) |
+| 最后更新 | 2026-09-11 |
 
-> 版本号以 [docs/README.md](../README.md) 第 2 节为单一登记处，本文交叉引用不写版本号（手册 4.5）。2026-09-11 为编辑性修订（头部元数据与评审状态如实化），设计内容零改动，登记于 [CR-009](../change-log.md)。
+> 版本号以 [docs/README.md](../README.md) 第 2 节为单一登记处，本文交叉引用不写版本号（手册 4.5）。2026-09-11 的编辑性修订（头部元数据与评审状态如实化）设计内容零改动，登记于 [CR-009](../change-log.md)。
 >
-> ⚠️ **已知待修矛盾 D-1 ~ D-7**（见[设计门纪要](../reviews/gate-3-design.md)第 5 节）。其中 **D-1 为 Sprint 2 开工阻断项**：§2.4 末"包命名约定"仍写 `controller` / `service` / `mapper` / `entity` / `dto` / `vo` 分包，与 ADR-012 的 DDD 四层架构及 AGENTS.md **直接冲突**，后续上下文开发应以 **ADR-012 与 AGENTS.md 为准，勿参照 §2.4 该段**。
+> ✅ **已知矛盾 D-1 ~ D-7 已于 2026-09-11 全部修正**（逐项见[设计门纪要](../reviews/gate-3-design.md)第 5 节与 [CR-017](../change-log.md)）：§2.4 旧"包命名约定"已替换为 **ADR-012 四层架构**说明（含依赖方向、DIP、跨上下文调用规则）、§3 模块表已把 auth/roster/user 合并为 **`account` 上下文**、§4.3 时序图参与者已改为实际四层组件、§7.3 引用已改指发布检查清单模板、§2.4 目录树排版已重构（拆为两个代码块）、§2.2 标题已去版本号；**D-4**（DDL 路径）由 [CR-014](../change-log.md) 随 Flyway 改造顺带修正。
 
 > **变更记录**
 >
+> - **v0.5（2026-09-11）**——**修正 D-1 ~ D-7（文档与代码对齐，不改任何设计决策）**，闭环设计门 A3-1（Sprint 2 开工阻断项）与 A3-3，登记于 [CR-017](../change-log.md)：§2.4 旧分包约定 → **ADR-012 四层架构**（含分层职责表、单向依赖、DIP、跨上下文规则、Mapper 位置）+ 目录树拆为 backend / frontend 两块并同步 `sql/`→`db/migration` 与 `scripts/`；§3 模块表 auth/roster/user → 单个 **`account`** 行；§4.3 时序图参与者 → `AccountController` / `AccountApplicationService` / `StudentVerificationService` / `RosterGateway`；§7.3 引用 → 发布检查清单模板；§2.2 标题去版本号。D-4 由 [CR-014](../change-log.md) 顺带修正。
 > - **v0.4（2026-09-07）**——二次开发优化：**auth / roster / user 合并重构为 `account` 限界上下文（DDD 四层，ADR-012）**——domain（聚合根 Account + 值对象 EmailAddress/StudentId + 领域服务 + 9 个端口 gateway + 领域事件）/ application（用例编排 + Command）/ infrastructure（仓储、Redis、log/mail 策略等适配器）/ web（契约不变）；落地模式：端口-适配器（DIP）、策略（CodeSender、RosterGateway bypass/DB 条件装配）、工厂方法、观察者（注册事件 AFTER_COMMIT 审计）、防腐层（DO↔聚合转换器）、仓储、门面。`mvn verify` 14/14 全绿（含 4 个新增领域单测），对外 API 契约不变。前端同步优化：Element Plus 按需自动引入（主包 1056KB → 271KB）、boards 常量去重、useCountdown 组合式函数、ApiError 统一错误模型、路由登录守卫。
 > - **v0.3（2026-08-31）**——发起人决议技术栈升级：**JDK 17 → 21、Spring Boot 3.2 → 4.1.1**（基于 Spring Framework 7 / Security 7）。适配点：starter 更名 `spring-boot-starter-web` → `spring-boot-starter-webmvc`；MyBatis-Plus 改用官方 `mybatis-plus-spring-boot4-starter` 3.5.17（分页拦截器需配套 `mybatis-plus-jsqlparser` 模块）；springdoc 3.1.0、jjwt 0.13.0、jsoup 1.23.2。`mvn verify` 10/10 全绿，业务代码零改动兼容。
 > - **v0.2（2026-08-30）**——发起人决议三项，本方案同步改版：
@@ -47,7 +48,7 @@ flowchart TB
     B --> M[第三方：内容安全机审 API / 邮件 / 短信]
 ```
 
-### 2.2 技术选型（v0.3 更新）
+### 2.2 技术选型
 
 | 决策点 | 候选 | 结论 | 理由 |
 |-------|------|------|------|
@@ -71,45 +72,75 @@ flowchart TB
 
 ### 2.4 代码仓库结构建议
 
+**backend/**（Spring Boot 4 + Maven）
+
 ```
-backend/（Spring Boot 4 + Maven）          frontend/（Vue 3 + Vite）
-├── src/main/java/com/campuslink/          ├── src/
-│   ├── CampusLinkApplication.java         │   ├── views/       # 首页/版块/帖子/发布/搜索/主页/通知/我的/admin
-│   ├── common/                            │   ├── components/  # 帖子渲染、Markdown 编辑器、楼层列表
-│   │   ├── result/    # 统一响应 / 错误码    │   ├── stores/      # Pinia（auth / notification）
-│   │   ├── exception/ # 全局异常处理         │   ├── router/      # 路由与登录守卫
-│   │   ├── markdown/  # 渲染服务（唯一出口） │   ├── api/         # 接口封装
-│   │   ├── audit/     # 审计日志切面         │   └── utils/       # highlight.js 初始化
-│   │   └── crypto/    # 学号/邮箱加解密      ├── index.html
-│   ├── config/        # Security/Redis/MyBatis/CORS/Schedule └── vite.config.ts
-│   ├── security/      # JWT 过滤器、角色鉴权
-│   └── module/                      # 限界上下文，DDD 四层（ADR-012）
-│       ├── account/                 # 账号与学籍（已按 DDD 重构）
-│       │   ├── domain/              # model(聚合/值对象) + service + gateway(端口) + event
-│       │   ├── application/         # 用例编排 + Command
-│       │   ├── infrastructure/      # persistence/redis/notify/codec 适配器（Mapper 在 *.mapper 包）
-│       │   └── web/                 # Controller + VO（对前端契约不变）
-│       ├── board/ post/ reply/ qa/ interaction/ notification/ search/ moderation/ admin/
-│       │                            # 后续上下文按同一四层范式演进
+backend/
+├── src/main/java/com/campuslink/
+│   ├── CampusLinkApplication.java
+│   ├── common/                 # 共享内核
+│   │   ├── result/             # 统一响应 / 错误码
+│   │   ├── exception/          # 全局异常处理
+│   │   ├── markdown/           # 渲染服务（唯一出口）
+│   │   ├── audit/              # 审计日志切面
+│   │   ├── crypto/             # 学号 / 邮箱加解密
+│   │   └── redis/              # Redis 键命名空间（RedisKeys）
+│   ├── config/                 # Security / Redis / MyBatis / CORS / 配置属性
+│   ├── security/               # JWT 过滤器、角色鉴权
+│   └── module/                 # 限界上下文，每上下文内部 DDD 四层（ADR-012）
+│       ├── account/            # 账号与学籍（已按 DDD 重构）
+│       │   ├── domain/         # model(聚合/值对象) + service + gateway(端口) + event + exception
+│       │   ├── application/    # 用例编排 + Command
+│       │   ├── infrastructure/ # persistence / redis / notify / memory / seed 适配器
+│       │   └── web/            # Controller + VO（对前端契约不变）
+│       └── board/ post/ reply/ qa/ interaction/ notification/ search/ moderation/
+│                               # 后续上下文按同一四层范式演进
 ├── src/main/resources/
-│   ├── application.yml / application-{env}.yml
-│   └── mapper/         # MyBatis XML
-├── src/test/java/      # 单元测试（JUnit 5 + Mockito）
-├── sql/                # 建表脚本 + 6 版块种子数据
+│   ├── application.yml
+│   └── db/migration/           # Flyway 迁移 V<n>__<描述>.sql（见该目录 README）
+├── src/test/java/              # 单元测试（JUnit 5 + Mockito）
+├── scripts/                    # PyMySQL 数据变更脚本 D<序号>__<描述>.py（见 scripts/README）
 └── pom.xml
+```
+
+**frontend/**（Vue 3 + Vite）
+
+```
+frontend/
+├── src/
+│   ├── views/                  # 首页 / 版块 / 帖子 / 发布 / 搜索 / 主页 / 通知 / 我的 / admin
+│   ├── components/             # 帖子渲染、Markdown 编辑器、楼层列表
+│   ├── stores/                 # Pinia（auth / notification）
+│   ├── router/                 # 路由与登录守卫
+│   ├── api/                    # 接口封装（client.ts 统一响应处理）
+│   └── utils/                  # highlight.js 初始化
+├── index.html
+└── vite.config.ts
 ```
 
 管理后台与主站共用 frontend 构建，按路由区分并以**后端权限校验兜底**（前端显隐仅为体验，不作为安全边界）。
 
-**包命名约定**：`module` 下每个业务模块按 `controller` / `service` / `mapper` / `entity` / `dto` / `vo` 分包；跨模块调用只允许通过 `service` 接口，不允许跨模块直连 `mapper`（保证模块边界可拆分）。
+**包结构与依赖方向（ADR-012）**：`module` 下每个**限界上下文**（`account`、`board`、…）内部固定分四层：
+
+| 层 | 放什么 | 可依赖 |
+|----|--------|--------|
+| `domain` | 聚合根、值对象、领域服务、领域事件、**出站端口（gateway）** | 仅 JDK 与自身，不依赖框架 |
+| `application` | 用例编排、Command / 结果模型 | `domain` |
+| `infrastructure` | 端口实现（MyBatis-Plus 仓储、Redis、通知等适配器）、`*.mapper` | `application`、`domain` |
+| `web` | Controller、请求 / 响应 VO | `application` |
+
+- **依赖方向单向**：`web` / `infrastructure` → `application` → `domain`；**端口定义在 `domain`、实现在 `infrastructure`（DIP）**，领域层不依赖 Spring / MyBatis；
+- **跨上下文只允许调用对方的 `application` 服务**，不允许跨上下文直连 `mapper` 或触及对方 `domain` 内部——这是上下文边界可拆分的前提；
+- MyBatis-Plus Mapper 统一放各上下文的 `infrastructure/**/mapper` 包（`@MapperScan("com.campuslink.**.mapper")`）；
+- 新增上下文（board / post / …）一律按上述四层范式演进（ADR-012 结论）。
+
+> **历史说明**：本节此前的"每个模块按 `controller` / `service` / `mapper` / `entity` / `dto` / `vo` 分包"约定是 ADR-012 之前的旧结构，已被上述四层架构取代（设计门缺陷 **D-1**，修正见 [CR-017](../change-log.md)）。
 
 ## 3. 模块设计
 
 | 模块 | 职责 | 依赖 |
 |------|------|------|
-| auth | 注册（**学籍核验 + 邮箱/手机验证码**）、登录、JWT 签发与续期、验证码限流 | roster、Redis、DB |
-| **roster** | **学籍名册导入（管理员）与核验服务：学号 + 姓名比对、学号占用检查、爆破防护** | DB、crypto |
-| user | 个人主页、资料编辑、**注销（7 天冷静期 + 匿名化定时任务）** | DB |
+| **account** | **账号与学籍上下文**（ADR-012 已合并 auth / roster / user）：注册（**学籍核验 + 邮箱验证码**）、登录、JWT 签发与续期、验证码与核验限流；学籍名册导入（管理员）与核验；个人主页、资料编辑、**注销（7 天冷静期 + 匿名化定时任务）** | Redis、DB、crypto |
 | board | 固定 6 版块与标签元数据（管理接口 P1） | DB |
 | post | 发帖 / 列表 / 详情 / 删除、调用 Markdown 渲染、计数冗余维护 | moderation、Redis |
 | reply | 楼层回复（floor_no 分配）、引用回复 | moderation |
@@ -118,10 +149,10 @@ backend/（Spring Boot 4 + Maven）          frontend/（Vue 3 + Vite）
 | notification | 通知生成（回复 / 点赞 / 收藏 / 采纳 / 引用）、未读数、已读 | DB |
 | search | 标题 + 标签检索（MySQL ngram FULLTEXT + 标签精确匹配） | DB |
 | moderation | 机审对接（发布前同步调用；**服务异常时按开关降级关闭发布入口**） | 第三方 |
-| admin | 后台登录与权限（超管 / 运营）、内容处置台、举报工单闭环、名册导入 | post、reply、user、roster |
-| common | Markdown 渲染服务、统一错误码、审计日志、加解密、健康检查 | — |
+| admin | 后台登录与权限（超管 / 运营）、内容处置台、举报工单闭环、名册导入 | post、reply、**account** |
+| common | Markdown 渲染服务、统一错误码、审计日志、加解密、**Redis 键命名空间**、健康检查 | — |
 
-> **v0.4 注**：auth / roster / user 已合并重构为 `account` 上下文（DDD 四层，见 ADR-012 与 AGENTS.md），上表模块职责按上下文对应迁移，**对外接口契约不变**；board / post 等后续上下文在各自 Sprint 内按同一范式演进。
+> **已落地**：auth / roster / user 已于 2026-09-07 合并为 **`account` 限界上下文**，内部按 `domain / application / infrastructure / web` 四层组织（ADR-012，结构见 §2.4），**对外接口契约不变**；board / post 等后续上下文在各自 Sprint 内按同一四层范式演进。
 
 ## 4. 数据模型
 
@@ -162,20 +193,27 @@ backend/（Spring Boot 4 + Maven）          frontend/（Vue 3 + Vite）
 ```mermaid
 sequenceDiagram
     participant U as 用户
-    participant A as auth 模块
-    participant R as roster 模块
+    participant W as AccountController（web）
+    participant S as AccountApplicationService（application）
+    participant V as StudentVerificationService（domain）
+    participant G as RosterGateway（domain 端口）
     participant DB as MySQL
-    U->>A: 提交 学号 + 姓名 + 邮箱 + 验证码
-    A->>A: 校验验证码 / 限流（IP 10 次每小时）
-    A->>R: verify(studentId, name)
-    R->>R: 姓名归一化（去空格、全角转半角、大小写统一）
-    R->>DB: SELECT WHERE student_id_hash = ? AND name = ?
-    DB-->>R: 命中 / 未命中
-    R->>DB: 检查 used_user_id 是否为空
-    DB-->>R: 未占用 / 已占用
-    R-->>A: 通过（签发一次性核验票据）/ 失败原因
-    A-->>U: 注册成功 / 统一失败提示
+    U->>W: POST /verify-student（学号 + 姓名）
+    W->>S: verifyStudent(VerifyStudentCommand, ip)
+    S->>S: IP 限流（同一 IP 10 次 / 小时）
+    S->>V: matches(StudentId, name)
+    V->>G: findAvailableByHash(HMAC(学号))
+    G->>DB: SELECT WHERE student_id_hash = ?
+    DB-->>G: 命中 / 未命中
+    G-->>V: StudentRecord / empty（含 used_user_id 是否为空）
+    V->>V: 姓名归一化比对（去空格、全角转半角、大小写统一）
+    V-->>S: 通过 / 不通过
+    S->>S: 签发一次性核验票据（Redis，5 分钟有效）
+    S-->>W: VerifyStudentResult(ticket)
+    W-->>U: 返回票据 / 统一失败提示（2101）
 ```
+
+> **分层对应**：`web` 只做协议转换；限流与票据编排在 `application`；比对规则（含姓名归一化）在 `domain` 的领域服务；名册读取经 `domain` 定义的 `RosterGateway` 端口，由 `infrastructure` 的实现落地（开发期 `InMemoryTestRosterGateway`，生产 `RosterGatewayDbImpl`）——即端口-适配器（DIP），见 §2.4。
 
 **关键设计要点**
 
@@ -189,7 +227,7 @@ sequenceDiagram
 
 ## 5. 接口契约
 
-- **风格**：REST，前缀 `/api/v1`；OpenAPI 由 springdoc-openapi 自动生成，部署于 `/api/docs`；
+- **风格**：REST，前缀 `/api/v1`；OpenAPI 由 springdoc-openapi 自动生成，部署于 `/api/docs`；**已归档快照** [`docs/design/api/openapi.json`](api/openapi.json)（来源 commit、再生成命令、实测请求响应示例见 [api/README.md](api/README.md)，[CR-019](../change-log.md)）——快照只覆盖**已实现**的端点，本节表格是完整规划；
 - **鉴权**：`Authorization: Bearer <jwt>`，7 天滑动续期；未登录可读、写操作 401；后台接口额外校验 `role in (ops, superadmin)`；
 - **统一响应**：`{ code, message, data, traceId }`；`code = 0` 成功；错误码分段：1xxx 通用、2xxx 账号（**21xx 学籍核验**）、3xxx 版块与帖子、4xxx 权限、5xxx 安全与机审；
 - **注册冲突的错误码策略（CR-016）**：唯一键冲突一律返回**业务错误码**，不得落到 `9999` 系统错误——
@@ -206,6 +244,7 @@ sequenceDiagram
 | `/api/v1/auth/verify-student` | POST | **学籍核验（学号 + 姓名），通过则返回一次性核验票据** |
 | `/api/v1/auth/captcha` | POST | 发验证码（限流） |
 | `/api/v1/auth/register` / `login` | POST | 注册（携带核验票据）/ 登录 |
+| `/api/v1/users/me` | GET | **我的主页（F-ACC-002 最小版，需登录）**；他人主页与资料编辑在后续 Sprint |
 | `/api/v1/boards/{code}/posts?pageNum=` | GET | 版块帖子列表（时间序） |
 | `/api/v1/posts?sort=latest\|hot&pageNum=` | GET | 全站最新 / 热门 |
 | `/api/v1/posts` | POST | 发帖（boardCode, title, contentMd, tags[]） |
@@ -262,7 +301,7 @@ sequenceDiagram
 ### 7.3 可用性设计
 
 - **机审降级**：机审服务异常时按配置开关关闭发布入口（fail-closed），运营可在后台切换；不可跳过审核（fail-open）；
-- **备份**：MySQL 每日 `mysqldump` 上传对象存储，保留 30 天；发布前手动快照（流程手册发布清单第 7 项）；
+- **备份**：MySQL 每日 `mysqldump` 上传对象存储，保留 30 天；发布前手动快照（见[发布检查清单模板](../templates/release-checklist-template.md) §2 第 7 项"数据备份完成"）；
 - **监控告警（上线检查门要求）**：MVP 以云主机监控（CPU / 内存 / 磁盘 / 网络）+ Nginx 5xx 告警 + Spring Boot Actuator `/actuator/health` 探活满足流程手册 3.6 出口标准；Prometheus / Grafana 体系列 P1 增强。
 
 ## 8. 部署架构（**形态待定，阶段六决策**）
@@ -305,7 +344,7 @@ sequenceDiagram
 
 - [x] 技术选型对比充分，ADR-003（后端框架）已终稿；
 - [ ] 数据模型覆盖 PRD 全部 P0 功能，索引设计可支撑列表与搜索指标；
-- [ ] 接口契约完整，可支撑前后端并行开发（OpenAPI 就绪）；
+- [ ] 接口契约完整，可支撑前后端并行开发（OpenAPI 就绪）；**进展（2026-09-11，[CR-019](../change-log.md) / 设计门 A3-4）**：springdoc 实时生成（`/api/docs`）+ 快照已归档 [`docs/design/api/`](api/README.md)，含 2 条主链路实测请求响应结构。**仍未达"完整"，故不勾选**：① 只覆盖 Sprint 1 已实现的 6 个端点，§5 表另有 11 行（Sprint 2+）契约未设计；② 快照未声明错误响应与鉴权（**N-1 / N-2**），且畸形请求体实测返回 500 而非 400（**N-3**，P2 缺陷），三项待修；
 - [ ] 安全设计覆盖：Markdown 白名单渲染、CSP、验证码限流、敏感信息加密、审计；
 - [ ] 学籍核验设计（4.3 节）评审通过，名册获取路径确认；
 - [ ] 非功能指标（PRD 第 4 节）均有对应措施（缓存、索引、降级、备份）；
