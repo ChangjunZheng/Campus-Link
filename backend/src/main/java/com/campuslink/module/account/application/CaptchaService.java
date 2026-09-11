@@ -1,0 +1,57 @@
+package com.campuslink.module.account.application;
+
+import com.campuslink.common.exception.ApiException;
+import com.campuslink.common.result.ResultCode;
+import com.campuslink.config.AppProperties;
+import com.campuslink.module.account.domain.gateway.CaptchaStore;
+import com.campuslink.module.account.domain.gateway.CodeSender;
+import com.campuslink.module.account.domain.gateway.SensitiveCodec;
+import com.campuslink.module.account.domain.model.EmailAddress;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+import java.security.SecureRandom;
+import java.time.Duration;
+
+/**
+ * 验证码用例（应用层，F-ACC-001）：限流规则（60s 重发、单号日上限）在此编排；
+ * 存取经 CaptchaStore 端口、发送经 CodeSender 端口（log / mail 策略）。
+ */
+@Service
+@RequiredArgsConstructor
+public class CaptchaService {
+
+    private static final SecureRandom RANDOM = new SecureRandom();
+
+    private final CaptchaStore captchaStore;
+    private final CodeSender codeSender;
+    private final SensitiveCodec codec;
+    private final AppProperties props;
+
+    public void send(String target) {
+        String targetKey = codec.hash(EmailAddress.of(target).value());
+
+        if (!captchaStore.tryAcquireSendSlot(targetKey,
+                Duration.ofSeconds(props.getCaptcha().getResendIntervalSeconds()))) {
+            throw new ApiException(ResultCode.CAPTCHA_TOO_FREQUENT);
+        }
+        long count = captchaStore.incrementDailyCount(targetKey);
+        if (count > props.getCaptcha().getDailyLimit()) {
+            throw new ApiException(ResultCode.CAPTCHA_EXCEEDED);
+        }
+
+        String code = String.format("%06d", RANDOM.nextInt(1_000_000));
+        captchaStore.saveCode(targetKey, code, Duration.ofMinutes(props.getCaptcha().getTtlMinutes()));
+        codeSender.send(target, code);
+    }
+
+    public boolean verify(String target, String code) {
+        return captchaStore.loadCode(codec.hash(EmailAddress.of(target).value()))
+                .map(saved -> saved.equals(code))
+                .orElse(false);
+    }
+
+    public void consume(String target) {
+        captchaStore.deleteCode(codec.hash(EmailAddress.of(target).value()));
+    }
+}

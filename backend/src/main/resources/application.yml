@@ -1,0 +1,72 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: campus-link-backend
+  datasource:
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:campuslink}?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC&useSSL=false&allowPublicKeyRetrieval=true
+    username: ${DB_USER:campuslink}
+    password: ${DB_PASSWORD:campuslink}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  mail:
+    host: ${MAIL_HOST:}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USER:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+  jackson:
+    time-zone: UTC
+    default-property-inclusion: non_null
+
+springdoc:
+  api-docs:
+    path: /api/docs
+  swagger-ui:
+    path: /api/docs/swagger-ui.html
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    banner: false
+    db-config:
+      id-type: auto
+  mapper-locations: classpath*:mapper/**/*.xml
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+campuslink:
+  jwt:
+    # 生产必须通过环境变量覆盖（上线检查清单项）
+    secret: ${JWT_SECRET:dev-only-jwt-secret-change-me-0123456789abcdef}
+    ttl-days: 7
+  crypto:
+    # 开发默认密钥仅限本地联调；hash/crypt 两把密钥独立，生产必须覆盖（上线检查清单项）
+    hash-key: ${APP_HASH_KEY:dev-only-hash-key-change-me-32-bytes-minimum!}
+    crypt-key: ${APP_CRYPT_KEY:dev-only-crypt-key-change-me-32-bytes-minimum!}
+  captcha:
+    ttl-minutes: 5
+    resend-interval-seconds: 60
+    daily-limit: 10
+  verify:
+    ip-hourly-limit: 10
+    ticket-ttl-minutes: 5
+  roster:
+    # 学籍核验旁路（内置测试名册）：仅限开发联调；生产必须为 false（上线检查清单项）
+    bypass: ${APP_ROSTER_BYPASS:true}
+  code-sender:
+    # log = 开发模式（验证码只打日志）；mail = 真实发送
+    mode: ${CODE_SENDER_MODE:log}
+  cors:
+    allowed-origins: ${CORS_ORIGINS:http://localhost:5173}

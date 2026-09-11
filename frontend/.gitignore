@@ -1,0 +1,13 @@
+node_modules/
+dist/
+*.local
+.env
+.env.local
+
+.idea/
+.vscode/
+*.log
+auto-imports.d.ts
+components.d.ts
+
+.DS_Store

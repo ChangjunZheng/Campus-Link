@@ -1,0 +1,82 @@
+# AGENTS.md — Campus-Link 项目协作指引
+
+> 编码代理在本工作区工作的上下文入口。沟通用中文；代码、命令、变量名、文件路径保持英文。
+
+## 项目概述
+
+Campus-Link：面向**重庆工程学院计算机专业学生**的垂直交流论坛（"问有所答、学有同伴、求职有路"）。
+核心功能：固定 6 版块（技术问答/学习资源/面经求职/竞赛交流/课程交流/闲聊灌水）、Markdown 帖子与代码高亮、问答最佳答案采纳、站内通知与搜索、**学籍核验注册（限本校，学号 + 姓名比对）**。
+当前阶段：**阶段四开发 · Sprint 1 完成 + DDD 二次开发重构**（账号上下文 `module/account` 四层化，ADR-012），执行依据见 `docs/development/sprint-1.md`。
+
+## 仓库结构（单仓库 monorepo）
+
+- 根目录即**唯一** git 仓库（默认分支 `main`）；
+- `docs/` —— 流程手册与全部项目文档；
+- `backend/` —— Spring Boot 4.1 + Java 21 + MyBatis-Plus 3.5.17（Boot4 starter）+ MySQL 8 + Redis 7；
+- `frontend/` —— Vue 3 + Vite + TS + Pinia + Element Plus；
+- 项目已统一为根目录单一仓库（monorepo），`git` 操作在根目录进行即可，无需区分子仓库。
+
+## 必读文档（按需查阅）
+
+| 文档 | 内容 |
+|------|------|
+| `docs/README.md` | **文档版本号唯一登记处**（第 2 节）+ 阶段门状态表（第 1 节）；交叉引用其他文档时**不要写版本号**，只写链接 |
+| `docs/process-handbook.md` | 7 阶段 6 评审门流程、缺陷等级 P0–P3、环境与分支策略、4.5 节文档归档规则 |
+| `docs/next-steps.md` | 阻塞项（B1/B2 名册、B3 根仓库远程托管）与并行项，"现在该干什么"入口 |
+| `docs/change-log.md` | **变更台账（CR-xxx）**。任何影响范围 / 排期 / 技术选型 / 架构 / 工程结构的改动，实施前先在此登记并做影响评估（范围 / 排期 / 质量），CR 编号写入 commit message |
+| `docs/tailoring-waivers.md` | 流程偏离与让步放行记录（W-xxx / T-xxx）；新增偏离须登记于此，不得只在对话里说明 |
+| `docs/reviews/gate-*.md` | 三道已过评审门的纪要（立项 / 需求 / 设计），含未闭环行动项——其中 **A3-1 是 Sprint 2 开工阻断项** |
+| `docs/design/tech-design.md` | 技术方案与 ADR-001~012，技术选型以它为准。⚠️ §2.4 末"包命名约定"与 ADR-012 四层架构冲突（缺陷 **D-1**，待修），**分包结构以 ADR-012 与本文件"架构与编码约定"为准** |
+| `docs/requirements/prd.md` | 需求基线（含学籍核验 F-ACC-004 升 P0） |
+| `docs/development/sprint-1.md` | Sprint 1 任务状态与出口自查 |
+
+## 常用命令
+
+**backend/**（先起依赖栈；构建需 **JDK 21**，本机先执行 `set "JAVA_HOME=D:\develop\Java\jdk-21"`）：
+
+```bash
+docker compose -f docker-compose.dev.yml up -d   # MySQL 8 + Redis 7，首次自动执行 sql/ 建表与种子
+mvn verify            # 编译 + 单测（合码前必须全绿）
+mvn spring-boot:run   # 启动：8080，健康检查 /actuator/health，OpenAPI /api/docs
+```
+
+**frontend/**：
+
+```bash
+npm install
+npm run dev           # 5173，/api 代理到 8080
+npm run build
+```
+
+**联调测试（Sprint 1 账号链路冒烟）**：起栈后浏览器打开 `http://localhost:5173/login`，注册 Tab：学籍核验 → 邮箱验证码 → 注册 → 登录 → 顶栏出现昵称。验证码在 `CODE_SENDER_MODE=log` 模式下只打在 backend 日志（行格式 `[DEV] captcha for <邮箱> => <6位码>`）。
+**测试名册**（仅 `app.roster.bypass=true` 生效）：2023001/张三、2023002/李四、2023003/王五、2024001/赵六。
+
+## 架构与编码约定
+
+- 后端为**模块化单体 + DDD 分层（ADR-012）**：限界上下文 `module/{account,board,...}`，上下文内四层 `domain`（聚合根/值对象/领域服务/端口 gateway/领域事件）→ `application`（用例编排 + Command）→ `infrastructure`（MyBatis-Plus 仓储、Redis、通知等适配器）→ `web`（Controller + VO）；依赖方向：web/infrastructure → application → domain，**端口定义在 domain、实现在 infrastructure（DIP）**；跨上下文只允许调用对方 application 服务；MyBatis-Plus Mapper 统一放 `*.mapper` 包（`@MapperScan("com.campuslink.**.mapper")`）；
+- 统一响应 `ApiResponse{code,message,data,traceId}`，错误码分段（1xxx 通用 / 2xxx 账号 / 21xx 学籍 / 3xxx 帖子 / 4xxx 权限 / 5xxx 安全机审），见技术方案第 5 节；DDL 变更走 `backend/sql/` 脚本，禁止 Hibernate 自动建表；
+- **敏感信息**（邮箱/手机号/学号）：明文一律 AES-GCM 加密存 `*_enc`，等值查询用 HMAC 哈希 `*_hash`；任何接口不得返回 `*_enc` / `*_hash`；密钥只从环境变量读取（`APP_HASH_KEY` / `APP_CRYPT_KEY`），**源码、示例、测试不得写入可用凭据字面量**；
+- **学籍核验**：三种失败（学号不存在/姓名不匹配/已注册）统一提示，防名册枚举；`app.roster.bypass` 仅限开发联调，**生产必须为 false**（上线检查清单项）；
+- **Markdown 渲染唯一出口** `common/markdown/MarkdownRenderer`（flexmark + jsoup 白名单）；flexmark 扩展须**同时注册到 Parser 与 HtmlRenderer**，否则节点解析成功但渲染为空；代码高亮由前端 highlight.js 完成；任何渲染改动必须保持 `MarkdownRendererTest` 全绿；
+- 前端页面按 PRD 5.1 清单实现；**Element Plus 按需自动引入**（unplugin-auto-import / unplugin-vue-components，勿回退全量引入）；API 统一走 `src/api/client.ts`（`ApiError` + JWT 注入 + 后端错误消息直接透出给 UI）；可复用逻辑放 `src/composables/`，版块等共享常量放 `src/constants/`；
+
+## 测试约定
+
+- **单测**：`mvn verify` 必须全绿；`MarkdownRendererTest` 的 6 个 XSS 回归用例是论坛安全生命线，渲染/白名单相关改动必须先补用例再改实现；
+- **联调冒烟**：新链路合入前必须真实起栈（Docker + 后端 + 前端）并**用浏览器打开 `http://localhost:5173` 实测**，不能只依赖单测；
+- 数据库结构变更需同步 `backend/sql/01_schema.sql`（开发期可重建容器卷）。
+
+## 文档与流程约定
+
+- 阶段门未通过不得进入下一阶段；评审结论与状态由项目经理同步到 `docs/README.md` 阶段门状态表；
+- **版本号只在 `docs/README.md` 第 2 节登记**；其他文档（含本文件）交叉引用时只写链接、不写版本号，避免升级后引用大面积失效；
+- **基线级变更先登记后实施**：范围 / 排期 / 技术选型 / 架构 / 工程结构的改动，实施前在 `docs/change-log.md` 登记 CR 并写影响评估（范围 / 排期 / 质量），同步受影响文档；
+- **流程偏离登记在 `docs/tailoring-waivers.md`**（W-xxx 让步放行 / T-xxx 已授权裁剪），评审门纪要归档在 `docs/reviews/gate-<n>-<name>.md`（手册 4.5 节）；
+- 新文档放入 `docs/` 对应阶段目录并在 `docs/README.md` 登记；文件名英文小写中划线（如 `sprint-2.md`），文档内容用中文；
+- 文档头部必须含：版本、状态、维护人、最后更新。
+
+## 红线（与用户全局规则一致）
+
+- **不自动 git commit / push**；提交前先展示变更摘要；commit message 用简洁英文；项目为单仓库（monorepo），统一在根目录操作；
+- 删除文件/目录、修改 `.env`/密钥/证书、`git push`/`rebase`/`reset --hard`、公开发布：必须先征得用户同意；
+- 生产环境红线：`app.roster.bypass=false`、JWT 与加密密钥全部覆盖默认值、名册导入与内容处置必须写审计日志、机审降级开关（fail-closed）不得改为跳过审核。

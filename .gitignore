@@ -1,0 +1,44 @@
+# ============================================================
+# Campus-Link 根 .gitignore（monorepo 根仓库）
+# 说明：子目录 backend/.gitignore 与 frontend/.gitignore 保留不动，
+#       其规则在各自目录内继续生效（Git 支持嵌套 .gitignore）。
+# ============================================================
+
+# ---------- 依赖与构建产物 ----------
+node_modules/
+dist/
+target/
+
+# ---------- 工具与运行期状态（不入库） ----------
+# WorkBuddy / 其它本地工具与记忆目录，含本地配置与缓存，不纳入版本控制
+.workbuddy/
+.mimosa/
+.zcode/
+
+# ---------- 密钥与环境变量 ----------
+# 仅忽略真实环境文件，示例文件 .env.example 需保留可追溯（见下方白名单）
+.env
+.env.local
+.env.*.local
+
+# ---------- 日志 ----------
+logs/
+*.log
+
+# ---------- IDE 与系统文件 ----------
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.classpath
+.project
+.settings/
+.DS_Store
+
+# ---------- 本项目特有 ----------
+# 后端重构备份压缩包（不入库）
+backend/.refactor-backup-*.zip
+# 前端 unplugin 自动生成的类型声明文件（非手写，重新生成即可）
+frontend/auto-imports.d.ts
+frontend/components.d.ts

@@ -1,0 +1,32 @@
+services:
+  mysql:
+    image: mysql:8 # 本机已存在的 8.4.10 LTS（与 8.0 schema 兼容）；生产环境按技术方案使用 8.0.x
+    container_name: campuslink-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_DATABASE: campuslink
+      MYSQL_USER: campuslink
+      MYSQL_PASSWORD: campuslink
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_0900_ai_ci
+    ports:
+      - "33061:3306" # 本机 3306 已被本地 MySQL 占用，映射到 33061；后端经 DB_PORT=33061 连接
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./sql:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot123"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    container_name: campuslink-redis
+    ports:
+      - "63790:6379" # 本机 6379 已被本地 Redis 占用，映射到 63790；后端经 REDIS_PORT=63790 连接
+    volumes:
+      - redis-data:/data
+
+volumes:
+  mysql-data:
+  redis-data:
