@@ -27,7 +27,7 @@
 | [研发流程手册](process-handbook.md) | v1.1 | 草案（随项目演进修订） | 2026-09-11 |
 | [变更台账](change-log.md) | v1.1 | 已生效（累积登记，CR-001~CR-010） | 2026-09-11 |
 | [裁剪与让步放行记录](tailoring-waivers.md) | v1.0 | **待签署**（W-01~W-06） | 2026-09-11 |
-| [下一步行动清单](next-steps.md) | v1.1 | 已生效 | 2026-09-11 |
+| [下一步行动清单](next-steps.md) | v1.2 | 已生效（B3 已闭环） | 2026-09-11 |
 | [BRD](initiation/brd.md) | v0.3 | 已评审（发起人确认，2026-08-30） | 2026-08-30 |
 | [可行性分析](initiation/feasibility-study.md) | v0.3 | 已评审（同上） | 2026-09-11 |
 | [项目章程](initiation/project-charter.md) | v0.4 | 已生效（正式签署待补） | 2026-09-11 |
