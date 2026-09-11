@@ -2,7 +2,7 @@
 
 | 文档信息 | 内容 |
 |---------|------|
-| 版本 | v1.4 |
+| 版本 | v1.8 |
 | 状态 | 已执行（出口自查部分未闭环） |
 | 维护人 | 技术负责人（发起人兼任） |
 | 关联阶段 | 开发（阶段四） |
@@ -20,22 +20,24 @@
 **目标**：地基与账号链路——能用学号 + 姓名 + 邮箱验证码注册成功，能登录，能看到个人主页；发一段含 `<script>` 的 Markdown 不产生 XSS。
 
 **出口自查**
-- [ ] 注册链路联调通过（学籍核验 → 验证码 → 注册 → 登录 → `GET /users/me`）——待本机执行 `docker compose -f docker-compose.dev.yml up -d` 后按 backend/README 步骤联调
+- [x] 注册链路联调通过（学籍核验 → 验证码 → 注册 → 登录 → `GET /users/me`）——**2026-09-11 首次真机跑通**（本机原生 MySQL 8 + Redis，后端 8088，经 Vite 5173 代理）：`2023001/张三` 核验返回票据 → 注册成功（`id=1`、`verified=true`）→ 登录返回 JWT → `/users/me` 返回昵称"张三"；验证码重发限流（`2002`/429）亦按设计生效。**首次启动时暴露并修复 2 个启动级缺陷**（见下方 v1.6 变更记录）
 - [x] XSS 用例回归全绿（`MarkdownRendererTest` 6 用例）
 - [x] `mvn verify` 与 `npm run build` 本机通过（2026-08-30：10/10 单测全绿，前端 1622 模块构建成功；2026-09-07 DDD 重构后 14/14 全绿）
 - [ ] **单测覆盖率达标（手册 3.4：≥60%，核心模块 ≥80%）——当前不可测量**：`backend/pom.xml` 未接入 jacoco 或任何覆盖率插件，见 [W-05](../tailoring-waivers.md) 补偿措施 ②
-- [ ] CI 全绿（待 B3 远程仓库接入后生效，工作流已就位于根目录 `.github/workflows/`）——**根仓库（monorepo）至今零提交且无远程，CI 从未运行过一次**，见 [W-05](../tailoring-waivers.md) / [W-06](../tailoring-waivers.md) / [CR-010](../change-log.md)
+- [ ] CI 全绿——✅ **已具备判定条件**：远程已配置，`backend-ci` / `frontend-ci` 随首次推送在 GitHub Actions **首跑成功**（[CR-011](../change-log.md)）。本项仍有保留条件：**静态扫描未接入**，故"全绿"尚未覆盖手册 3.4 要求的扫描环节
 - [ ] Code Review 完成（发起人 / 第二角色）——手册要求至少 1 名同行批准，单人项目须以确定形式闭环，见 [W-05](../tailoring-waivers.md) 补偿措施 ④
 - [ ] 静态扫描无新增阻断级问题（手册 3.4 出口标准）——**未接入**，见 [W-05](../tailoring-waivers.md)
 
-> **提测准入门现状：上述 6 项中 4 项未满足，其中 3 项属"客观不可执行"**（覆盖率无插件、CI 无远程、静态扫描未接入）。按手册 3.4 出口标准，Sprint 1 目前**不具备提测条件**。
+> **提测准入门现状：上述 7 项中 3 项已满足、4 项未满足**（未满足：覆盖率不可测、CI 的静态扫描环节缺失、Code Review 未闭环、静态扫描未接入）。联调冒烟已于 2026-09-11 通过，原"CI 无远程""注册链路未验证"两项已消除。按手册 3.4 出口标准，Sprint 1 目前**仍不具备提测条件**。
+>
+> ⚠️ **首次真机启动（2026-09-11）暴露 2 个启动级缺陷，`mvn verify` 全绿却完全没发现**——因为 14 个单测均为纯领域单测，没有一个加载完整 Spring 上下文。这正是 W-05 所记录的"无集成测试"缺口的实证：出口自查前 5 项全绿，但应用**从未成功启动过**。
 
 ## 任务清单
 
 | # | 任务 | 产出 | 状态 |
 |---|------|------|------|
 | T1 | 仓库脚手架 | backend：Spring Boot（**初版 3.2，v1.2 已升级至 4.1.1 + JDK 21，见 [CR-007](../change-log.md)**）+ Maven + application.yml + docker-compose.dev.yml（MySQL 8 + Redis 7）；frontend：Vue 3 + Vite + TS + Pinia + Element Plus | ✅ 2026-08-30 |
-| T2 | 数据库 | `backend/sql/01_schema.sql`（11 张表 + 索引 + 标题 ngram 全文索引）+ `02_seed_boards.sql`（6 版块种子） | ✅ 2026-08-30 |
+| T2 | 数据库 | **12 张表** + 索引 + 标题 ngram 全文索引 + 6 版块种子。原为 `backend/sql/01_schema.sql` 与 `02_seed_boards.sql`（2026-08-30 产出），**2026-09-11 随 [CR-014](../change-log.md) 转为 Flyway 迁移** `db/migration/V1__init_schema.sql` + `V2__seed_boards.sql`，`backend/sql/` 已删除 | ✅ 2026-08-30 |
 | T3 | 公共层 | 统一响应 `ApiResponse`（含 traceId）、`ResultCode` 分段错误码、全局异常处理、参数校验 | ✅ 2026-08-30 |
 | T4 | **安全地基：Markdown 渲染** | `common/markdown/MarkdownRenderer`（flexmark + jsoup 白名单，服务端单点净化，ADR-005）+ XSS 回归用例 | ✅ 2026-08-30 |
 | T5 | 鉴权骨架 | Spring Security + JWT 过滤器（jjwt）+ 角色解析 + CORS；FilterChain 收紧列入 Sprint 2 | ✅ 2026-08-30 |
@@ -44,23 +46,52 @@
 | T8 | 前端骨架 | 顶栏导航（6 版块入口 / 搜索占位 / 用户菜单）、注册登录页（学籍核验两步流 + 60s 验证码倒计时）、首页与版块占位页 | ✅ 2026-08-30 |
 | T9 | 构建验证 | `mvn verify`（编译 + 单测 10/10 全绿）与 `npm run build`（1622 模块）本机通过 | ✅ 2026-08-30 |
 
-## 阻塞与依赖（对应 next-steps.md，均未清零）
+## 阻塞与依赖（对应 next-steps.md）
 
-- **B1 / B2 学籍名册**：当前以 `app.roster.bypass=true` + 内置测试名册（学号 2023001/2023002/2023003/2024001 ↔ 姓名 张三/李四/王五/赵六）开发联调；真实名册到位后由 SUPERADMIN 走 `POST /api/v1/admin/roster/import` 导入，然后**关闭 bypass 并回归注册链路**（名册表结构已按"学号,姓名[,年级[,专业]]"预留，B2 字段决议如有出入需调整导入列映射）。
-- **B3 仓库远程**：项目已合并为根目录单一仓库（monorepo，[CR-010](../change-log.md)）；GitHub Actions 工作流位于根 `.github/workflows/`（`backend-ci.yml` 跑 `mvn verify`、`frontend-ci.yml` 跑 `npm ci && npm run build`，各自以 `working-directory` 指向子目录并按 `paths` 过滤触发），**配置远程后自动生效**。
+- **B1 / B2 学籍名册**（**仍开放**）：当前以 `app.roster.bypass=true` + 内置测试名册（学号 2023001/2023002/2023003/2024001 ↔ 姓名 张三/李四/王五/赵六）开发联调；真实名册到位后由 SUPERADMIN 走 `POST /api/v1/admin/roster/import` 导入，然后**关闭 bypass 并回归注册链路**（名册表结构已按"学号,姓名[,年级[,专业]]"预留，B2 字段决议如有出入需调整导入列映射）。
+- ~~**B3 仓库远程**~~ **✅ 已闭环（2026-09-11，[CR-011](../change-log.md)）**：项目为根目录单一仓库（monorepo，[CR-010](../change-log.md)）；远程 `https://github.com/Epoch-1483/Campus-Link` 已配置，首次提交 `837a22f` 已推送并建立 `main` 上游跟踪。GitHub Actions 工作流位于根 `.github/workflows/`（`backend-ci.yml` 跑 `mvn verify`、`frontend-ci.yml` 跑 `npm ci && npm run build`，各自以 `working-directory` 指向子目录并按 `paths` 过滤触发），**两次首跑均成功**。未配置的剩余项：`main` 分支保护与 PR 流程。
+- **开发期依赖栈**：本机原生 MySQL 8 / Redis，不用 Docker；后端默认端口 **8088**（[CR-012](../change-log.md)）。
 - **P1 UI 稿**：按发起人决议直接用 Element Plus 拼页面（行动清单 §4.3），视觉细节后续迭代。
 
 ## 测试名册（开发联调用，仅 bypass 模式）
 
+> 学号须为 **9 位数字**（CR-013 新增格式约束）；旧的 7 位测试号已被格式校验挡下，不再可用。
+
 | 学号 | 姓名 |
 |------|------|
-| 2023001 | 张三 |
-| 2023002 | 李四 |
-| 2023003 | 王五 |
-| 2024001 | 赵六 |
+| 249971346 | 张三 |
+| 249971347 | 李四 |
+| 249971348 | 王五 |
+| 249971349 | 赵六 |
+
+**管理员账号**（dev-only 种子，与 bypass 同门控）：`admin@campuslink.local`（`SUPERADMIN`，无学号、不走核验）。
+**验证码**：默认固定 `123456`（`campuslink.captcha.fixed-code`）；留空则恢复随机 6 位并只打日志。
 
 ## 变更记录
 
+- v1.8（2026-09-11）——**CR-014：数据库变更管理改为 Flyway（DDL）+ PyMySQL（数据）**：
+  1. **接入 Flyway**：`spring-boot-starter-flyway` + `flyway-mysql`（Boot 4.1.1 管理 Flyway **12.4.0**，本机仓库已缓存、可离线构建）；配置 `spring.flyway`（`locations=classpath:db/migration`、`baseline-on-migrate=false`、`clean-disabled=true`）。**实测社区版对 MySQL 8 可用**；
+  2. **迁移脚本**：`backend/sql/01_schema.sql` → `V1__init_schema.sql`（12 张表，去掉 `CREATE DATABASE`/`USE`，并移除 `IF NOT EXISTS`——迁移应失败得响亮）；`02_seed_boards.sql` → `V2__seed_boards.sql`（6 版块，按"参考数据随 schema 版本化"处理）。`backend/sql/` **已删除**（内容与 git 历史双重可追溯）；
+  3. **数据脚本规范**：新增 `backend/scripts/`（`README.md` 约定 + `requirements.txt`（PyMySQL 1.2.0）+ `data/_template.py`）。命名 `D<序号>__<描述>.py`；**默认 dry-run、`--apply` 才写库**；凭据只从环境变量读；事务包裹；要求幂等。`.gitignore` 已排除 `scripts/.venv/`；
+  4. **`docker-compose.dev.yml` 移除 `./sql` 挂载**——容器内建表会绕过 Flyway 历史导致 `validate` 失败；
+  5. ✅ **清库重建实测**（验证迁移可执行性，这是本次的关键动作）：发现并确认 **`V1` 从未被真实执行过**（原 `01_schema.sql` 一直靠手工导入）。本次 DROP 库后由 Flyway 全量执行，日志 `Successfully applied 2 migrations`，`flyway_schema_history` 记录 V1/V2 且 `success=1`；12 张业务表 + `flyway_schema_history` 齐全、6 版块中文正常、admin 种子账号已建；
+  6. ✅ **功能回归**：核验 → 注册 → `/users/me`、admin 登录（`SUPERADMIN`）→ 名册导入（`inserted:1`）、匿名调用管理接口 403/4002、未注册邮箱登录统一提示 2005，全部通过；
+  7. 📌 **顺带观察（未处理）**：Redis 的键**没有应用命名空间前缀**（如限流键直接是 `verify:ip:0:0:0:0:0:0:0:1`）。本机 Redis 若与其它项目共用实例，存在键冲突风险；本次因测试累积把该 IP 的限流计数打到上限（值 11 > 上限 10），是靠手工删键恢复的。建议后续给 Redis 键加统一前缀（如 `campuslink:`），登记为待办。
+- v1.7（2026-09-11）——**CR-013：字段校验收紧 + dev 便利项；顺带修复注册链路缺陷**：
+  1. **学号限定 9 位数字**：`StudentId` 值对象加领域不变量、`VerifyStudentCommand` 加 `@Pattern`，非法输入返回 400 + 字段级提示（实测 7/8/10 位、含字母、含符号均被拒）；**姓名限定中文名或外文名**（中文 2~16 汉字可含 `·`，外文名字母起头可含空格/`-`/`'`/`.`）；`nickname` 仍为自由文本；
+  2. **dev 固定验证码 `123456`**：新增 `campuslink.captcha.fixed-code`，仅显式配置时生效，配置时启动打 WARN；未配置仍为随机 6 位。**刻意与 `CODE_SENDER_MODE` 解耦**，避免"日志模式"被隐式等同"弱口令"；
+  3. **dev-only 管理员种子账号**：`admin@campuslink.local`（`SUPERADMIN`、无学号、不走核验），与 bypass 同门控、幂等；`Account.provisioned(...)` 工厂 + `AccountConverter` 的 studentId 空值保护。实测：admin 登录 → `SUPERADMIN`，可导入名册（`inserted:1`）；**普通用户与匿名调用同一接口均 403/4002**；
+  4. **测试名册换为 9 位**：`249971346~249971349`（旧 7 位号会被格式校验挡下），文档已同步（AGENTS.md / backend README / 本文件）；
+  5. 🔴 **发现并修复注册链路缺陷（先于本次变更存在）**：`VerificationTicketStore` 的载荷是**加密后的学号**，而 `register` 直接把该**密文**当学号使用（缺 `codec.decrypt`）。后果有两层——① 落库的 `student_id_enc` 是"密文的密文"，`student_id_hash` 是 HMAC(密文)；② **因 AES-GCM 每次密文不同，`uk_users_student_id_hash` 唯一约束从未真正命中，即"一号一账号"实际失效**。已修为 `codec::decrypt`，并补回归单测 `AccountApplicationServiceRegisterTest`（断言 save 收到的聚合携带**明文**学号、名册占用用明文哈希）。修复后实测：同一学号换邮箱重复注册会撞唯一约束（修复前静默通过）；
+  6. **单测 14 → 36**：新增 `AccountCommandsValidationTest`（20 例：学号/姓名格式矩阵）、`StudentId` 格式用例、注册回归 1 例；
+  7. ⚠️ **更正 v1.6 的核查结论**：v1.6 记"落库核查确认邮箱以 `*_enc` + `*_hash` 存储、无明文"——该结论对邮箱成立，**但对学号不成立**（当时落库的是密文）。当时的冒烟只验证了链路返回 200，未校验持久化字段的**语义正确性**，故漏过该缺陷。这再次印证 W-05 所记的"无集成/冒烟测试"缺口：**只看响应码不足以判定链路正确**；
+  8. ⏳ **未解决的健壮性缺口（登记待办）**：重复学号现在会正确撞唯一约束，但抛出的是**未处理的 `DuplicateKeyException`**，经全局兜底返回 `9999 系统繁忙`，语义上应映射为明确的业务错误（如"该学籍已注册"）；依赖名册占用（`rosterGateway.occupy`）在 **bypass 模式下恒返回 true**、不做占用记录，故开发期无法用 bypass 预演该分支，需真实名册（B1/B2）或 DB 名册实现才能验证。
+- v1.6（2026-09-11）——**首次真机启动与联调，修复 2 个启动级缺陷**（缺陷修复，非基线变更）：
+  1. **`@MapperScan` 路径失效（阻断启动）**：`CampusLinkApplication` 仍写 `com.campuslink.module.*.mapper`（单段通配），而 ADR-012 重构已把 mapper 移到 `module/*/infrastructure/persistence/mapper`（多出 3 段），导致 `UserMapper` / `StudentRosterMapper` 未注册为 bean，应用启动即 `APPLICATION FAILED TO START`。修为 `com.campuslink.**.mapper`（与 AGENTS.md 约定一致），保留 `com.campuslink.common.audit`。**该缺陷自 2026-09-07 重构起即存在，但应用从未被启动过，故直到今天才暴露**；
+  2. **`/actuator/health` 恒为 DOWN（误导性信号）**：`MAIL_HOST` 为空但属性存在，Spring Boot 仍注册 `MailHealthIndicator` 并去连 SMTP，抛 `AuthenticationFailedException`，使健康检查整体 DOWN。而 dev 用 `CODE_SENDER_MODE=log` 根本不发信。已加 `management.health.mail.enabled: ${MAIL_HEALTH_ENABLED:false}`（切到 mail 模式时应置 true）。修复后 `/actuator/health` 返回 `UP`；
+  3. **联调结果**：`2023001/张三` 学籍核验 → 票据 → 验证码（日志模式）→ 注册（`id=1`、`verified=true`）→ 登录（JWT）→ `/users/me` 返回昵称，全链路经 Vite 5173 代理跑通；验证码重发限流按设计返回 `2002`/429；落库核查确认邮箱以 `*_enc` 密文 + `*_hash` HMAC 存储、无明文，注册写审计日志 1 条。
+  > **为什么测试没拦住**：`mvn verify` 的 14 个用例全是纯领域单测，无一加载完整 Spring 上下文，因此"能否启动"与"bean 是否齐全"完全不在测试覆盖内——这是 [W-05](../tailoring-waivers.md) 所指"无集成/冒烟测试"缺口的直接后果，也说明提测准入门该项不可省。
+- v1.5（2026-09-11）——**因 CR-011 / CR-012 同步状态，任务范围与完成情况零改动**：① 出口自查"CI 全绿"项由"从未运行过"改为"已具备判定条件"（`backend-ci` / `frontend-ci` 首跑均成功，[CR-011](../change-log.md)），并保留"静态扫描未接入"的限定；② 提测准入门现状由"6 项中 4 项未满足"改为"3 项未满足 + 1 项待联调验证"；③ 阻塞与依赖标题去掉"均未清零"，B3 标记闭环；④ 联调步骤改为本机 MySQL / Redis（不再引用 Docker compose 起栈），新增后端端口 8088 说明（[CR-012](../change-log.md)）。
 - v1.4（2026-09-11）——**编辑性修订，任务范围与完成情况零改动**（[CR-009](../change-log.md)）：① 头部"版本"字段长期停留在 v1.0、与变更记录（已到 v1.3）矛盾，本次校正；② 补手册 4.5 要求的"状态"字段；③ 上游依据去掉硬编码版本号（原写"技术方案 v0.2 / PRD v1.1"，技术方案实际已 v0.4）；④ T1 行标注 Spring Boot 3.2 → 4.1.1 升级事实；⑤ **出口自查补齐手册 3.4 要求但原先缺失的两项**——单测覆盖率门槛与静态扫描，均如实标注"当前不可执行"（`backend/pom.xml` 无 jacoco、CI 无远程），并标注提测准入门现状为 6 项中 4 项未满足，见 [W-05](../tailoring-waivers.md)；⑥ 头部补程序说明，指向 W-02 / W-04。
 - v1.3（2026-09-07）——**DDD 二次开发重构**（ADR-012）：auth / roster / user 合并为 `module/account` 限界上下文四层（domain 含聚合 Account + 值对象 EmailAddress/StudentId + 9 个端口 + 领域事件；application 用例编排 + Command；infrastructure 适配器含 RosterGateway bypass/DB 双策略与注册事件 AFTER_COMMIT 审计监听；web 契约不变）。旧包文件已备份至 `backend/.refactor-backup-auth-roster-user.zip` 后删除（**该 zip 是缺少版本控制的替代产物，远程与首次提交完成后应删除，见 [W-06](../tailoring-waivers.md)**）。`mvn verify` 14/14 全绿（+4 领域单测）。前端优化：Element Plus 按需自动引入（主包 1056KB→271KB，gzip 347→100KB）、`src/constants/boards.ts` 去重、`useCountdown` 组合式函数、`ApiError` 统一错误模型、requiresAuth 路由守卫、VITE_API_TARGET 代理端口可覆盖。
 - v1.2（2026-08-31）——技术栈升级（发起人决议）：JDK 17 → **21**，Spring Boot 3.2 → **4.1.1**（starter `web`→`webmvc`；MyBatis-Plus 改用官方 `mybatis-plus-spring-boot4-starter` 3.5.17，分页拦截器配套 `mybatis-plus-jsqlparser`；springdoc 3.1.0、jjwt 0.13.0、jsoup 1.23.2）。`mvn verify` 10/10 全绿，业务代码零改动兼容。

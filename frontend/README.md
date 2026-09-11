@@ -9,7 +9,7 @@ Campus-Link（重庆工程学院计算机专业学生交流论坛）Web 前端�
 
 ```bash
 npm install
-npm run dev        # http://localhost:5173，/api 代理到 http://localhost:8080
+npm run dev        # http://localhost:5173，/api 代理到 http://localhost:8088（可用 VITE_API_TARGET 覆盖）
 ```
 
 需要先启动 backend（见 backend/README.md），注册链路依赖学籍核验 + 验证码接口。

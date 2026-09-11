@@ -153,7 +153,7 @@ backend/（Spring Boot 4 + Maven）          frontend/（Vue 3 + Vite）
 - `notifications(user_id, is_read, created_at DESC)` — 通知未读数；
 - **`student_roster(student_id_hash)` UNIQUE** — 名册去重与核验查询；
 - **`users(student_id_hash)` UNIQUE** — 一个学号只能绑定一个账号；
-- 完整 DDL 在 `backend/sql/schema.sql`，开发阶段 Sprint 1 产出并评审。
+- 完整 DDL 以 **Flyway 版本化迁移**形式维护：`backend/src/main/resources/db/migration/V<n>__<描述>.sql`（起始基线 `V1__init_schema.sql`，`V2__seed_boards.sql` 为内置 6 版块参考数据），应用启动时自动执行并记录于 `flyway_schema_history`；**纯数据增删改**走 `backend/scripts/data/D<序号>__<描述>.py`（PyMySQL）。原 `backend/sql/` 目录已删除（[CR-014](../change-log.md)），历史由 git 承担——该变动同时消除了设计门纪要 **D-4**（"完整 DDL 在 `backend/sql/schema.sql`"与实际文件不符）所记录的路径漂移。
 
 ### 4.3 学籍核验设计（PRD F-ACC-004）
 
@@ -274,10 +274,11 @@ sequenceDiagram
 
 **与形态无关的固定项**
 
-- **容器化**：Docker Compose 编排 `nginx` / `backend` / `mysql` / `redis`（P1 增 `meilisearch`）；frontend 构建为静态产物由 Nginx 托管；
-- **CI/CD**：流水线 = 编译 → 静态检查 → 单元测试 → 构建镜像 → 部署 staging → 手动确认发布 prod；采用 GitHub Actions，工作流位于**根仓库** `.github/workflows/`（`backend-ci.yml` / `frontend-ci.yml`，以 `working-directory` 指向子目录 + `paths` 过滤触发）——**待根仓库配置远程后生效**（[CR-010](../change-log.md)），接入前以本地脚本执行同等步骤；
-- **分支策略**：按流程手册 4.4 节执行（`main` 受保护 + `feature/*`），CI 全绿方可合并；
-- **环境**：dev（本地）→ staging（预发，与生产同配置）→ prod（生产），test 并入 staging（ADR-008）。
+- **容器化**：Docker Compose 编排 `nginx` / `backend` / `mysql` / `redis`（P1 增 `meilisearch`）；frontend 构建为静态产物由 Nginx 托管。⚠️ **开发期例外**：本机原生 MySQL 8 + Redis 已占用 3306 / 6379，且 8080 被其它项目占用，故**开发期改用本机原生服务、后端默认端口 8088**，`docker-compose.dev.yml` 保留至发布阶段启用（[CR-012](../change-log.md)）。**部署形态本身（ADR-011）不受影响**，仍在阶段六启动前决策；
+- **CI/CD**：流水线 = 编译 → 静态检查 → 单元测试 → 构建镜像 → 部署 staging → 手动确认发布 prod；采用 GitHub Actions，工作流位于**根仓库** `.github/workflows/`（`backend-ci.yml` / `frontend-ci.yml`，以 `working-directory` 指向子目录 + `paths` 过滤触发）——✅ 已生效：远程就绪、两个工作流随首次推送**首跑成功**（[CR-011](../change-log.md)）。**静态扫描尚未接入**，故流水线中的"静态检查"环节目前缺失；
+- **分支策略**：按流程手册 4.4 节执行（`main` 受保护 + `feature/*`），CI 全绿方可合并。⚠️ 远程虽已就绪，但**分支保护规则与 PR 流程尚未配置**，该策略目前未实际生效；
+- **环境**：dev（本地）→ staging（预发，与生产同配置）→ prod（生产），test 并入 staging（ADR-008）；
+- **数据库变更管理（[CR-014](../change-log.md)）**：结构变更全部以 **Flyway 版本化迁移**表达（`backend/src/main/resources/db/migration/V<n>__<描述>.sql`），应用启动时自动执行、记录于 `flyway_schema_history`，**各环境执行同一套迁移**，不再依赖容器初始化脚本或人工执行 SQL（`docker-compose.dev.yml` 已移除 `./sql` 挂载）；纯数据增删改走 `backend/scripts/data/D<序号>__<描述>.py`（PyMySQL，默认 dry-run）。唯一的人工引导动作是 `CREATE DATABASE`（JDBC 连接的前提，不属迁移范围）。**回滚约束**：已 apply 的迁移不可修改，社区版无 undo，回滚通过新增前向迁移或人工回滚脚本实现。
 
 ## 9. 风险与待确认项
 
@@ -287,7 +288,7 @@ sequenceDiagram
 | 机审服务商选型与预算确认 | 待确认 | 产品 + 技术 | 开发启动前 |
 | ~~后端框架终稿~~ | — | — | **已定稿（ADR-003，Spring Boot）** |
 | UI 设计人力与 UI 稿产出（PRD 5.1 页面清单为输入） | 风险（遗留行动项） | 项目经理 | 开发并行补齐 |
-| 根仓库（monorepo）的远程托管与 CI 生效 | 待确认（阻塞项 B3） | 项目经理 | 开发启动前 |
+| ~~根仓库（monorepo）的远程托管与 CI 生效~~ | — | — | **✅ 已闭环（2026-09-11，CR-011）**：远程就绪、首次提交推送、两个 workflow 首跑成功；剩 `main` 分支保护与 PR 流程待配置 |
 | PRD Q2：注销内容匿名化细则的法务意见 | 待确认 | 产品 | 提测前 |
 | PRD Q6：热门排序权重参数 | 待确认 | 技术 | 试点期调优 |
 | **PRD Q7：学籍名册获取渠道与更新机制** | **待确认（阻塞）** | **产品（发起人）** | **Sprint 1 开始前** |

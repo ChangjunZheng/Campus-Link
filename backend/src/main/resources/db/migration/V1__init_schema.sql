@@ -1,13 +1,15 @@
--- Campus-Link 核心表 DDL（技术方案 v0.2 第 4 节）
--- MySQL 8.0 / utf8mb4 / 时间字段存 UTC（应用以 Instant 写入，连接时区 UTC）
--- 由 docker-compose.dev.yml 挂载到 /docker-entrypoint-initdb.d 首次启动自动执行；
--- 手动执行：mysql -h127.0.0.1 -ucampuslink -p < sql/01_schema.sql
-
-CREATE DATABASE IF NOT EXISTS campuslink DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
-USE campuslink;
+-- ============================================================================
+-- V1 · Campus-Link 初始表结构（基线）
+-- 依据：技术方案 §4 数据模型
+-- 约定：MySQL 8 / utf8mb4_0900_ai_ci / 时间字段存 UTC（应用以 Instant 写入，连接时区 UTC）
+--
+-- ⚠️ 本文件是 Flyway 版本化迁移，**一经执行不可修改**（内容被校验和锁定，
+--    改动会导致下次启动 Validate failed: checksum mismatch）。
+--    后续结构变更一律新增 V<n>__<描述>.sql，切勿编辑本文件。
+-- ============================================================================
 
 -- 账号表：email/phone/学号均为敏感信息，加密存储（AES-GCM），查询用 HMAC 哈希
-CREATE TABLE IF NOT EXISTS users (
+CREATE TABLE users (
     id              BIGINT AUTO_INCREMENT PRIMARY KEY,
     email_enc       VARCHAR(512) NULL COMMENT 'AES-GCM 加密邮箱',
     email_hash      CHAR(64)     NULL COMMENT 'HMAC-SHA256(邮箱小写)',
@@ -21,7 +23,7 @@ CREATE TABLE IF NOT EXISTS users (
     bio             VARCHAR(512) NULL,
     role            VARCHAR(16)  NOT NULL DEFAULT 'USER' COMMENT 'USER/OPS/SUPERADMIN',
     status          VARCHAR(16)  NOT NULL DEFAULT 'ACTIVE' COMMENT 'ACTIVE/BANNED/DEACTIVATED',
-    student_id_enc  VARCHAR(512) NULL COMMENT 'AES-GCM 加密学号',
+    student_id_enc  VARCHAR(512) NULL COMMENT 'AES-GCM 加密学号；运营/管理账号可空',
     student_id_hash CHAR(64)     NULL COMMENT 'HMAC-SHA256(学号)，一号一账号',
     verified        TINYINT(1)   NOT NULL DEFAULT 0 COMMENT '是否通过学籍核验',
     anonymized      TINYINT(1)   NOT NULL DEFAULT 0 COMMENT '注销匿名化标记',
@@ -34,7 +36,7 @@ CREATE TABLE IF NOT EXISTS users (
 ) ENGINE = InnoDB COMMENT = '账号';
 
 -- 学籍名册：学号只存 HMAC 哈希，不落明文（技术方案 4.3）；姓名明文用于容错比对，不对外暴露
-CREATE TABLE IF NOT EXISTS student_roster (
+CREATE TABLE student_roster (
     id              BIGINT AUTO_INCREMENT PRIMARY KEY,
     student_id_hash CHAR(64)     NOT NULL,
     name            VARCHAR(64)  NOT NULL,
@@ -48,8 +50,8 @@ CREATE TABLE IF NOT EXISTS student_roster (
     KEY idx_roster_used_user (used_user_id)
 ) ENGINE = InnoDB COMMENT = '学籍名册';
 
--- 版块：MVP 固定 6 个（种子数据见 02_seed_boards.sql）
-CREATE TABLE IF NOT EXISTS boards (
+-- 版块：MVP 固定 6 个（种子数据见 V2__seed_boards.sql）
+CREATE TABLE boards (
     id          BIGINT AUTO_INCREMENT PRIMARY KEY,
     code        VARCHAR(32)  NOT NULL COMMENT '路由标识，如 qna',
     name        VARCHAR(64)  NOT NULL,
@@ -63,7 +65,7 @@ CREATE TABLE IF NOT EXISTS boards (
 ) ENGINE = InnoDB COMMENT = '版块';
 
 -- 帖子：content_html 发布时由服务端渲染落库（ADR-005），请求时零渲染
-CREATE TABLE IF NOT EXISTS posts (
+CREATE TABLE posts (
     id                BIGINT AUTO_INCREMENT PRIMARY KEY,
     board_id          BIGINT        NOT NULL,
     author_id         BIGINT        NOT NULL,
@@ -90,7 +92,7 @@ CREATE TABLE IF NOT EXISTS posts (
     CONSTRAINT fk_posts_author FOREIGN KEY (author_id) REFERENCES users (id)
 ) ENGINE = InnoDB COMMENT = '帖子';
 
-CREATE TABLE IF NOT EXISTS tags (
+CREATE TABLE tags (
     id         BIGINT AUTO_INCREMENT PRIMARY KEY,
     name       VARCHAR(64) NOT NULL,
     use_count  INT         NOT NULL DEFAULT 0,
@@ -99,7 +101,7 @@ CREATE TABLE IF NOT EXISTS tags (
     UNIQUE KEY uk_tags_name (name)
 ) ENGINE = InnoDB COMMENT = '标签';
 
-CREATE TABLE IF NOT EXISTS post_tags (
+CREATE TABLE post_tags (
     post_id BIGINT NOT NULL,
     tag_id  BIGINT NOT NULL,
     PRIMARY KEY (post_id, tag_id),
@@ -108,7 +110,7 @@ CREATE TABLE IF NOT EXISTS post_tags (
 ) ENGINE = InnoDB COMMENT = '帖子-标签关联';
 
 -- 楼层回复：floor_no 按 post 内自增（发帖服务内分配）
-CREATE TABLE IF NOT EXISTS replies (
+CREATE TABLE replies (
     id              BIGINT AUTO_INCREMENT PRIMARY KEY,
     post_id         BIGINT      NOT NULL,
     author_id       BIGINT      NOT NULL,
@@ -128,7 +130,7 @@ CREATE TABLE IF NOT EXISTS replies (
 ) ENGINE = InnoDB COMMENT = '楼层回复';
 
 -- 点赞：唯一约束去重（帖子或回复）
-CREATE TABLE IF NOT EXISTS likes (
+CREATE TABLE likes (
     user_id     BIGINT      NOT NULL,
     target_type VARCHAR(16) NOT NULL COMMENT 'POST/REPLY',
     target_id   BIGINT      NOT NULL,
@@ -136,7 +138,7 @@ CREATE TABLE IF NOT EXISTS likes (
     PRIMARY KEY (user_id, target_type, target_id)
 ) ENGINE = InnoDB COMMENT = '点赞';
 
-CREATE TABLE IF NOT EXISTS favorites (
+CREATE TABLE favorites (
     user_id    BIGINT   NOT NULL,
     post_id    BIGINT   NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -144,7 +146,7 @@ CREATE TABLE IF NOT EXISTS favorites (
     CONSTRAINT fk_fav_post FOREIGN KEY (post_id) REFERENCES posts (id)
 ) ENGINE = InnoDB COMMENT = '收藏';
 
-CREATE TABLE IF NOT EXISTS notifications (
+CREATE TABLE notifications (
     id          BIGINT AUTO_INCREMENT PRIMARY KEY,
     user_id     BIGINT      NOT NULL COMMENT '接收人',
     type        VARCHAR(16) NOT NULL COMMENT 'reply/like/favorite/accept/quote',
@@ -157,7 +159,7 @@ CREATE TABLE IF NOT EXISTS notifications (
 ) ENGINE = InnoDB COMMENT = '站内通知';
 
 -- 举报工单：24h 同对象去重按 (reporter_id, target_type, target_id, created_at) 查询
-CREATE TABLE IF NOT EXISTS reports (
+CREATE TABLE reports (
     id           BIGINT AUTO_INCREMENT PRIMARY KEY,
     reporter_id  BIGINT        NOT NULL,
     target_type  VARCHAR(16)   NOT NULL COMMENT 'POST/REPLY/USER',
@@ -174,7 +176,7 @@ CREATE TABLE IF NOT EXISTS reports (
 ) ENGINE = InnoDB COMMENT = '举报工单';
 
 -- 审计日志：后台全操作（名册导入、内容处置等）留痕
-CREATE TABLE IF NOT EXISTS audit_logs (
+CREATE TABLE audit_logs (
     id          BIGINT AUTO_INCREMENT PRIMARY KEY,
     actor_id    BIGINT        NULL,
     action      VARCHAR(64)   NOT NULL,

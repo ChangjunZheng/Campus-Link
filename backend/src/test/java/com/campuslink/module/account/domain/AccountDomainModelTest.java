@@ -22,10 +22,21 @@ class AccountDomainModelTest {
     }
 
     @Test
-    @DisplayName("StudentId 值对象：trim 规范化")
+    @DisplayName("StudentId 值对象：trim 规范化，且必须为 9 位数字（CR-013）")
     void studentIdNormalized() {
-        assertThat(StudentId.of(" 2023001 ").value()).isEqualTo("2023001");
+        assertThat(StudentId.of(" 249971346 ").value()).isEqualTo("249971346");
         assertThatThrownBy(() -> StudentId.of(" ")).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("StudentId 值对象：非 9 位数字一律拒绝")
+    void studentIdRejectsWrongFormat() {
+        // 旧测试名册的 7 位学号、常见错位长度、含字母、含符号，都应被格式约束挡下
+        assertThatThrownBy(() -> StudentId.of("2023001")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> StudentId.of("24997134")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> StudentId.of("2499713460")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> StudentId.of("24997134a")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> StudentId.of("24997-1346")).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test

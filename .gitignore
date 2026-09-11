@@ -42,3 +42,7 @@ backend/.refactor-backup-*.zip
 # 前端 unplugin 自动生成的类型声明文件（非手写，重新生成即可）
 frontend/auto-imports.d.ts
 frontend/components.d.ts
+# 数据变更脚本（PyMySQL）的独立虚拟环境与字节码缓存；脚本与 requirements.txt 需入库
+backend/scripts/.venv/
+__pycache__/
+*.py[cod]

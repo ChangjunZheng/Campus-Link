@@ -20,11 +20,12 @@ import java.util.Optional;
 @ConditionalOnProperty(name = "campuslink.roster.bypass", havingValue = "true", matchIfMissing = true)
 public class InMemoryTestRosterGateway implements RosterGateway {
 
+    /** 测试名册：学号须为 9 位数字（CR-013 格式约束），否则会在入参校验阶段即被拒绝、到不了本网关 */
     private static final Map<String, String> TEST_ROSTER = Map.of(
-            "2023001", "张三",
-            "2023002", "李四",
-            "2023003", "王五",
-            "2024001", "赵六");
+            "249971346", "张三",
+            "249971347", "李四",
+            "249971348", "王五",
+            "249971349", "赵六");
 
     private final SensitiveCodec codec;
 

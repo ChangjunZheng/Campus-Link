@@ -65,6 +65,16 @@ public class Account {
                 role, status, verified, anonymized, deleteAt, createdAt, updatedAt);
     }
 
+    /**
+     * 工厂方法：预置管理员账号（开发期种子 / 运维初始化）。
+     * 管理员是运营或校方人员、不是学生，因此**无学号**、也不走学籍核验——
+     * 这是 {@link #registered} 之外唯一的建号入口，role 显式给定，不依赖注册链路。
+     */
+    public static Account provisioned(EmailAddress email, String nickname, AccountRole role) {
+        return new Account(null, email, null, nickname.trim(), null, null, null, null, null,
+                role, AccountStatus.ACTIVE, true, false, null, null, null);
+    }
+
     public boolean isActive() {
         return status == AccountStatus.ACTIVE;
     }

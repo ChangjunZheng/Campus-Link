@@ -70,6 +70,17 @@
       <scope>runtime</scope>
     </dependency>
 
+    <!-- 数据库结构变更（DDL）由 Flyway 版本化管理，迁移脚本见 src/main/resources/db/migration（CR-014） -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-flyway</artifactId>
+    </dependency>
+    <!-- Flyway 10+ 的数据库支持拆分为独立模块，MySQL 8 需显式引入 -->
+    <dependency>
+      <groupId>org.flywaydb</groupId>
+      <artifactId>flyway-mysql</artifactId>
+    </dependency>
+
     <dependency>
       <groupId>org.springdoc</groupId>
       <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>

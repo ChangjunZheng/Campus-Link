@@ -14,9 +14,9 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      // 开发环境代理到本地后端；后端端口可用 VITE_API_TARGET 覆盖（如 18080 避开本机 8080 占用）
+      // 开发环境代理到本地后端；后端默认端口 8088（CR-011），可用 VITE_API_TARGET 覆盖
       '/api': {
-        target: process.env.VITE_API_TARGET || 'http://localhost:8080',
+        target: process.env.VITE_API_TARGET || 'http://localhost:8088',
         changeOrigin: true,
       },
     },

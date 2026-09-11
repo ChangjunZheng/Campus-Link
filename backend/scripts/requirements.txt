@@ -1,0 +1,7 @@
+# Data-change script dependencies (backend/scripts).
+# NOTE: keep this file ASCII-only -- pip on Windows decodes requirement files
+#       with the system locale codec (GBK), so UTF-8 comments break the install
+#       with UnicodeDecodeError. Chinese notes live in scripts/README.md.
+#
+# Setup: python -m venv .venv && .venv/Scripts/pip install -r requirements.txt
+PyMySQL==1.2.0

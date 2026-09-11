@@ -1,9 +1,18 @@
 server:
-  port: 8080
+  # 默认 8088：本机 8080 已被另一项目的 Tomcat 占用（CR-011）；生产可用 SERVER_PORT 覆盖
+  port: ${SERVER_PORT:8088}
 
 spring:
   application:
     name: campus-link-backend
+  # 结构变更（DDL）由 Flyway 版本化管理，规范见 src/main/resources/db/migration/README.md（CR-014）
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    # 不对"非空但无 Flyway 历史"的库做静默认领：应显式 baseline 或清库重建，避免结构与迁移历史不一致
+    baseline-on-migrate: false
+    validate-on-migrate: true
+    clean-disabled: true
   datasource:
     url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:campuslink}?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC&useSSL=false&allowPublicKeyRetrieval=true
     username: ${DB_USER:campuslink}
@@ -45,6 +54,11 @@ management:
     web:
       exposure:
         include: health,info
+  health:
+    mail:
+      # dev 用 CODE_SENDER_MODE=log 不发信，但 spring.mail.host 存在会让 Boot 注册邮件健康指示器并去连 SMTP，
+      # 导致 /actuator/health 恒为 DOWN。默认关闭；切到 CODE_SENDER_MODE=mail 时应置 MAIL_HEALTH_ENABLED=true。
+      enabled: ${MAIL_HEALTH_ENABLED:false}
 
 campuslink:
   jwt:
@@ -59,6 +73,9 @@ campuslink:
     ttl-minutes: 5
     resend-interval-seconds: 60
     daily-limit: 10
+    # 固定验证码（开发联调便利，免去每次从后端日志捞码）：配置后所有验证码都等于该值。
+    # ⚠️ 等同于取消验证码防线——非本机环境必须留空（CAPTCHA_FIXED_CODE=），上线检查清单项。
+    fixed-code: ${CAPTCHA_FIXED_CODE:123456}
   verify:
     ip-hourly-limit: 10
     ticket-ttl-minutes: 5

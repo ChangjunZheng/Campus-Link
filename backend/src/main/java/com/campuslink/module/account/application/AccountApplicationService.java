@@ -70,7 +70,9 @@ public class AccountApplicationService {
         if (!captchaService.verify(email.value(), command.code())) {
             throw new ApiException(ResultCode.CAPTCHA_INVALID);
         }
+        // 票据载荷是加密后的学号（VerificationTicketStore 约定：不含明文学号），此处必须解密还原
         String studentId = ticketStore.consume(command.ticket())
+                .map(codec::decrypt)
                 .orElseThrow(() -> new ApiException(ResultCode.VERIFY_TICKET_INVALID));
         if (accountRepository.existsByEmailHash(codec.hash(email.value()))) {
             throw new ApiException(ResultCode.EMAIL_EXISTS);

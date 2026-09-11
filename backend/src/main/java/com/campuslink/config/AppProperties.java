@@ -32,6 +32,11 @@ public class AppProperties {
         private int ttlMinutes = 5;
         private int resendIntervalSeconds = 60;
         private int dailyLimit = 10;
+        /**
+         * 固定验证码（开发联调便利）：配置后所有验证码都为该值，**非本机环境必须留空**（上线检查清单项）。
+         * 刻意与 code-sender.mode 解耦，避免"日志模式"被隐式等同于"弱口令"。
+         */
+        private String fixedCode;
     }
 
     @Data

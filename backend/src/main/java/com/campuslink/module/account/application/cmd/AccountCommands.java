@@ -12,12 +12,18 @@ import jakarta.validation.constraints.Size;
  */
 public final class AccountCommands {
 
+    /** 姓名格式：中文名（2~16 个汉字，可含 ·/・ 分隔的复姓或少数民族名）或外文名（字母起头，可含空格 / - / ' / .） */
+    private static final String PERSON_NAME_PATTERN =
+            "^(?:[\\p{IsHan}]{2,16}(?:[\\u00B7\\u30FB][\\p{IsHan}]{1,16})?|[A-Za-z][A-Za-z .'\\-]{1,63})$";
+
     private AccountCommands() {
     }
 
     public record VerifyStudentCommand(
-            @NotBlank(message = "学号不能为空") String studentId,
-            @NotBlank(message = "姓名不能为空") String name) {
+            @NotBlank(message = "学号不能为空")
+            @Pattern(regexp = "\\d{9}", message = "学号必须为 9 位数字") String studentId,
+            @NotBlank(message = "姓名不能为空")
+            @Pattern(regexp = PERSON_NAME_PATTERN, message = "姓名须为符合规范的中文名或外文名") String name) {
     }
 
     public record VerifyStudentResult(String ticket) {

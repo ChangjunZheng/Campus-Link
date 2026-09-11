@@ -32,39 +32,52 @@ Campus-Link：面向**重庆工程学院计算机专业学生**的垂直交流�
 
 ## 常用命令
 
-**backend/**（先起依赖栈；构建需 **JDK 21**，本机先执行 `set "JAVA_HOME=D:\develop\Java\jdk-21"`）：
+> **开发期依赖栈用本机原生服务，不用 Docker**（[CR-011](docs/change-log.md)）；`docker-compose.dev.yml` 保留，发布阶段（阶段六）再启用。
+> Redis：`D:\Workspace\TechResources\Redis\Redis-8.6.2-Windows-x64-msys2-with-Service\redis-server.exe`（在自身目录下以 `redis.conf` 启动，监听 127.0.0.1:6379，无密码）。
+> MySQL：本机 `127.0.0.1:3306`，库 `campuslink`。**表结构不用手工导入**：Flyway 在后端启动时自动执行 `src/main/resources/db/migration/` 下未应用的迁移（[CR-014](docs/change-log.md)）。
+
+**backend/**（构建需 **JDK 21**，本机先执行 `set "JAVA_HOME=D:\develop\Java\jdk-21"`）：
 
 ```bash
-docker compose -f docker-compose.dev.yml up -d   # MySQL 8 + Redis 7，首次自动执行 sql/ 建表与种子
+# 仅首次需要：库必须先存在，Flyway 才能连上（建库属基础设施引导，不归 Flyway 管）
+mysql -h127.0.0.1 -uroot -p -e "CREATE DATABASE IF NOT EXISTS campuslink DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;"
+
 mvn verify            # 编译 + 单测（合码前必须全绿）
-mvn spring-boot:run   # 启动：8080，健康检查 /actuator/health，OpenAPI /api/docs
+mvn spring-boot:run   # 启动：8088（SERVER_PORT 可覆盖）；启动时 Flyway 自动迁移建表
+                      # 健康检查 /actuator/health，OpenAPI /api/docs
 ```
+
+> 新增表 / 改列 / 加索引：在 `src/main/resources/db/migration/` 新增 `V<n>__<描述>.sql`（**不要改已执行的迁移**），规范见该目录 `README.md`。
+> 纯数据增删：写 `backend/scripts/data/D<序号>__<描述>.py`（PyMySQL，默认 dry-run），规范见 `backend/scripts/README.md`。
 
 **frontend/**：
 
 ```bash
 npm install
-npm run dev           # 5173，/api 代理到 8080
+npm run dev           # 5173，/api 代理到 8088
 npm run build
 ```
 
-**联调测试（Sprint 1 账号链路冒烟）**：起栈后浏览器打开 `http://localhost:5173/login`，注册 Tab：学籍核验 → 邮箱验证码 → 注册 → 登录 → 顶栏出现昵称。验证码在 `CODE_SENDER_MODE=log` 模式下只打在 backend 日志（行格式 `[DEV] captcha for <邮箱> => <6位码>`）。
-**测试名册**（仅 `app.roster.bypass=true` 生效）：2023001/张三、2023002/李四、2023003/王五、2024001/赵六。
+**联调测试（Sprint 1 账号链路冒烟）**：浏览器打开 `http://localhost:5173/login`，注册 Tab：学籍核验 → 邮箱验证码 → 注册 → 登录 → 顶栏出现昵称。后端为 8088（见"常用命令"）。
+**验证码**：默认已固定为 `123456`（`campuslink.captcha.fixed-code`，启动时会打 WARN）；把该配置留空则恢复随机 6 位，随机码在 `CODE_SENDER_MODE=log` 下只打在 backend 日志（行格式 `[DEV] captcha for <邮箱> => <6位码>`）。
+**测试名册**（仅 `app.roster.bypass=true` 生效，学号须为 **9 位数字**）：`249971346/张三`、`249971347/李四`、`249971348/王五`、`249971349/赵六`。
+**管理员账号**（dev-only 种子，与 bypass 同门控，bypass=false 时不存在）：`admin@campuslink.local`，登录用任意邮箱方式 + 验证码（`123456`），角色 `SUPERADMIN`，可调用 `/api/v1/admin/roster/import`；该账号**无学号、不走学籍核验**。
+**入参格式**：学号 `^\d{9}$`；姓名限中文名（2~16 汉字，可含 `·`）或外文名（字母起头，可含空格 / `-` / `'` / `.`）。`nickname` 仍为 2~32 自由文本。
 
 ## 架构与编码约定
 
 - 后端为**模块化单体 + DDD 分层（ADR-012）**：限界上下文 `module/{account,board,...}`，上下文内四层 `domain`（聚合根/值对象/领域服务/端口 gateway/领域事件）→ `application`（用例编排 + Command）→ `infrastructure`（MyBatis-Plus 仓储、Redis、通知等适配器）→ `web`（Controller + VO）；依赖方向：web/infrastructure → application → domain，**端口定义在 domain、实现在 infrastructure（DIP）**；跨上下文只允许调用对方 application 服务；MyBatis-Plus Mapper 统一放 `*.mapper` 包（`@MapperScan("com.campuslink.**.mapper")`）；
-- 统一响应 `ApiResponse{code,message,data,traceId}`，错误码分段（1xxx 通用 / 2xxx 账号 / 21xx 学籍 / 3xxx 帖子 / 4xxx 权限 / 5xxx 安全机审），见技术方案第 5 节；DDL 变更走 `backend/sql/` 脚本，禁止 Hibernate 自动建表；
+- 统一响应 `ApiResponse{code,message,data,traceId}`，错误码分段（1xxx 通用 / 2xxx 账号 / 21xx 学籍 / 3xxx 帖子 / 4xxx 权限 / 5xxx 安全机审），见技术方案第 5 节；**数据库结构变更一律新增 Flyway 迁移** `src/main/resources/db/migration/V<n>__<描述>.sql`（**已执行的迁移不可修改**，回滚靠新增前向迁移，规范见该目录 README），**纯数据增删走** `backend/scripts/data/D<序号>__<描述>.py`（PyMySQL，默认 dry-run）；禁止 Hibernate 自动建表；
 - **敏感信息**（邮箱/手机号/学号）：明文一律 AES-GCM 加密存 `*_enc`，等值查询用 HMAC 哈希 `*_hash`；任何接口不得返回 `*_enc` / `*_hash`；密钥只从环境变量读取（`APP_HASH_KEY` / `APP_CRYPT_KEY`），**源码、示例、测试不得写入可用凭据字面量**；
-- **学籍核验**：三种失败（学号不存在/姓名不匹配/已注册）统一提示，防名册枚举；`app.roster.bypass` 仅限开发联调，**生产必须为 false**（上线检查清单项）；
+- **学籍核验**：学号须 9 位数字、姓名须为中文名或外文名格式（`VerifyStudentCommand` 校验 + `StudentId` 值对象不变量）；三种失败（学号不存在/姓名不匹配/已注册）统一提示，防名册枚举；`app.roster.bypass` 仅限开发联调，**生产必须为 false**（上线检查清单项）；
 - **Markdown 渲染唯一出口** `common/markdown/MarkdownRenderer`（flexmark + jsoup 白名单）；flexmark 扩展须**同时注册到 Parser 与 HtmlRenderer**，否则节点解析成功但渲染为空；代码高亮由前端 highlight.js 完成；任何渲染改动必须保持 `MarkdownRendererTest` 全绿；
 - 前端页面按 PRD 5.1 清单实现；**Element Plus 按需自动引入**（unplugin-auto-import / unplugin-vue-components，勿回退全量引入）；API 统一走 `src/api/client.ts`（`ApiError` + JWT 注入 + 后端错误消息直接透出给 UI）；可复用逻辑放 `src/composables/`，版块等共享常量放 `src/constants/`；
 
 ## 测试约定
 
 - **单测**：`mvn verify` 必须全绿；`MarkdownRendererTest` 的 6 个 XSS 回归用例是论坛安全生命线，渲染/白名单相关改动必须先补用例再改实现；
-- **联调冒烟**：新链路合入前必须真实起栈（Docker + 后端 + 前端）并**用浏览器打开 `http://localhost:5173` 实测**，不能只依赖单测；
-- 数据库结构变更需同步 `backend/sql/01_schema.sql`（开发期可重建容器卷）。
+- **联调冒烟**：新链路合入前必须真实起栈（本机原生 MySQL / Redis + 后端 + 前端，见"常用命令"）并**用浏览器打开 `http://localhost:5173` 实测**，不能只依赖单测；
+- **数据库结构变更必须随附新的 Flyway 迁移** `db/migration/V<n>__<描述>.sql`，不得手工改库、不得依赖 Hibernate 自动建表；`mvn verify` 不校验迁移可执行性（无集成测试），故结构变更后须真实启动一次确认迁移成功。
 
 ## 文档与流程约定
 
@@ -79,4 +92,4 @@ npm run build
 
 - **不自动 git commit / push**；提交前先展示变更摘要；commit message 用简洁英文；项目为单仓库（monorepo），统一在根目录操作；
 - 删除文件/目录、修改 `.env`/密钥/证书、`git push`/`rebase`/`reset --hard`、公开发布：必须先征得用户同意；
-- 生产环境红线：`app.roster.bypass=false`、JWT 与加密密钥全部覆盖默认值、名册导入与内容处置必须写审计日志、机审降级开关（fail-closed）不得改为跳过审核。
+- 生产环境红线：`app.roster.bypass=false`、**`campuslink.captcha.fixed-code` 必须留空**（固定验证码等同于取消验证码防线）、JWT 与加密密钥全部覆盖默认值、名册导入与内容处置必须写审计日志、机审降级开关（fail-closed）不得改为跳过审核。

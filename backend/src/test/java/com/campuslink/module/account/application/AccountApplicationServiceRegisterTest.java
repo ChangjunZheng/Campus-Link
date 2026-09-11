@@ -1,0 +1,96 @@
+package com.campuslink.module.account.application;
+
+import com.campuslink.config.AppProperties;
+import com.campuslink.module.account.application.cmd.AccountCommands.LoginResult;
+import com.campuslink.module.account.application.cmd.AccountCommands.RegisterCommand;
+import com.campuslink.module.account.domain.gateway.AccountRepository;
+import com.campuslink.module.account.domain.gateway.RateLimitGateway;
+import com.campuslink.module.account.domain.gateway.RosterGateway;
+import com.campuslink.module.account.domain.gateway.SensitiveCodec;
+import com.campuslink.module.account.domain.gateway.TokenIssuer;
+import com.campuslink.module.account.domain.gateway.VerificationTicketStore;
+import com.campuslink.module.account.domain.model.Account;
+import com.campuslink.module.account.domain.service.StudentVerificationService;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
+
+import java.util.Optional;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
+
+/**
+ * 注册用例回归单测：票据载荷是加密学号，注册必须解密后再建号。
+ *
+ * <p>回归背景：此前 register 直接把票据里的**密文**当学号使用，落库的 student_id 是密文而非真实学号；
+ * 又因 AES-GCM 每次密文不同，"一号一账号"的 student_id_hash 唯一约束从未真正生效。
+ * 该缺陷在入参校验放宽时被掩盖，加上学号 9 位格式约束后才暴露（见 CR-013）。
+ */
+@ExtendWith(MockitoExtension.class)
+class AccountApplicationServiceRegisterTest {
+
+    private static final String PLAIN_STUDENT_ID = "249971346";
+    private static final String ENCRYPTED_STUDENT_ID = "ENC(" + PLAIN_STUDENT_ID + ")";
+
+    @Mock
+    private StudentVerificationService verificationService;
+    @Mock
+    private AccountRepository accountRepository;
+    @Mock
+    private RosterGateway rosterGateway;
+    @Mock
+    private VerificationTicketStore ticketStore;
+    @Mock
+    private CaptchaService captchaService;
+    @Mock
+    private SensitiveCodec codec;
+    @Mock
+    private TokenIssuer tokenIssuer;
+    @Mock
+    private RateLimitGateway rateLimitGateway;
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
+
+    private AccountApplicationService service;
+
+    @BeforeEach
+    void setUp() {
+        service = new AccountApplicationService(
+                verificationService, accountRepository, rosterGateway, ticketStore, captchaService,
+                codec, tokenIssuer, rateLimitGateway, new AppProperties(), eventPublisher);
+    }
+
+    @Test
+    @DisplayName("注册：票据中的加密学号必须解密后落库，不得把密文当学号")
+    void registerPersistsPlainStudentIdFromEncryptedTicket() {
+        when(codec.decrypt(ENCRYPTED_STUDENT_ID)).thenReturn(PLAIN_STUDENT_ID);
+        when(codec.hash(anyString())).thenAnswer(inv -> "H(" + inv.getArgument(0) + ")");
+        when(ticketStore.consume("ticket-1")).thenReturn(Optional.of(ENCRYPTED_STUDENT_ID));
+        when(captchaService.verify(anyString(), anyString())).thenReturn(true);
+        when(accountRepository.existsByEmailHash(anyString())).thenReturn(false);
+        when(accountRepository.save(any(Account.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(rosterGateway.occupy(anyString(), any())).thenReturn(true);
+        when(tokenIssuer.issue(any(), anyString())).thenReturn("jwt-token");
+        when(tokenIssuer.ttlSeconds()).thenReturn(604800L);
+
+        LoginResult result = service.register(
+                new RegisterCommand("ticket-1", "someone@example.com", "123456", "张三"));
+
+        ArgumentCaptor<Account> saved = ArgumentCaptor.forClass(Account.class);
+        org.mockito.Mockito.verify(accountRepository).save(saved.capture());
+        assertThat(saved.getValue().getStudentId().value()).isEqualTo(PLAIN_STUDENT_ID);
+
+        // 占用名册用的是真实学号的哈希，而非密文的哈希
+        org.mockito.Mockito.verify(rosterGateway).occupy(eq("H(" + PLAIN_STUDENT_ID + ")"), any());
+        assertThat(result.account().getStudentId().value()).isEqualTo(PLAIN_STUDENT_ID);
+    }
+}

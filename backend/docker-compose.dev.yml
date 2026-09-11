@@ -11,8 +11,10 @@ services:
     ports:
       - "33061:3306" # 本机 3306 已被本地 MySQL 占用，映射到 33061；后端经 DB_PORT=33061 连接
     volumes:
+      # 仅持久化数据目录。**不再挂载 ./sql 到 /docker-entrypoint-initdb.d**：
+      # 结构变更统一由 Flyway 迁移（后端启动时执行，见 src/main/resources/db/migration，CR-014）。
+      # 若在此处执行建表 SQL，会绕过 Flyway 历史，导致 validate 失败。
       - mysql-data:/var/lib/mysql
-      - ./sql:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot123"]
       interval: 5s

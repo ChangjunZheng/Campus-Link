@@ -30,8 +30,11 @@ public final class AccountConverter {
         d.setRole(account.getRole().name());
         d.setStatus(account.getStatus().name());
         d.setVerified(account.isVerified());
-        d.setStudentIdEnc(codec.encrypt(account.getStudentId().value()));
-        d.setStudentIdHash(codec.hash(account.getStudentId().value()));
+        // 管理员等非学生账号无学号（users.student_id_* 可空，唯一索引允许多 NULL）
+        if (account.getStudentId() != null) {
+            d.setStudentIdEnc(codec.encrypt(account.getStudentId().value()));
+            d.setStudentIdHash(codec.hash(account.getStudentId().value()));
+        }
         d.setAnonymized(account.isAnonymized());
         d.setDeleteAt(account.getDeleteAt());
         d.setCreatedAt(account.getCreatedAt());
@@ -43,7 +46,7 @@ public final class AccountConverter {
         return Account.rehydrate(
                 d.getId(),
                 EmailAddress.of(codec.decrypt(d.getEmailEnc())),
-                StudentId.of(codec.decrypt(d.getStudentIdEnc())),
+                d.getStudentIdEnc() == null ? null : StudentId.of(codec.decrypt(d.getStudentIdEnc())),
                 d.getNickname(),
                 d.getAvatarUrl(),
                 d.getSchool(),

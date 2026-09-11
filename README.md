@@ -13,7 +13,7 @@
 **先看这三个**
 
 - [**下一步行动清单**](docs/next-steps.md) — 阻塞项 / 并行项 / Sprint 拆解，"现在该干什么"
-- [**变更台账**](docs/change-log.md) — 全部基线级变更与影响评估（CR-001~CR-010）
+- [**变更台账**](docs/change-log.md) — 全部基线级变更与影响评估（CR-001~CR-012）
 - [**裁剪与让步放行记录**](docs/tailoring-waivers.md) — 6 项流程偏离，**待发起人签署**
 
 **规范与索引**
@@ -53,14 +53,14 @@
 - `backend/` — 服务端代码（DDL、公共层、Markdown 渲染、账号上下文 `module/account` DDD 四层，见[技术方案 2.4](docs/design/tech-design.md)）
 - `frontend/` — Web 前端代码（Vue 3 + Vite + Element Plus，注册 / 登录页可用）
 
-> CI 工作流位于根目录 `.github/workflows/`（`backend-ci.yml` / `frontend-ci.yml`）。⚠️ 仓库目前**尚无提交、未配置远程托管**（见 [W-06](docs/tailoring-waivers.md)）。当前项目资产**无任何副本**，且变更台账与评审纪要的日期暂无 git 凭证可交叉验证。这是当前最高优先级风险。
+> CI 工作流位于根目录 `.github/workflows/`（`backend-ci.yml` / `frontend-ci.yml`）。✅ **仓库已配置远程** `https://github.com/Epoch-1483/Campus-Link`，`main` 跟踪 `origin/main`，首次提交 `837a22f` 已推送，两个工作流均已在 GitHub Actions **首次运行成功**（原"零提交、无远程、无备份"风险已于 2026-09-11 闭环，见 [CR-011](docs/change-log.md)）。尚未配置的是 `main` 分支保护与 PR 流程。
 
 ## 当前状态
 
 - [x] 阶段一 · 立项启动 — 🟡 **有条件通过**（2026-08-30 发起人单人简化评审）；定位为计算机专业学生交流论坛，后收敛为单校范围
 - [x] 阶段二 · 需求 — 🟡 **有条件通过**；PRD 基线（单校范围 + 学籍核验升 P0），**四方检查清单 0/9 勾选**
 - [x] 阶段三 · 设计 — 🟡 **有条件通过**；技术方案 v0.1 经评审，**v0.3 / v0.4（含已落地的 DDD 重构）未评审**；UI 稿未产出
-- [ ] 阶段四 · 开发 — **Sprint 1 完成（T1~T9）**；提测准入门 3 项硬指标当前不可执行（覆盖率 / CI / Code Review，见 [W-05](docs/tailoring-waivers.md)）
+- [ ] 阶段四 · 开发 — **Sprint 1 完成（T1~T9）**；提测准入门 6 项出口标准中 3 项未满足（单测覆盖率无插件、静态扫描未接入、Code Review 未闭环；**CI 已可真实判定**，见 [W-05](docs/tailoring-waivers.md)）
 - [ ] 阶段五 · 测试
 - [ ] 阶段六 · 发布 — 部署形态决策点（ADR-011）在本阶段启动前
 - [ ] 阶段七 · 运维与收尾
@@ -74,4 +74,4 @@
 3. 学籍核验方式 = **学号 + 姓名比对**（名册预置），F-ACC-004 升为 P0（CR-003）；
 4. 部署形态**挂起**，阶段六启动前决策（CR-005）。
 
-四项决议的完整影响评估见[变更台账](docs/change-log.md)。后续另有 CR-006（开发节奏 6 → 8 周）、CR-007（JDK 21 + Boot 4.1）、CR-008（账号上下文 DDD 重构）、CR-009（治理记录补录）、CR-010（三仓库 → 根目录 monorepo）。
+四项决议的完整影响评估见[变更台账](docs/change-log.md)。后续另有 CR-006（开发节奏 6 → 8 周）、CR-007（JDK 21 + Boot 4.1）、CR-008（账号上下文 DDD 重构）、CR-009（治理记录补录）、CR-010（三仓库 → 根目录 monorepo）、CR-011（版本控制闭环）、CR-012（开发期环境改本机 MySQL/Redis、后端端口 8088）。
