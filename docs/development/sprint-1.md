@@ -2,7 +2,7 @@
 
 | 文档信息 | 内容 |
 |---------|------|
-| 版本 | v1.8 |
+| 版本 | v1.9 |
 | 状态 | 已执行（出口自查部分未闭环） |
 | 维护人 | 技术负责人（发起人兼任） |
 | 关联阶段 | 开发（阶段四） |
@@ -69,6 +69,11 @@
 
 ## 变更记录
 
+- v1.9（2026-09-11）——**CR-015：Redis 键统一加命名空间前缀**（关闭 v1.8 第 7 条登记的待办）：
+  1. 新增 `common/redis/RedisKeys`（`PREFIX = "campuslink:"`、`of(logicalKey)`），三个适配器 `RedisCaptchaStore` / `RedisTicketStore` / `RedisRateLimitAdapter` 全部改为经它生成键；**前缀只在基础设施层补**，应用层继续只表达逻辑键（`verify:ip:<ip>`），未把 Redis 命名知识泄漏上去；
+  2. 新增 `RedisKeyNamespaceTest`（4 例，Mockito 断言实际键名）防止后续适配器漏加前缀；
+  3. ✅ **实测**：旧裸键名（`verify:ip:...`、`captcha:code:...`）`exists=0`，新键 `campuslink:*` 正常；并发现一个改造前残留的裸 `verify:ip:` 键（value=1、TTL 2833s）已手工清理；账号链路（核验 → 注册含票据消费 → 登录 → admin 登录）全绿，无回归。单测 36 → **40**；
+  4. 说明：受影响的键**全是带 TTL 的临时键**（限流 1h / 验证码 5min / 票据 5min），故**无需数据迁移**，但改造瞬间在途的旧键会变成孤儿直到 TTL 到期。前缀取**固定常量**而非配置项，避免各环境键名漂移。
 - v1.8（2026-09-11）——**CR-014：数据库变更管理改为 Flyway（DDL）+ PyMySQL（数据）**：
   1. **接入 Flyway**：`spring-boot-starter-flyway` + `flyway-mysql`（Boot 4.1.1 管理 Flyway **12.4.0**，本机仓库已缓存、可离线构建）；配置 `spring.flyway`（`locations=classpath:db/migration`、`baseline-on-migrate=false`、`clean-disabled=true`）。**实测社区版对 MySQL 8 可用**；
   2. **迁移脚本**：`backend/sql/01_schema.sql` → `V1__init_schema.sql`（12 张表，去掉 `CREATE DATABASE`/`USE`，并移除 `IF NOT EXISTS`——迁移应失败得响亮）；`02_seed_boards.sql` → `V2__seed_boards.sql`（6 版块，按"参考数据随 schema 版本化"处理）。`backend/sql/` **已删除**（内容与 git 历史双重可追溯）；

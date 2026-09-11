@@ -71,6 +71,7 @@ npm run build
 - **敏感信息**（邮箱/手机号/学号）：明文一律 AES-GCM 加密存 `*_enc`，等值查询用 HMAC 哈希 `*_hash`；任何接口不得返回 `*_enc` / `*_hash`；密钥只从环境变量读取（`APP_HASH_KEY` / `APP_CRYPT_KEY`），**源码、示例、测试不得写入可用凭据字面量**；
 - **学籍核验**：学号须 9 位数字、姓名须为中文名或外文名格式（`VerifyStudentCommand` 校验 + `StudentId` 值对象不变量）；三种失败（学号不存在/姓名不匹配/已注册）统一提示，防名册枚举；`app.roster.bypass` 仅限开发联调，**生产必须为 false**（上线检查清单项）；
 - **Markdown 渲染唯一出口** `common/markdown/MarkdownRenderer`（flexmark + jsoup 白名单）；flexmark 扩展须**同时注册到 Parser 与 HtmlRenderer**，否则节点解析成功但渲染为空；代码高亮由前端 highlight.js 完成；任何渲染改动必须保持 `MarkdownRendererTest` 全绿；
+- **Redis 键命名**：所有键必须带应用命名空间前缀（`common/redis/RedisKeys.of(...)`，前缀常量 `campuslink:`）——本机 / 共享实例上常有多个应用共用同一 Redis，裸键名会冲突且无法按应用清理；**前缀只在 infrastructure 适配器补**，应用层只传逻辑键（如 `verify:ip:<ip>`），不要把 Redis 命名知识带进应用层；新增适配器须走 `RedisKeys`（`RedisKeyNamespaceTest` 现有 3 个适配器的断言，无编译期强制）；
 - 前端页面按 PRD 5.1 清单实现；**Element Plus 按需自动引入**（unplugin-auto-import / unplugin-vue-components，勿回退全量引入）；API 统一走 `src/api/client.ts`（`ApiError` + JWT 注入 + 后端错误消息直接透出给 UI）；可复用逻辑放 `src/composables/`，版块等共享常量放 `src/constants/`；
 
 ## 测试约定
