@@ -9,6 +9,7 @@ import com.campuslink.module.account.application.cmd.AccountCommands.RegisterCom
 import com.campuslink.module.account.application.cmd.AccountCommands.VerifyStudentCommand;
 import com.campuslink.module.account.application.cmd.AccountCommands.VerifyStudentResult;
 import com.campuslink.module.account.domain.event.AccountRegisteredEvent;
+import com.campuslink.module.account.domain.exception.AccountConflictException;
 import com.campuslink.module.account.domain.gateway.AccountRepository;
 import com.campuslink.module.account.domain.gateway.RateLimitGateway;
 import com.campuslink.module.account.domain.gateway.RosterGateway;
@@ -78,7 +79,16 @@ public class AccountApplicationService {
             throw new ApiException(ResultCode.EMAIL_EXISTS);
         }
 
-        Account account = accountRepository.save(Account.registered(email, StudentId.of(studentId), command.nickname()));
+        Account account;
+        try {
+            account = accountRepository.save(Account.registered(email, StudentId.of(studentId), command.nickname()));
+        } catch (AccountConflictException e) {
+            // 邮箱冲突可明确提示（邮箱非名册信息）；学号冲突必须与其它核验失败**同提示**，
+            // 否则可据提示差异枚举出"哪些学号在名册中且已被占用"（PRD F-ACC-004 防名册枚举）
+            throw new ApiException(e.field() == AccountConflictException.Field.EMAIL
+                    ? ResultCode.EMAIL_EXISTS
+                    : ResultCode.STUDENT_VERIFY_FAILED);
+        }
         if (!rosterGateway.occupy(codec.hash(studentId), account.getId())) {
             // 并发注册占用冲突：抛出使整个事务回滚（含刚插入的账号）
             throw new ApiException(ResultCode.STUDENT_VERIFY_FAILED);

@@ -2,7 +2,7 @@
 
 | 文档信息 | 内容 |
 |---------|------|
-| 版本 | v1.9 |
+| 版本 | v1.10 |
 | 状态 | 已执行（出口自查部分未闭环） |
 | 维护人 | 技术负责人（发起人兼任） |
 | 关联阶段 | 开发（阶段四） |
@@ -68,6 +68,14 @@
 **验证码**：默认固定 `123456`（`campuslink.captcha.fixed-code`）；留空则恢复随机 6 位并只打日志。
 
 ## 变更记录
+
+- v1.10（2026-09-11）——**CR-016：唯一键冲突翻译为业务错误**（关闭 v1.7 第 8 条登记的待办）：
+  1. 新增领域异常 `AccountConflictException`（`Field{EMAIL, STUDENT_ID}`）；**`AccountRepository.save` 端口契约显式化**——适配器负责把数据库唯一键冲突翻译为领域异常，应用层不感知 JDBC / MyBatis 异常类型（保持 DIP）；
+  2. `AccountRepositoryImpl` 按唯一索引名（`uk_users_student_id_hash` / `uk_users_email_hash`）识别冲突字段；**未识别的约束原样抛出**，不猜测业务语义；
+  3. `register` 映射：**学号冲突 → `2101`（与其它核验失败同码同提示）**、邮箱冲突 → `2004`；
+  4. 🔴 **更正 v1.7 第 8 条的表述**：该处写"应映射为'该学籍已注册'"——**这是错的**。PRD F-ACC-004 要求"学号不存在 / 姓名不匹配 / 学号已注册"返回**同一提示**；若为重复学号单独提示"已注册"，等于可据提示差异枚举出哪些学号在名册中且被占用。故改为统一 `2101`，仅邮箱保留可区分提示（邮箱非名册数据）；
+  5. ✅ **实测**：重复学号注册由 `500/9999 系统繁忙` 变为 `400/2101 学籍信息校验未通过`；日志无 `unhandled exception`；事务回滚干净（冲突未留孤儿行，`users` 表计数不变）；未占用学号正常注册成功（`id=6`）；
+  6. **单测 40 → 45**：新增应用层映射 2 例（`AccountApplicationServiceRegisterTest`）+ 适配器翻译 3 例（`AccountRepositoryImplConflictTest`，含"未识别约束原样抛出"）。
 
 - v1.9（2026-09-11）——**CR-015：Redis 键统一加命名空间前缀**（关闭 v1.8 第 7 条登记的待办）：
   1. 新增 `common/redis/RedisKeys`（`PREFIX = "campuslink:"`、`of(logicalKey)`），三个适配器 `RedisCaptchaStore` / `RedisTicketStore` / `RedisRateLimitAdapter` 全部改为经它生成键；**前缀只在基础设施层补**，应用层继续只表达逻辑键（`verify:ip:<ip>`），未把 Redis 命名知识泄漏上去；

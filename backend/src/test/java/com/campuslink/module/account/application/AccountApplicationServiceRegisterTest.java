@@ -1,8 +1,11 @@
 package com.campuslink.module.account.application;
 
+import com.campuslink.common.exception.ApiException;
+import com.campuslink.common.result.ResultCode;
 import com.campuslink.config.AppProperties;
 import com.campuslink.module.account.application.cmd.AccountCommands.LoginResult;
 import com.campuslink.module.account.application.cmd.AccountCommands.RegisterCommand;
+import com.campuslink.module.account.domain.exception.AccountConflictException;
 import com.campuslink.module.account.domain.gateway.AccountRepository;
 import com.campuslink.module.account.domain.gateway.RateLimitGateway;
 import com.campuslink.module.account.domain.gateway.RosterGateway;
@@ -23,6 +26,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -92,5 +96,40 @@ class AccountApplicationServiceRegisterTest {
         // 占用名册用的是真实学号的哈希，而非密文的哈希
         org.mockito.Mockito.verify(rosterGateway).occupy(eq("H(" + PLAIN_STUDENT_ID + ")"), any());
         assertThat(result.account().getStudentId().value()).isEqualTo(PLAIN_STUDENT_ID);
+    }
+
+    @Test
+    @DisplayName("注册：学号唯一键冲突 -> 统一为学籍核验失败提示（防名册枚举），不得返回 9999")
+    void studentIdConflictMapsToUnifiedVerificationFailure() {
+        stubReachingSave();
+        when(accountRepository.save(any(Account.class))).thenThrow(
+                new AccountConflictException(AccountConflictException.Field.STUDENT_ID, "学号已被占用", null));
+
+        assertThatExceptionOfType(ApiException.class)
+                .isThrownBy(() -> service.register(
+                        new RegisterCommand("ticket-1", "someone@example.com", "123456", "张三")))
+                .satisfies(e -> assertThat(e.getCode()).isEqualTo(ResultCode.STUDENT_VERIFY_FAILED));
+    }
+
+    @Test
+    @DisplayName("注册：邮箱唯一键冲突 -> 明确提示邮箱已注册")
+    void emailConflictMapsToEmailExists() {
+        stubReachingSave();
+        when(accountRepository.save(any(Account.class))).thenThrow(
+                new AccountConflictException(AccountConflictException.Field.EMAIL, "邮箱已被占用", null));
+
+        assertThatExceptionOfType(ApiException.class)
+                .isThrownBy(() -> service.register(
+                        new RegisterCommand("ticket-1", "someone@example.com", "123456", "张三")))
+                .satisfies(e -> assertThat(e.getCode()).isEqualTo(ResultCode.EMAIL_EXISTS));
+    }
+
+    /** 桩到 save 之前所需的全部依赖（两个冲突用例共用） */
+    private void stubReachingSave() {
+        when(codec.decrypt(ENCRYPTED_STUDENT_ID)).thenReturn(PLAIN_STUDENT_ID);
+        when(codec.hash(anyString())).thenAnswer(inv -> "H(" + inv.getArgument(0) + ")");
+        when(ticketStore.consume("ticket-1")).thenReturn(Optional.of(ENCRYPTED_STUDENT_ID));
+        when(captchaService.verify(anyString(), anyString())).thenReturn(true);
+        when(accountRepository.existsByEmailHash(anyString())).thenReturn(false);
     }
 }
