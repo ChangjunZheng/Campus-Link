@@ -6,6 +6,7 @@ import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.domain.JavaCodeUnit;
 import com.tngtech.archunit.core.domain.JavaMethod;
+import com.tngtech.archunit.core.domain.JavaMethodCall;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 import org.junit.jupiter.api.BeforeAll;
@@ -30,8 +31,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  * 如 {@code domain.model} 与 {@code PageResult}）、<b>R-3</b>（domain 只依赖 JDK + lombok + {@code common}）。
  *
  * <p>⚠️ 覆盖边界：本测试只强制**结构约束**，不校验语义（跨上下文调用是否合理、角色模型是否恰当仍靠评审）；
- * 且 {@code SecurityConfig} 仍为 {@code permitAll()}——N-4 闭环的是"漏写鉴权静默变公开"，
- * **不是**框架级 URL 拦截。
+ * 路径级拦截自 CR-031 起由 {@code EndpointAuthorizationManager} 按端点注解执行（G8 守其接线），
+ * 但框架**只区分"登录 / 未登录"**——角色与资源级授权（如"仅作者可删"）仍归业务代码。
  */
 class ArchitectureGuardTest {
 
@@ -55,6 +56,8 @@ class ArchitectureGuardTest {
     private static final String SECURITY_REQUIREMENT = "io.swagger.v3.oas.annotations.security.SecurityRequirement";
     private static final String CURRENT_USER = "com.campuslink.common.web.CurrentUser";
     private static final String BASE_MAPPER = "com.baomidou.mybatisplus.core.mapper.BaseMapper";
+    private static final String SECURITY_CONFIG = "com.campuslink.config.SecurityConfig";
+    private static final String ENDPOINT_AUTHORIZATION_MANAGER = "com.campuslink.security.EndpointAuthorizationManager";
 
     private static final Set<String> MAPPING_ANNOTATIONS = Set.of(
             "org.springframework.web.bind.annotation.GetMapping",
@@ -252,6 +255,34 @@ class ArchitectureGuardTest {
             }
         }
         assertNoViolations("G7 受保护端点的运行时鉴权", violations);
+    }
+
+    @Test
+    @DisplayName("G8 CR-031：SecurityConfig 必须依赖 EndpointAuthorizationManager，且不得再调 permitAll（路径级鉴权不被摘除）")
+    void securityConfigMustEnforcePathAuthorization() {
+        Set<String> violations = new LinkedHashSet<>();
+        JavaClass securityConfig = classes.stream()
+                .filter(candidate -> SECURITY_CONFIG.equals(candidate.getName()))
+                .findFirst().orElse(null);
+        if (securityConfig == null) {
+            violations.add("未导入 %s——本规则失去对象".formatted(SECURITY_CONFIG));
+        } else {
+            boolean wired = securityConfig.getDirectDependenciesFromSelf().stream()
+                    .anyMatch(dependency -> ENDPOINT_AUTHORIZATION_MANAGER.equals(dependency.getTargetClass().getName()));
+            if (!wired) {
+                violations.add("SecurityConfig 未依赖 EndpointAuthorizationManager——路径级鉴权被摘除后全部端点一律放行，"
+                        + "@PublicEndpoint / @SecurityRequirement 的声明将失去运行时意义");
+            }
+            for (JavaMethod method : securityConfig.getMethods()) {
+                for (JavaMethodCall call : method.getMethodCallsFromSelf()) {
+                    if ("permitAll".equals(call.getTarget().getName())
+                            && call.getTargetOwner().getPackageName().startsWith("org.springframework.security")) {
+                        violations.add("%s 调用了 permitAll()：全通放行等于取消鉴权".formatted(describe(method)));
+                    }
+                }
+            }
+        }
+        assertNoViolations("G8 路径级鉴权", violations);
     }
 
     /** module 四层内的全部 HTTP 映射方法（含 web 子包） */

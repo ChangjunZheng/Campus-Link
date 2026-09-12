@@ -1,5 +1,7 @@
 package com.campuslink.config;
 
+import com.campuslink.security.ApiErrorSecurityHandler;
+import com.campuslink.security.EndpointAuthorizationManager;
 import com.campuslink.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -23,6 +25,8 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final EndpointAuthorizationManager endpointAuthorizationManager;
+    private final ApiErrorSecurityHandler apiErrorSecurityHandler;
     private final AppProperties appProperties;
 
     @Bean
@@ -30,8 +34,14 @@ public class SecurityConfig {
         http.csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                // TODO(Sprint 2+)：按接口收紧；Sprint 1 仅搭骨架，写操作的登录态由各 Controller 自行校验
-                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
+                // 路径级鉴权（CR-031）：按端点注解（@PublicEndpoint / @SecurityRequirement）裁决，
+                // module 端点未声明即 fail-closed——不再有 permitAll 兜底
+                .authorizeHttpRequests(auth -> auth.anyRequest().access(endpointAuthorizationManager))
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(apiErrorSecurityHandler)
+                        .accessDeniedHandler(apiErrorSecurityHandler))
+                // 无状态 API 不存"重放请求"：否则 401 响应会因默认 request cache 创建 session
+                .requestCache(AbstractHttpConfigurer::disable)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }

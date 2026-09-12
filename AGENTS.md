@@ -27,7 +27,7 @@ description: 重庆工程学院计算机专业学生交流论坛（Spring Boot 4
 ## 项目状态速览（快照 2026-09-12；每次收尾更新，细节看驾驶舱）
 
 - **阶段四开发中**：Sprint 1 ✅（账号链路，T1~T9）；Sprint 2 ✅（论坛最小 MVP，M1~M6、A1~A5 真机验收通过）；Sprint 3 未开工、计划未创建；
-- **B4 / B5（= A3-9 / A3-10）已于 2026-09-12 由 [CR-028](docs/变更日志/变更台账.md) 完成**：ArchUnit `ArchitectureGuardTest`（10 用例）把 ADR-012 四层规则**首次变为机器强制**（规则吸收复评 R-1 / R-2 / R-3；R-1 裁决：禁止 web 注入 domain 端口，`UserController` 已改经 application）；**N-4 闭环**（每个映射方法必须显式 `@PublicEndpoint` 或 `@SecurityRequirement`，受保护者必须调用 `CurrentUser` 统一入口）；F-1 / F-3 / F-4 与 N-5 / N-6 同批处置；单测 87 → **107** 全绿。**残留**：`SecurityConfig` 仍 `permitAll()`（路径级拦截未做）；**W-02 / W-07 的关闭前置已成立，状态为"可关闭、待发起人签署"（任何文档不代签）**；
+- **B4 / B5（= A3-9 / A3-10）已于 2026-09-12 由 [CR-028](docs/变更日志/变更台账.md) 完成**：ArchUnit `ArchitectureGuardTest`（初版 10 用例，[CR-031](docs/变更日志/变更台账.md) 增至 11）把 ADR-012 四层规则**首次变为机器强制**（规则吸收复评 R-1 / R-2 / R-3；R-1 裁决：禁止 web 注入 domain 端口，`UserController` 已改经 application）；**N-4 闭环**（每个映射方法必须显式 `@PublicEndpoint` 或 `@SecurityRequirement`，受保护者必须调用 `CurrentUser` 统一入口）；F-1 / F-3 / F-4 与 N-5 / N-6 同批处置；单测 87 → **107** 全绿。**同日 [CR-031](docs/变更日志/变更台账.md) 补上框架级路径鉴权**（消除当时登记的"`SecurityConfig` 仍 `permitAll()`、路径级拦截未做"残留）：`EndpointAuthorizationManager` 在过滤器链按端点注解裁决（`module` 端点未声明即 fail-closed），401 / 403 出口沿用 `ApiError` 外壳，单测 **107 → 117** 全绿、真机 4 个受保护端点匿名 / 非法 token 一律 401；**W-02 / W-07 的关闭前置已成立，状态为"可关闭、待发起人签署"（任何文档不代签）**；
 - **流程已降密度（[CR-029](docs/变更日志/变更台账.md)）**：CR 自 CR-030 起改一行式登记；**项目状态只维护 change-log §1 + 进度驾驶舱两处**；取消凭证回填仪式（凭证 = commit message 写 CR 号）；AI 遵守下方「汇报约定」；
 - **唯一外部依赖**：B1 / B2 学籍名册（未到位前注册链路只能走 `app.roster.bypass`）；
 - **提测准入门 7 项中 4 项未满足**（覆盖率 / 静态扫描 / Code Review / UI 走查）；让步放行 W-01 ~ W-07 中**仅 W-06 已关闭**，**W-02 / W-07 关闭前置已成立（[CR-028](docs/变更日志/变更台账.md)）但待发起人签署、不得代签**；
@@ -69,7 +69,7 @@ description: 重庆工程学院计算机专业学生交流论坛（Spring Boot 4
 # 仅首次需要：库必须先存在，Flyway 才能连上（建库属基础设施引导，不归 Flyway 管）
 mysql -h127.0.0.1 -uroot -p -e "CREATE DATABASE IF NOT EXISTS campuslink DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;"
 
-mvn verify            # 编译 + 单测（合码前必须全绿，当前基线 107 个；含架构守护测试）
+mvn verify            # 编译 + 单测（合码前必须全绿，当前基线 117 个；含架构守护测试）
 mvn spring-boot:run   # 启动：8088（SERVER_PORT 可覆盖）；健康检查 /actuator/health，OpenAPI /api/docs
 ```
 
@@ -95,13 +95,13 @@ npm run build
 - 限界上下文 `module/{account,forum,...}`，上下文内四层：`domain`（聚合根 / 值对象 / 领域服务 / **端口 gateway** / 领域事件）→ `application`（用例编排 + Command）→ `infrastructure`（MyBatis-Plus 仓储、Redis、通知等适配器）→ `web`（Controller + VO）；
 - 依赖方向：**web / infrastructure → application → domain**；端口定义在 domain、实现在 infrastructure（DIP）；**跨上下文只允许调用对方 application 服务**；
 - MyBatis-Plus Mapper 统一放 `*.mapper` 包；`@MapperScan` 的值**恰为单值** `{"com.campuslink.**.mapper"}`（2026-09-12 [CR-028](docs/变更日志/变更台账.md) 将 `AuditMapper` 移入 `common/audit/mapper/` 后收窄，**并由守护测试断言"恰为单值"——再加特例即测试失败**）；
-- ✅ **四层与跨上下文规则自 [CR-028](docs/变更日志/变更台账.md)（A3-9）起由 `ArchitectureGuardTest` 机器强制**（ArchUnit，10 用例）：分层依赖方向 / domain 不依赖框架（lombok 放行、`domain → common` 放行）/ **web 不得注入 `domain.gateway` 端口、不得调 `domain.service`（R-1），允许对 `domain.model` 与不可变载体做只读类型引用（R-2）** / 跨上下文只调对方 `application` / 端口实现必须在同上下文 `infrastructure` / Mapper 实现必须在 `..mapper..` 包 / N-4 声明一致性。**改依赖结构前先读 [技术方案 §2.4](docs/设计/技术方案.md)（规则已与该节双向绑定，任一侧改动须同步）**；新增上下文最有效做法仍为**照抄 `module/{account,forum}` 的结构**（范式可复制性已由 A3-11 复评确认，结论见追认纪要 §8）。
+- ✅ **四层与跨上下文规则自 [CR-028](docs/变更日志/变更台账.md)（A3-9）起由 `ArchitectureGuardTest` 机器强制**（ArchUnit，**11 用例**——[CR-028](docs/变更日志/变更台账.md) 落 10 例，[CR-031](docs/变更日志/变更台账.md) 新增 G8）：分层依赖方向 / domain 不依赖框架（lombok 放行、`domain → common` 放行）/ **web 不得注入 `domain.gateway` 端口、不得调 `domain.service`（R-1），允许对 `domain.model` 与不可变载体做只读类型引用（R-2）** / 跨上下文只调对方 `application` / 端口实现必须在同上下文 `infrastructure` / Mapper 实现必须在 `..mapper..` 包 / N-4 声明一致性 / **G8：`SecurityConfig` 必须依赖 `EndpointAuthorizationManager` 且不得再调 `permitAll()`（路径级鉴权不被摘除）**。**改依赖结构前先读 [技术方案 §2.4](docs/设计/技术方案.md)（规则已与该节双向绑定，任一侧改动须同步）**；新增上下文最有效做法仍为**照抄 `module/{account,forum}` 的结构**（范式可复制性已由 A3-11 复评确认，结论见追认纪要 §8）。
 
 ### 错误响应与契约声明（[CR-021](docs/变更日志/变更台账.md) 起）
 
 - 错误外壳 `common/result/ApiError{code,message,traceId}`（**无 `data`**，与成功外壳 `ApiResponse` 分开）；**所有 ≥400 的响应只能由 `GlobalExceptionHandler` 产出**，Controller 只 `throw new ApiException(ResultCode.X)`，不自己拼错误体；
 - **HTTP 状态码不另行约定**——每个 `ResultCode` 自带 `httpStatus`，改状态码只改枚举一处；
-- 契约里的错误响应由 `OpenApiErrorResponseCustomizer` 从 `ResultCode` **单点派生**：端点用项目自有注解 `@ErrorCodes({ResultCode.X, ...})` 声明业务错误码（通用 400/500 自动补，不必声明）；**鉴权声明（N-4 闭环，[CR-028](docs/变更日志/变更台账.md) 起机器强制）**：`module/*/web` 下**每个 HTTP 映射方法必须显式二选一**——公开端点标 `@PublicEndpoint`、受保护端点标 `@SecurityRequirement(name = ApiDocs.BEARER_AUTH)` **且方法体真的调用 `common/web/CurrentUser`**（`requireId` / `requireRole`，统一抛 `NOT_LOGGED_IN` / `FORBIDDEN`）——漏写即守护测试失败；**不要加全局 security**（会把公开端点错标为需鉴权）；**禁止用 swagger 的 `@ApiResponses` 手写错误响应**（事实存两份，改错误码必然漂移）；
+- 契约里的错误响应由 `OpenApiErrorResponseCustomizer` 从 `ResultCode` **单点派生**：端点用项目自有注解 `@ErrorCodes({ResultCode.X, ...})` 声明业务错误码（通用 400/500 自动补，不必声明）；**鉴权声明（N-4 闭环，[CR-028](docs/变更日志/变更台账.md)；自 [CR-031](docs/变更日志/变更台账.md) 起同时是运行时拦截的唯一依据）**：`module/*/web` 下**每个 HTTP 映射方法必须显式二选一**——公开端点标 `@PublicEndpoint`、受保护端点标 `@SecurityRequirement(name = ApiDocs.BEARER_AUTH)` **且方法体真的调用 `common/web/CurrentUser`**（`requireId` / `requireRole`，统一抛 `NOT_LOGGED_IN` / `FORBIDDEN`）——漏写即守护测试失败；**`security/EndpointAuthorizationManager` 在过滤器链按同一组注解裁决**（公开放行 / 受保护要求登录 / module 端点未声明即 fail-closed），框架只区分"登录 / 未登录"，角色与资源级授权仍归业务代码；**不要加全局 security**（会把公开端点错标为需鉴权）；**禁止用 swagger 的 `@ApiResponses` 手写错误响应**（事实存两份，改错误码必然漂移）；
 - **日志分档**：业务错误不记日志、框架级客户端错误记 1 行 WARN 不打全栈、只有兜底 `Exception` 记 ERROR + 全栈（客户端错误进 ERROR 会污染 5xx 监控——N-3 缺陷成因）。
 
 ### 数据与迁移
@@ -125,11 +125,11 @@ npm run build
 
 ## 测试约定
 
-- **单测**：`mvn verify` 必须全绿（**当前基线 107 个**，含 `ArchitectureGuardTest` 架构守护测试）；`MarkdownRendererTest` 的 6 个 XSS 回归用例是论坛安全生命线，渲染 / 白名单改动**先补用例再改实现**；
-- **受保护端点必须真的校验鉴权（N-4 已闭环，[CR-028](docs/变更日志/变更台账.md)；机制为机器强制）**：**每个 HTTP 映射方法必须显式标 `@PublicEndpoint` 或 `@SecurityRequirement`，且标后者者必须真的调用 `common/web/CurrentUser`（`requireId` / `requireRole`）**——`ArchitectureGuardTest` 会拦（漏写即测试失败）；**新增需登录的端点仍须补一个「匿名 → 401」单测**（真机 401 也要验）。⚠️ **`SecurityConfig` 仍是 `anyRequest().permitAll()`**——闭环的是"漏写鉴权静默变公开"，**不是**框架级路径拦截，登录态仍由 Controller 主动校验；
+- **单测**：`mvn verify` 必须全绿（**当前基线 117 个**，含 `ArchitectureGuardTest` 架构守护测试与 `EndpointAuthorizationManagerTest` 路径级鉴权矩阵）；`MarkdownRendererTest` 的 6 个 XSS 回归用例是论坛安全生命线，渲染 / 白名单改动**先补用例再改实现**；
+- **受保护端点必须真的校验鉴权（N-4 已闭环，[CR-028](docs/变更日志/变更台账.md)；路径级拦截自 [CR-031](docs/变更日志/变更台账.md) 起落地）**：**每个 HTTP 映射方法必须显式标 `@PublicEndpoint` 或 `@SecurityRequirement`，且标后者者必须真的调用 `common/web/CurrentUser`（`requireId` / `requireRole`）**——`ArchitectureGuardTest` G7 会拦（漏写即测试失败）；**新增需登录的端点仍须补一个「匿名 → 401」单测**（真机 401 也要验）。⚠️ 运行时是**两层**：`security/EndpointAuthorizationManager` 在过滤器链按注解拒绝匿名（401 / 4001，框架直接产出），`CurrentUser` 在业务侧承担角色与资源级授权（403 / 4002）——**框架只区分"登录 / 未登录"，别指望它做角色判定**；
 - **联调冒烟**：新链路合入前必须真实起栈（本机 MySQL / Redis + 后端 + 前端）并**浏览器实测**，不能只依赖单测；
 - **结构变更后真实启动一次**确认 Flyway 迁移成功（`mvn verify` 不校验迁移可执行性，也不校验 `@MapperScan` 通配的实际扫描结果）；
-- **接口契约变更必须重生成 OpenAPI 快照** `docs/设计/接口契约/openapi.json`：凡改 Controller 路径 / 方法 / 入参出参 / 校验注解、**新增端点（公开 / 受保护声明）**、`ApiResponse` / `ApiError` 外壳、`OpenApiConfig`、**`common/web/CurrentUser` 或 `PublicEndpoint`**、`ResultCode` 的错误码 / 提示语 / `getHttpStatus()` 映射、或把 `SecurityConfig` 从 `permitAll()` 改成真正按路径授权，都须起后端后按 [api/README.md](docs/设计/接口契约/README.md) §2 命令重抓并格式化，看 `git diff`——**非空即契约已变**，同步技术方案 §5 与该 README。**快照无机器校验，漂移只能靠这条约定拦**；`1002` / `1003` / `1004` 三类响应永远进不了快照，以该 README §6.3 文字约定为准。
+- **接口契约变更必须重生成 OpenAPI 快照** `docs/设计/接口契约/openapi.json`：凡改 Controller 路径 / 方法 / 入参出参 / 校验注解、**新增端点（公开 / 受保护声明）**、`ApiResponse` / `ApiError` 外壳、`OpenApiConfig`、**`common/web/CurrentUser` 或 `PublicEndpoint`**、`ResultCode` 的错误码 / 提示语 / `getHttpStatus()` 映射、**或改了 `security/EndpointAuthorizationManager` / `SecurityConfig` 的授权口径**（[CR-031](docs/变更日志/变更台账.md) 已把 `permitAll()` 换成按端点注解授权并再生成过快照——快照的 `security` 声明不会自动跟随运行时规则，此后每次改动都须重抓核对），都须起后端后按 [api/README.md](docs/设计/接口契约/README.md) §2 命令重抓并格式化，看 `git diff`——**非空即契约已变**，同步技术方案 §5 与该 README。**快照无机器校验，漂移只能靠这条约定拦**；`1002` / `1003` / `1004` 三类响应永远进不了快照，以该 README §6.3 文字约定为准。
 
 ## 汇报约定（每次 AI 会话执行）★
 
@@ -152,10 +152,10 @@ npm run build
 - 阶段门未通过不得进入下一阶段；评审结论与状态由项目经理同步到 `docs/README.md` 阶段门状态表；
 - **版本号只在 `docs/README.md` §2 登记**；其他文档（含本文件）交叉引用只写链接、不写版本号；
 - **状态两处收口（[CR-029](docs/变更日志/变更台账.md) 起）**：项目当前状态只维护 **change-log §1 + 进度驾驶舱** 两处；next-steps / gate-* / waivers 等文档中的既有状态保留为历史，**不再新增状态同步义务**——新状态变化时只改两处；
-- **流程偏离登记在 `docs/流程偏离记录.md`**（不得只在对话里说明）；评审门纪要归档在 `docs/评审/gate-<n>-<name>.md`；
+- **流程偏离登记在 `docs/流程偏离记录.md`**（不得只在对话里说明）；评审门纪要归档在 `docs/评审/<阶段名>门纪要.md`（现行三份：`立项门纪要.md` / `需求门纪要.md` / `设计门纪要.md`）；
 - **文档命名用中文（[CR-030](docs/变更日志/变更台账.md) 起，推翻原"英文小写中划线"规则）**：文档与文件夹一律用中文名（如 `docs/评审/设计门纪要.md`）；**唯一例外 `README.md`**（GitHub 目录入口约定）；目标结构：`docs/{立项,需求,设计,开发,评审,模板,变更日志}/`；
 - **简洁原则**：流程文档只保留"当前结论 + 指针"，**日志式过程记录（实施补记、状态回填、凭证追踪、版本变更记录）一律写入 `docs/变更日志/`**，不在流程文档里累积；
-- **批量迁移待执行**：中文重命名与日志迁移将在 **CR-028 实施会话结束后一次性批量执行**（含全量链接修复），避免与并行会话按旧路径写文件撞车；在此之前新文档暂维持现名；
+- **批量迁移已执行（[CR-030](docs/变更日志/变更台账.md)，2026-09-12）**：中文重命名与日志迁移已一次性完成（35 个 git mv + 1582 处链接修复，校验 0 失效）——原"待 CR-028 会话结束后执行"的安排已履行，新文档一律直接用中文名；
 - 新文档放入 `docs/` 对应位置并在 `docs/README.md` §2 + §3 **两处登记**（漏登记即产生文档不一致），内容用中文；
 - 文档头部必须含：**版本、状态、维护人、最后更新**。
 

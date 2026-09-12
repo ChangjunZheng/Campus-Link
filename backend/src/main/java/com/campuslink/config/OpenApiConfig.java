@@ -24,9 +24,11 @@ public class OpenApiConfig {
                         .scheme("bearer")
                         .bearerFormat("JWT")
                         .description("登录返回的 JWT，请求头 `Authorization: Bearer <token>`。"
-                                + "运行时的强制点是 JwtAuthenticationFilter 解析 + Controller 内 CurrentUser 统一入口校验"
-                                + "（SecurityConfig 仍为 permitAll，无路径级拦截）。"
+                                + "框架在进入业务代码前按端点注解裁决：标 `@SecurityRequirement` 的端点要求已登录，"
+                                + "标 `@PublicEndpoint` 的放行，module 端点两者都没标即 fail-closed；"
+                                + "未登录由过滤器链直接产出 401 / 4001（CR-031，SecurityConfig 已无 permitAll 兜底）。"
+                                + "角色与资源级授权仍归业务代码的 CurrentUser（requireRole → 403 / 4002）；"
                                 + "受保护端点必须声明本 security 并真的调用 CurrentUser，"
-                                + "该纪律由 ArchitectureGuardTest 机器校验（N-4 已闭环，CR-028）。")));
+                                + "该纪律由 ArchitectureGuardTest 机器校验。")));
                 } 
 }

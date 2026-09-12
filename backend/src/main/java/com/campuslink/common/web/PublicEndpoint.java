@@ -13,7 +13,9 @@ import java.lang.annotation.Target;
  * 本注解（公开）或 {@code @SecurityRequirement}（受保护）。目的不是记录事实，而是**强制一次明确表态**——
  * 新增端点若两者都没写，守护测试即失败，不会再出现"忘了加鉴权 → 静默变成公开接口"。
  *
- * <p>⚠️ 本注解**不产生任何运行时行为**（不被框架读取），只是给守护测试与后续 Review 的声明锚点。
+ * <p>⚠️ 本注解自 [CR-031] 起**参与运行时裁决**：{@code security/EndpointAuthorizationManager} 在过滤器链里读取它，
+ * 标记者匿名放行（与 {@code @SecurityRequirement} 互斥）。它是"公开"的唯一声明锚点——
+ * module 端点两者都不标即 fail-closed（要求登录），不会再有"没表态的端点默认公开"。
  */
 @Documented
 @Retention(RetentionPolicy.RUNTIME)

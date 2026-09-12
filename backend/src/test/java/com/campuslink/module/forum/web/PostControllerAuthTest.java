@@ -27,10 +27,12 @@ import static org.mockito.Mockito.when;
  * 发帖端点的授权三态：匿名 / principal 非用户 ID（如匿名令牌的字符串主体）必须 401 且不触达用例，
  * 已登录则放行并把操作人 ID 从 principal 透传给用例。
  *
- * <p>为什么必须有这组断言：{@code SecurityConfig} 仍是 {@code anyRequest().permitAll()}
- * （**N-4 未闭环**），登录态实际由 Controller 手写校验——漏写或写错**不会让任何测试失败**，
- * 只会静默把发帖变成公开接口，而契约快照上的 {@code security} 声明反而制造"已受保护"的错觉。
- * 这是 [W-07](../../../../../../../../docs/tailoring-waivers.md) 推迟 A3-9 的直接后果（设计 §4.2）。
+ * <p>为什么框架已按注解拦截（CR-031，{@code security/EndpointAuthorizationManager}）之后仍需这组断言：
+ * 路径级拦截只判"有没有登录"，判不了"principal 是不是账号 id"这类主体形状问题，也无法证明**用例未被触达**；
+ * 且它守的是一段历史教训——{@code SecurityConfig} 曾长期 {@code anyRequest().permitAll()}，
+ * 那时漏写 Controller 校验**不会让任何测试失败**，只会静默把发帖变成公开接口，
+ * 而契约快照上的 {@code security} 声明反而制造"已受保护"的错觉
+ * （W-07 推迟 A3-9 的直接后果，见 docs/流程偏离记录.md；设计 §4.2）。
  */
 class PostControllerAuthTest {
 

@@ -25,7 +25,7 @@ import static org.mockito.Mockito.when;
 
 /**
  * 回帖端点的授权：匿名必须 401 且不触达用例。理由与断言必要性见 {@link PostControllerAuthTest}
- * （N-4 未闭环下，漏写校验会静默变成公开接口，设计 §4.2）。
+ * （框架层已按注解拦截匿名，本组断言守的是业务侧边界——见该类的说明）。
  */
 class ReplyControllerAuthTest {
 
