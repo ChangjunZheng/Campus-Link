@@ -63,7 +63,7 @@ async function doRegister() {
 </script>
 
 <template>
-  <el-card shadow="never" class="login-card">
+  <el-card shadow="never" class="mx-auto mt-6 max-w-[480px]">
     <el-tabs v-model="tab">
       <el-tab-pane label="登录" name="login">
         <el-form label-position="top" @submit.prevent>
@@ -71,7 +71,7 @@ async function doRegister() {
             <el-input v-model="loginForm.email" placeholder="注册时使用的邮箱" />
           </el-form-item>
           <el-form-item label="验证码">
-            <div class="code-row">
+            <div class="flex w-full gap-2">
               <el-input v-model="loginForm.code" placeholder="6 位验证码" maxlength="6" />
               <el-button
                 :disabled="loginCaptcha.remaining.value > 0 || loginCaptcha.sending.value"
@@ -81,8 +81,8 @@ async function doRegister() {
               </el-button>
             </div>
           </el-form-item>
-          <el-button type="primary" class="submit" @click="doLogin">登录</el-button>
-          <p class="tip">未注册？切换到"注册"，先用学号 + 姓名完成学籍核验。</p>
+          <el-button type="primary" class="w-full" @click="doLogin">登录</el-button>
+          <p class="mt-2 text-caption text-ink-meta">未注册？切换到"注册"，先用学号 + 姓名完成学籍核验。</p>
         </el-form>
       </el-tab-pane>
 
@@ -99,8 +99,8 @@ async function doRegister() {
           <el-form-item label="姓名">
             <el-input v-model="reg.name" placeholder="请输入真实姓名" />
           </el-form-item>
-          <el-button type="primary" class="submit" @click="doVerify">核验学籍</el-button>
-          <p class="tip">学号仅用于与学校名册做哈希比对，不会展示在个人主页。</p>
+          <el-button type="primary" class="w-full" @click="doVerify">核验学籍</el-button>
+          <p class="mt-2 text-caption text-ink-meta">学号仅用于与学校名册做哈希比对，不会展示在个人主页。</p>
         </el-form>
 
         <el-form v-else label-position="top" @submit.prevent>
@@ -108,7 +108,7 @@ async function doRegister() {
             <el-input v-model="reg.email" placeholder="用于登录与找回，仅本人可见" />
           </el-form-item>
           <el-form-item label="验证码">
-            <div class="code-row">
+            <div class="flex w-full gap-2">
               <el-input v-model="reg.code" placeholder="6 位验证码" maxlength="6" />
               <el-button
                 :disabled="regCaptcha.remaining.value > 0 || regCaptcha.sending.value"
@@ -121,30 +121,10 @@ async function doRegister() {
           <el-form-item label="昵称">
             <el-input v-model="reg.nickname" placeholder="社区展示昵称（2~32 字符）" maxlength="32" />
           </el-form-item>
-          <el-button type="primary" class="submit" @click="doRegister">完成注册</el-button>
-          <p class="tip">核验票据 5 分钟内有效，过期请返回上一步重新核验。</p>
+          <el-button type="primary" class="w-full" @click="doRegister">完成注册</el-button>
+          <p class="mt-2 text-caption text-ink-meta">核验票据 5 分钟内有效，过期请返回上一步重新核验。</p>
         </el-form>
       </el-tab-pane>
     </el-tabs>
   </el-card>
 </template>
-
-<style scoped>
-.login-card {
-  max-width: 480px;
-  margin: 24px auto;
-}
-.code-row {
-  display: flex;
-  gap: 8px;
-  width: 100%;
-}
-.submit {
-  width: 100%;
-}
-.tip {
-  color: #909399;
-  font-size: 12px;
-  margin-top: 8px;
-}
-</style>

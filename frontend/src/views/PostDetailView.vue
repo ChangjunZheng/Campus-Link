@@ -46,7 +46,9 @@ async function loadReplies() {
   } catch (e) {
     replies.value = []
     total.value = 0
-    if (!missing.value) {
+    // 帖子本身不存在（3001）时由 loadPost 渲染整页错误态；两个请求并发，此处可能先于 loadPost 失败，
+    // 只按错误码判断才能保证不重复弹提示
+    if (!(e instanceof ApiError && e.code === 3001)) {
       ElMessage.error(e instanceof Error ? e.message : '楼层加载失败')
     }
   }
@@ -104,37 +106,48 @@ watch(
     </el-result>
 
     <template v-else-if="post">
-      <el-card shadow="never" class="post-card">
-        <div class="post-head">
-          <RouterLink :to="`/board/${post.boardCode}`" class="board-link">{{ post.boardName }}</RouterLink>
-          <el-tag v-if="post.accepted" type="success" size="small">已采纳</el-tag>
+      <el-card shadow="never" class="mb-4">
+        <!-- 标题与正文同处 760px 阅读列（ui-guideline §6），否则标题贴卡片边、正文内缩，左缘不齐 -->
+        <div class="mx-auto max-w-reading">
+          <div class="flex items-center gap-2">
+            <RouterLink :to="`/board/${post.boardCode}`" class="text-note text-primary hover:text-primary-hover">
+              {{ post.boardName }}
+            </RouterLink>
+            <el-tag v-if="post.accepted" type="success" size="small">已采纳</el-tag>
+          </div>
+          <h1 class="my-2 text-h1 font-medium text-ink">{{ post.title }}</h1>
+          <div class="flex flex-wrap gap-4 text-caption text-ink-meta">
+            <span>{{ post.authorNickname }}</span>
+            <span>发布于 {{ formatTime(post.createdAt) }}</span>
+            <span>{{ post.replyCount }} 回复</span>
+          </div>
+          <el-divider />
+          <div class="markdown-body" v-html="post.contentHtml" />
         </div>
-        <h1 class="post-title">{{ post.title }}</h1>
-        <div class="post-meta">
-          <span>{{ post.authorNickname }}</span>
-          <span>发布于 {{ formatTime(post.createdAt) }}</span>
-          <span>{{ post.replyCount }} 回复</span>
-        </div>
-        <el-divider />
-        <div class="markdown-body" v-html="post.contentHtml" />
       </el-card>
 
-      <el-card shadow="never" class="reply-card">
+      <el-card shadow="never" class="mb-4">
         <template #header>
-          <span>全部回复（{{ total }}）</span>
+          <span class="font-medium">全部回复（{{ total }}）</span>
         </template>
         <el-empty v-if="!replies.length" description="还没有回复，来占一楼" />
-        <ul v-else class="reply-list">
-          <li v-for="r in replies" :key="r.id">
-            <div class="reply-head">
-              <span class="floor">#{{ r.floorNo }} 楼</span>
-              <span class="reply-author">{{ r.authorNickname }}</span>
-              <span class="reply-time">{{ formatTime(r.createdAt) }}</span>
+        <ul v-else>
+          <li
+            v-for="r in replies"
+            :key="r.id"
+            class="border-b-[0.5px] border-divider py-3 last:border-b-0"
+          >
+            <div class="mx-auto max-w-reading">
+              <div class="mb-1.5 flex flex-wrap items-center gap-3 text-caption text-ink-meta">
+                <span class="font-medium text-primary">#{{ r.floorNo }} 楼</span>
+                <span class="text-ink">{{ r.authorNickname }}</span>
+                <span>{{ formatTime(r.createdAt) }}</span>
+              </div>
+              <div class="markdown-body" v-html="r.contentHtml" />
             </div>
-            <div class="markdown-body" v-html="r.contentHtml" />
           </li>
         </ul>
-        <div class="pager">
+        <div class="mt-3 flex justify-center">
           <el-pagination
             v-if="total > size"
             layout="prev, pager, next"
@@ -146,9 +159,9 @@ watch(
         </div>
       </el-card>
 
-      <el-card shadow="never" class="reply-card">
+      <el-card shadow="never" class="mb-4">
         <template #header>
-          <span>写回复</span>
+          <span class="font-medium">写回复</span>
         </template>
         <template v-if="auth.isLoggedIn">
           <el-input
@@ -159,7 +172,7 @@ watch(
             show-word-limit
             placeholder="支持 Markdown 语法（标题 / 列表 / 代码块 / 链接）"
           />
-          <el-button type="primary" class="submit" :loading="submitting" @click="submitReply">发表回复</el-button>
+          <el-button type="primary" class="mt-3" :loading="submitting" @click="submitReply">发表回复</el-button>
         </template>
         <el-alert v-else type="info" :closable="false" show-icon>
           <template #title>
@@ -173,89 +186,3 @@ watch(
     <el-skeleton v-else :rows="8" animated />
   </div>
 </template>
-
-<style scoped>
-.post-card,
-.reply-card {
-  margin-bottom: 16px;
-}
-.post-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.board-link {
-  color: #409eff;
-  font-size: 13px;
-  text-decoration: none;
-}
-.post-title {
-  margin: 8px 0;
-  font-size: 22px;
-}
-.post-meta {
-  display: flex;
-  gap: 16px;
-  color: #909399;
-  font-size: 12px;
-}
-.reply-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-.reply-list li {
-  padding: 12px 0;
-  border-bottom: 1px solid #f0f2f5;
-}
-.reply-list li:last-child {
-  border-bottom: none;
-}
-.reply-head {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  margin-bottom: 6px;
-  font-size: 12px;
-  color: #909399;
-}
-.floor {
-  color: #409eff;
-  font-weight: 600;
-}
-.reply-author {
-  color: #303133;
-}
-.submit {
-  margin-top: 12px;
-}
-.pager {
-  margin-top: 12px;
-  display: flex;
-  justify-content: center;
-}
-.markdown-body {
-  font-size: 14px;
-  line-height: 1.7;
-  color: #303133;
-  overflow-wrap: anywhere;
-}
-.markdown-body :deep(pre) {
-  background: #f6f8fa;
-  padding: 10px 12px;
-  border-radius: 6px;
-  overflow-x: auto;
-}
-.markdown-body :deep(code) {
-  font-family: Consolas, Monaco, monospace;
-}
-.markdown-body :deep(img) {
-  max-width: 100%;
-}
-.markdown-body :deep(blockquote) {
-  margin: 0;
-  padding-left: 12px;
-  border-left: 3px solid #dcdfe6;
-  color: #606266;
-}
-</style>

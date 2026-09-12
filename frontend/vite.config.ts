@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
+import tailwindcss from '@tailwindcss/vite'
 import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
@@ -7,6 +8,8 @@ import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 export default defineConfig({
   plugins: [
     vue(),
+    // 样式工具层（CR-023）；设计令牌与 EP 覆写在 src/styles/tokens.css
+    tailwindcss(),
     // Element Plus 按需自动引入（组件 + API），替代全量引入，显著减小构建产物
     AutoImport({ resolvers: [ElementPlusResolver()] }),
     Components({ resolvers: [ElementPlusResolver()] }),

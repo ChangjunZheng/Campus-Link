@@ -55,18 +55,20 @@ async function submit() {
 </script>
 
 <template>
-  <el-card shadow="never" class="publish-card">
+  <el-card shadow="never" class="mx-auto max-w-[860px]">
     <template #header>
-      <span>发布帖子</span>
+      <span class="font-medium">发布帖子</span>
     </template>
     <el-form label-position="top" @submit.prevent>
       <el-form-item label="版块">
-        <el-select v-model="form.boardCode" placeholder="选择版块" class="board-select">
-          <el-option v-for="b in boards" :key="b.code" :label="b.name" :value="b.code">
-            <span>{{ b.name }}</span>
-            <span class="option-desc">{{ b.description }}</span>
-          </el-option>
-        </el-select>
+        <div class="w-[260px]">
+          <el-select v-model="form.boardCode" placeholder="选择版块">
+            <el-option v-for="b in boards" :key="b.code" :label="b.name" :value="b.code">
+              <span>{{ b.name }}</span>
+              <span class="float-right ml-4 text-caption text-ink-meta">{{ b.description }}</span>
+            </el-option>
+          </el-select>
+        </div>
       </el-form-item>
       <el-form-item label="标题">
         <el-input v-model="form.title" maxlength="100" show-word-limit placeholder="一句话说清问题或主题（1~100 字）" />
@@ -82,28 +84,7 @@ async function submit() {
         />
       </el-form-item>
       <el-button type="primary" :loading="submitting" @click="submit">发布</el-button>
-      <span class="tip">发布后正文会被渲染为 HTML 并做安全净化，XSS 防线在服务端。</span>
+      <span class="ml-3 text-caption text-ink-meta">发布后正文会被渲染为 HTML 并做安全净化，XSS 防线在服务端。</span>
     </el-form>
   </el-card>
 </template>
-
-<style scoped>
-.publish-card {
-  max-width: 860px;
-  margin: 0 auto;
-}
-.board-select {
-  width: 260px;
-}
-.option-desc {
-  float: right;
-  color: #909399;
-  font-size: 12px;
-  margin-left: 16px;
-}
-.tip {
-  margin-left: 12px;
-  color: #909399;
-  font-size: 12px;
-}
-</style>

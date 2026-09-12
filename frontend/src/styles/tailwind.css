@@ -1,0 +1,45 @@
+@import 'tailwindcss';
+
+/* 令牌 → 工具类映射（CR-023）
+ *
+ * 用 @theme inline：工具类直接引用 var(--cl-*)，运行时仍可被 tokens.css 覆盖；
+ * 若写成普通 @theme，值会被内联成字面量，令牌层就失去意义。
+ *
+ * 边界（见 tokens.css 顶部说明）：工具类在 @layer utilities，压不过无层的 Element Plus 组件样式 ——
+ * EP 组件用 tokens.css 里的 CSS 变量覆写，自家元素才用工具类。
+ */
+@theme inline {
+  --color-primary: var(--cl-color-primary);
+  --color-primary-hover: var(--cl-color-primary-hover);
+  --color-primary-soft: var(--cl-color-primary-soft);
+  --color-link: var(--cl-color-link);
+  --color-ink: var(--cl-text-primary);
+  --color-ink-regular: var(--cl-text-regular);
+  --color-ink-meta: var(--cl-text-meta);
+  --color-page: var(--cl-bg-page);
+  --color-card: var(--cl-bg-card);
+  --color-line: var(--cl-border-base);
+  --color-divider: var(--cl-border-divider);
+  --color-code: var(--cl-bg-code);
+
+  --text-caption: var(--cl-font-caption);
+  --text-note: var(--cl-font-sm);
+  --text-body: var(--cl-font-body);
+  --text-title-sm: var(--cl-font-title-sm);
+  --text-title: var(--cl-font-title);
+  --text-title-lg: var(--cl-font-title-lg);
+  --text-h1: var(--cl-font-h1);
+  --text-hero: var(--cl-font-hero);
+
+  --radius-sm: var(--cl-radius-sm);
+  --radius-md: var(--cl-radius-md);
+  --radius-lg: var(--cl-radius-lg);
+
+  --leading-tight: var(--cl-leading-tight);
+  --leading-body: var(--cl-leading-body);
+
+  --container-page: var(--cl-container);
+  --container-reading: var(--cl-reading);
+
+  --font-sans: var(--cl-font-family);
+}

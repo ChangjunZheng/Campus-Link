@@ -17,23 +17,33 @@ function logout() {
 </script>
 
 <template>
-  <el-container class="layout">
-    <el-header class="header">
-      <div class="header-inner">
-        <RouterLink to="/" class="logo">Campus-Link</RouterLink>
-        <nav class="nav">
-          <RouterLink v-for="b in BOARDS" :key="b.code" :to="`/board/${b.code}`" class="nav-item">
+  <el-container class="min-h-screen">
+    <el-header class="border-b-[0.5px] border-line bg-card">
+      <div class="mx-auto flex h-full max-w-page items-center gap-4">
+        <RouterLink to="/" class="flex shrink-0 items-center gap-2 text-title-lg font-medium text-primary">
+          <img src="/logo.svg" alt="" class="h-[22px] w-[22px]" width="22" height="22" />
+          Campus-Link
+        </RouterLink>
+        <nav class="flex flex-1 gap-1 overflow-x-auto">
+          <RouterLink
+            v-for="b in BOARDS"
+            :key="b.code"
+            :to="`/board/${b.code}`"
+            class="whitespace-nowrap rounded-sm px-2.5 py-1.5 text-body text-ink transition-colors hover:bg-primary-soft hover:text-primary [&.router-link-active]:bg-primary-soft [&.router-link-active]:text-primary"
+          >
             {{ b.name }}
           </RouterLink>
         </nav>
-        <div class="right">
-          <el-input placeholder="搜索帖子（Sprint 3 上线）" size="small" class="search" disabled />
+        <div class="flex items-center gap-3">
+          <div class="hidden w-[200px] md:block">
+            <el-input placeholder="搜索即将开放" size="small" disabled />
+          </div>
           <el-badge :value="0" :hidden="true">
             <el-icon :size="18"><Bell /></el-icon>
           </el-badge>
           <template v-if="auth.isLoggedIn">
             <el-dropdown>
-              <span class="user">{{ nickname }}</span>
+              <span class="cursor-pointer text-body text-ink">{{ nickname }}</span>
               <template #dropdown>
                 <el-dropdown-menu>
                   <el-dropdown-item @click="router.push('/notifications')">通知中心</el-dropdown-item>
@@ -48,83 +58,11 @@ function logout() {
         </div>
       </div>
     </el-header>
-    <el-main class="main">
+    <el-main class="mx-auto w-full max-w-page">
       <RouterView />
     </el-main>
-    <el-footer class="footer">
+    <el-footer class="text-center text-caption text-ink-meta">
       Campus-Link · 重庆工程学院计算机专业学生社区
     </el-footer>
   </el-container>
 </template>
-
-<style>
-body {
-  margin: 0;
-  background: #f5f6f8;
-}
-.layout {
-  min-height: 100vh;
-}
-.header {
-  background: #fff;
-  border-bottom: 1px solid #e4e7ed;
-}
-.header-inner {
-  max-width: 1080px;
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  height: 60px;
-}
-.logo {
-  font-weight: 700;
-  font-size: 20px;
-  color: #409eff;
-  text-decoration: none;
-  white-space: nowrap;
-}
-.nav {
-  display: flex;
-  gap: 4px;
-  flex: 1;
-  overflow-x: auto;
-}
-.nav-item {
-  padding: 6px 10px;
-  border-radius: 6px;
-  color: #303133;
-  text-decoration: none;
-  font-size: 14px;
-  white-space: nowrap;
-}
-.nav-item:hover,
-.nav-item.router-link-active {
-  background: #ecf5ff;
-  color: #409eff;
-}
-.right {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.search {
-  width: 200px;
-}
-.user {
-  cursor: pointer;
-  color: #303133;
-  font-size: 14px;
-}
-.main {
-  max-width: 1080px;
-  margin: 0 auto;
-  width: 100%;
-  box-sizing: border-box;
-}
-.footer {
-  text-align: center;
-  color: #909399;
-  font-size: 12px;
-}
-</style>

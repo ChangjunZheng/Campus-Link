@@ -1,0 +1,347 @@
+/* Campus-Link 设计令牌层 + Element Plus 覆写层（CR-023）
+ *
+ * 两条硬约束，改本文件前先读：
+ * 1) Element Plus 的样式是「无 @layer 的普通 CSS」，Tailwind 的工具类在 @layer utilities 内，
+ *    无层样式永远压过有层样式 —— 因此「用 Tailwind 工具类覆写 EP 组件内部」不可行。
+ *    凡 EP 组件自身的样式，一律在本文件按「EP CSS 变量 → 组件级结构规则」两级覆写。
+ * 2) EP 组件样式由运行时注入（通常晚于本文件），且 `:root` 只有 (0,1,0) ——
+ *    本文件统一用 `:root:root`(0,2,0) 起手，使覆写与注入顺序无关。
+ */
+
+:root:root {
+  /* ---- 配色：主蓝（CR-024 应发起人决策回退 CR-023 的深青，恢复 EP 默认蓝） ---- */
+  --cl-color-primary: #409eff;
+  --cl-color-primary-hover: color-mix(in srgb, var(--cl-color-primary) 90%, #000);
+  --cl-color-primary-active: color-mix(in srgb, var(--cl-color-primary) 80%, #000);
+  --cl-color-primary-soft: color-mix(in srgb, var(--cl-color-primary) 8%, #fff);
+  --cl-color-link: var(--cl-color-primary);
+  --cl-color-success: #67c23a;
+  --cl-color-danger: #f56c6c;
+
+  /* ---- 文本（--cl-text-meta 专供元信息，对比度见 ui-guideline §4.3） ---- */
+  --cl-text-primary: #303133;
+  --cl-text-regular: #606266;
+  --cl-text-meta: #606266;
+  --cl-text-placeholder: #a8abb2;
+
+  /* ---- 背景 ---- */
+  --cl-bg-page: #f5f6f8;
+  --cl-bg-card: #fff;
+  --cl-bg-hover: var(--cl-color-primary-soft);
+  --cl-bg-code: #f6f8fa;
+
+  /* ---- 边框 ---- */
+  --cl-border-base: #e4e7ed;
+  --cl-border-divider: #f0f2f5;
+  --cl-hairline: 0.5px;
+
+  /* ---- 间距（4 的倍数，与 Tailwind 默认间距刻度同源） ---- */
+  --cl-space-1: 4px;
+  --cl-space-2: 8px;
+  --cl-space-3: 12px;
+  --cl-space-4: 16px;
+  --cl-space-5: 24px;
+  --cl-space-6: 32px;
+
+  /* ---- 字号阶梯 ---- */
+  --cl-font-caption: 12px;
+  --cl-font-sm: 13px;
+  --cl-font-body: 14px;
+  --cl-font-title-sm: 15px;
+  --cl-font-title: 17px;
+  --cl-font-title-lg: 20px;
+  --cl-font-h1: 22px;
+  --cl-font-hero: 24px;
+
+  --cl-leading-tight: 1.5;
+  --cl-leading-body: 1.7;
+
+  /* ---- 圆角 ---- */
+  --cl-radius-sm: 6px;
+  --cl-radius-md: 8px;
+  --cl-radius-lg: 12px;
+
+  /* ---- 布局 ---- */
+  --cl-container: 1080px;
+  --cl-reading: 760px;
+  --cl-header-h: 60px;
+
+  --cl-font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', '微软雅黑', Arial, sans-serif;
+}
+
+/* ---- Element Plus 变量桥接：主色 / 文本 / 圆角 / 字号 / 边框宽度 ---- */
+:root:root {
+  --el-color-primary: var(--cl-color-primary);
+  /* EP 用 RGB 三元组拼 rgba()，无法由上面的颜色派生，改主色时须同步本行 */
+  --el-color-primary-rgb: 64, 158, 255;
+  --el-color-primary-light-3: color-mix(in srgb, var(--cl-color-primary) 70%, #fff);
+  --el-color-primary-light-5: color-mix(in srgb, var(--cl-color-primary) 50%, #fff);
+  --el-color-primary-light-7: color-mix(in srgb, var(--cl-color-primary) 30%, #fff);
+  --el-color-primary-light-8: color-mix(in srgb, var(--cl-color-primary) 20%, #fff);
+  --el-color-primary-light-9: color-mix(in srgb, var(--cl-color-primary) 10%, #fff);
+  --el-color-primary-dark-2: var(--cl-color-primary-active);
+
+  --el-text-color-primary: var(--cl-text-primary);
+  --el-text-color-regular: var(--cl-text-regular);
+  --el-text-color-secondary: var(--cl-text-regular);
+  --el-text-color-placeholder: var(--cl-text-placeholder);
+  --el-bg-color-page: var(--cl-bg-page);
+  --el-border-color-light: var(--cl-border-base);
+  --el-border-color-lighter: var(--cl-border-divider);
+
+  --el-border-radius-base: var(--cl-radius-md);
+  --el-border-radius-small: var(--cl-radius-sm);
+  --el-border-width: var(--cl-hairline);
+  --el-font-size-large: var(--cl-font-title);
+  --el-font-size-medium: var(--cl-font-title-sm);
+  --el-font-family: var(--cl-font-family);
+
+  /* 浮动层（下拉 / 提示 / 消息）保留极轻投影，卡片阴影见下方组件级规则 */
+  --el-box-shadow-light: 0 1px 2px rgb(15 23 42 / 6%), 0 4px 12px rgb(15 23 42 / 8%);
+  --el-box-shadow-lighter: 0 1px 2px rgb(15 23 42 / 6%);
+  --el-box-shadow: 0 4px 16px rgb(15 23 42 / 10%);
+}
+
+/* ---- 组件级结构规则：EP 把这些值写死在组件规则里，变量够不到 ---- */
+
+.el-card.el-card {
+  --el-card-border-color: var(--cl-border-base);
+  --el-card-border-radius: var(--cl-radius-lg);
+  --el-card-padding: var(--cl-space-4);
+  border-width: var(--cl-hairline);
+}
+
+.el-card.el-card .el-card__header {
+  border-bottom-width: var(--cl-hairline);
+}
+
+/* 卡片阴影一律砍掉；列表卡片（shadow="hover"）以主色描边替代悬停反馈 */
+.el-card.el-card.is-always-shadow {
+  box-shadow: none;
+}
+
+.el-card.el-card.is-hover-shadow:hover,
+.el-card.el-card.is-hover-shadow:focus {
+  border-color: var(--cl-color-primary);
+  box-shadow: none;
+}
+
+.el-tag.el-tag {
+  --el-tag-border-radius: var(--cl-radius-sm);
+}
+
+/* 实心主色按钮 hover 必须变深：EP 默认 hover 用 primary-light-3（掺 30% 白），
+   白字落在那个色上只有 3.08:1，不达 AA。:not() 是必需的——plain / text / link 变体的
+   hover 由 .el-button--primary.is-plain 等 (0,2,0) 规则接管，且它们的 hover 底色是纯主色
+   （5.47:1 ✅），不能被本规则覆盖。 */
+.el-button.el-button--primary:not(.is-plain):not(.is-text):not(.is-link) {
+  --el-button-hover-bg-color: var(--cl-color-primary-hover);
+  --el-button-hover-border-color: var(--cl-color-primary-hover);
+}
+
+.el-divider--horizontal.el-divider--horizontal {
+  border-top-width: var(--cl-hairline);
+}
+
+/* 输入类控件的描边是 box-shadow（EP 内部把 1px 写死），--el-border-width 够不到。
+   本组最高只到 (0,4,0)：EP 的错误态规则是 (0,4,0)/(0,5,0)，错误态仍由它接管。 */
+:root:root .el-input__wrapper,
+:root:root .el-textarea__inner,
+:root:root .el-select__wrapper {
+  box-shadow: 0 0 0 var(--cl-hairline) var(--el-border-color) inset;
+}
+
+:root:root .el-input__wrapper:hover,
+:root:root .el-textarea__inner:hover,
+:root:root .el-select__wrapper.is-hovering {
+  box-shadow: 0 0 0 var(--cl-hairline) var(--el-border-color-hover) inset;
+}
+
+:root:root .el-input__wrapper.is-focus,
+:root:root .el-textarea__inner:focus,
+:root:root .el-select__wrapper.is-focused {
+  box-shadow: 0 0 0 var(--cl-hairline) var(--el-color-primary) inset;
+}
+
+:root:root .el-input.is-disabled .el-input__wrapper,
+:root:root .el-textarea.is-disabled .el-textarea__inner,
+:root:root .el-select__wrapper.is-disabled,
+:root:root .el-select__wrapper.is-disabled:hover,
+:root:root .el-select__wrapper.is-disabled.is-focus {
+  box-shadow: 0 0 0 var(--cl-hairline) var(--el-disabled-border-color) inset;
+}
+
+/* ---- 全局基线 ----
+   必须放进 @layer base：无层声明（无论优先级多低）都压过任何层内的声明，
+   裸元素的 body/a 规则若无层，会把 Tailwind 的 text-ink / hover:text-primary 全部顶掉。
+   放进 base 后，工具类（utilities 层）仍可覆盖本层；EP 不定义这些元素样式，无竞争。 */
+@layer base {
+  body {
+    margin: 0;
+    background-color: var(--cl-bg-page);
+    color: var(--cl-text-primary);
+    font-family: var(--cl-font-family);
+    font-size: var(--cl-font-body);
+    line-height: var(--cl-leading-tight);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a {
+    color: var(--cl-color-link);
+    text-decoration: none;
+  }
+
+  a:hover {
+    /* hover 跟随链接色而非主色（CR-024）：链接已是独立深蓝，hover 继续变深
+       （≈ #1764b0，对比度只升不降），不再跳到更浅的主色 hover */
+    color: color-mix(in srgb, var(--cl-color-link) 90%, #000);
+  }
+
+  ::selection {
+    background: var(--cl-color-primary-soft);
+  }
+}
+
+/* ---- Markdown 正文（服务端渲染，ADR-005）----
+   Tailwind preflight 会把标题字号、列表符号、块级间距全部归零，故此处必须显式重建；
+   发帖预览与帖子详情共用这一份，不再写进组件的 scoped 样式。
+   放 components 层：低于 utilities，页面若显式给工具类仍可覆盖。 */
+@layer components {
+  .markdown-body {
+    color: var(--cl-text-primary);
+    font-size: var(--cl-font-body);
+    line-height: var(--cl-leading-body);
+    overflow-wrap: anywhere;
+  }
+
+  .markdown-body > :first-child {
+    margin-top: 0;
+  }
+
+  .markdown-body > :last-child {
+    margin-bottom: 0;
+  }
+
+  .markdown-body h1,
+  .markdown-body h2,
+  .markdown-body h3,
+  .markdown-body h4 {
+    margin: 1.6em 0 0.6em;
+    font-weight: 500;
+    line-height: var(--cl-leading-tight);
+  }
+
+  .markdown-body h1 {
+    font-size: var(--cl-font-title-lg);
+  }
+
+  .markdown-body h2 {
+    font-size: var(--cl-font-title);
+  }
+
+  .markdown-body h3 {
+    font-size: var(--cl-font-title-sm);
+  }
+
+  .markdown-body h4 {
+    font-size: var(--cl-font-body);
+  }
+
+  .markdown-body p {
+    margin: 1em 0;
+  }
+
+  .markdown-body ul,
+  .markdown-body ol {
+    margin: 1em 0;
+    padding-left: 1.6em;
+  }
+
+  .markdown-body ul {
+    list-style: disc;
+  }
+
+  .markdown-body ol {
+    list-style: decimal;
+  }
+
+  .markdown-body li {
+    margin: 0.3em 0;
+  }
+
+  .markdown-body li > ul,
+  .markdown-body li > ol {
+    margin: 0.3em 0;
+  }
+
+  .markdown-body a {
+    color: var(--cl-color-link);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .markdown-body strong {
+    font-weight: 500;
+  }
+
+  .markdown-body blockquote {
+    margin: 1em 0;
+    padding: 0.2em 0 0.2em var(--cl-space-4);
+    border-left: 3px solid var(--cl-border-base);
+    color: var(--cl-text-regular);
+  }
+
+  .markdown-body code {
+    padding: 0.15em 0.35em;
+    border-radius: 4px;
+    background: var(--cl-bg-code);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Courier New', monospace;
+    font-size: 0.9em;
+  }
+
+  .markdown-body pre {
+    margin: 1em 0;
+    padding: var(--cl-space-3) var(--cl-space-4);
+    border-radius: var(--cl-radius-sm);
+    background: var(--cl-bg-code);
+    line-height: 1.6;
+    overflow-x: auto;
+  }
+
+  .markdown-body pre code {
+    padding: 0;
+    background: none;
+    font-size: var(--cl-font-sm);
+  }
+
+  .markdown-body img {
+    max-width: 100%;
+    height: auto;
+  }
+
+  .markdown-body hr {
+    margin: 1.6em 0;
+    border: 0;
+    border-top: var(--cl-hairline) solid var(--cl-border-base);
+  }
+
+  .markdown-body table {
+    width: 100%;
+    margin: 1em 0;
+    border-collapse: collapse;
+    font-size: var(--cl-font-sm);
+  }
+
+  .markdown-body th,
+  .markdown-body td {
+    padding: var(--cl-space-2) var(--cl-space-3);
+    border: var(--cl-hairline) solid var(--cl-border-base);
+    text-align: left;
+  }
+
+  .markdown-body th {
+    background: var(--cl-bg-code);
+    font-weight: 500;
+  }
+}
