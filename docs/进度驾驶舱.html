@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Campus-Link · 项目进度驾驶舱</title>
+<style>
+  :root{
+    --primary:#409eff; --primary-rgb:64,158,255; --link:#1a6fc4;
+    --text:#303133; --text-2:#606266; --text-3:#909399;
+    --border:rgba(0,0,0,.10); --bg:#f5f7fa; --card:#fff;
+    --ok:#67c23a; --warn:#e6a23c; --danger:#f56c6c; --info:#909399;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6}
+  .wrap{max-width:1180px;margin:0 auto;padding:24px 20px 60px}
+  header.top{background:linear-gradient(135deg,#409eff,#337ecc);color:#fff;border-radius:12px;padding:22px 26px;margin-bottom:18px}
+  header.top h1{font-size:22px;font-weight:500;letter-spacing:.5px}
+  header.top .sub{opacity:.9;font-size:13px;margin-top:4px}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-top:16px}
+  .stat{background:rgba(255,255,255,.14);border-radius:10px;padding:10px 14px}
+  .stat b{display:block;font-size:22px;font-weight:600}
+  .stat span{font-size:12px;opacity:.9}
+  nav.tabs{display:flex;gap:8px;margin:0 0 18px;flex-wrap:wrap}
+  nav.tabs button{border:1px solid var(--border);background:var(--card);color:var(--text-2);padding:8px 18px;border-radius:8px;cursor:pointer;font-size:14px}
+  nav.tabs button.active{background:var(--primary);border-color:var(--primary);color:#fff}
+  section.tab{display:none}
+  section.tab.active{display:block}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin-bottom:14px}
+  .card h3{font-size:15px;font-weight:500;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  @media(max-width:860px){.grid2,.grid3{grid-template-columns:1fr}}
+  .badge{display:inline-block;padding:1px 9px;border-radius:10px;font-size:12px;line-height:20px}
+  .b-ok{background:#f0f9eb;color:var(--ok);border:1px solid #e1f3d8}
+  .b-warn{background:#fdf6ec;color:var(--warn);border:1px solid #faecd8}
+  .b-danger{background:#fef0f0;color:var(--danger);border:1px solid #fde2e2}
+  .b-info{background:#f4f4f5;color:var(--info);border:1px solid #e9e9eb}
+  .b-primary{background:#ecf5ff;color:var(--primary);border:1px solid #d9ecff}
+  /* 阶段条 */
+  .phases{display:flex;gap:6px;align-items:stretch;flex-wrap:wrap}
+  .phase{flex:1;min-width:130px;border-radius:8px;padding:10px 12px;border:1px solid var(--border);background:#fafafa;position:relative}
+  .phase.done{background:#f0f9eb;border-color:#e1f3d8}
+  .phase.doing{background:#ecf5ff;border-color:#d9ecff;border-width:2px}
+  .phase .p-title{font-weight:500;font-size:13px}
+  .phase .p-status{font-size:12px;color:var(--text-2);margin-top:2px}
+  .phase .p-note{font-size:12px;color:var(--text-3);margin-top:4px}
+  /* 时间线 */
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
+  .toolbar select,.toolbar input{padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:#fff;font-size:13px;color:var(--text)}
+  .tl-group{margin-bottom:14px}
+  .tl-date{font-weight:600;color:var(--link);font-size:13px;margin:10px 4px 8px}
+  .cr-item{background:var(--card);border:1px solid var(--border);border-left:3px solid var(--primary);border-radius:8px;padding:10px 14px;margin-bottom:8px}
+  .cr-item.s-full{border-left-color:var(--ok)}
+  .cr-item.s-part{border-left-color:var(--warn)}
+  .cr-item.s-none{border-left-color:var(--danger)}
+  .cr-head{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .cr-head b{font-size:13px}
+  .cr-title{color:var(--text);font-size:13px;margin-top:3px}
+  .cr-meta{font-size:12px;color:var(--text-3);margin-top:4px}
+  .cr-meta code{background:#f4f4f5;padding:0 5px;border-radius:4px;font-size:11px}
+  /* 表格 */
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top}
+  th{color:var(--text-2);font-weight:500;background:#fafafa;white-space:nowrap}
+  tr:last-child td{border-bottom:none}
+  .todo-num{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--primary);color:#fff;font-size:12px;font-weight:600;flex-shrink:0}
+  .risk{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px dashed var(--border)}
+  .risk:last-child{border-bottom:none}
+  .risk .dot{width:10px;height:10px;border-radius:50%;margin-top:6px;flex-shrink:0}
+  .risk .r-title{font-weight:500;font-size:13px}
+  .risk .r-desc{font-size:12px;color:var(--text-2);margin-top:2px}
+  .muted{color:var(--text-3);font-size:12px}
+  a{color:var(--link);text-decoration:none}
+  footer{margin-top:26px;text-align:center;color:var(--text-3);font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <h1>Campus-Link · 项目进度驾驶舱</h1>
+  <div class="sub">重庆工程学院计算机专业学生交流论坛 · 企业流程（BRD → PRD → 设计 → 开发）· 单人 + AI 协作 · 数据快照 2026-09-12（change-log v1.26 / next-steps v1.9 / waivers v1.9）</div>
+  <div class="stats">
+    <div class="stat"><b>30</b><span>变更记录（CR）</span></div>
+    <div class="stat"><b>2 / 4</b><span>Sprint 已交付（S1 · S2 MVP）</span></div>
+    <div class="stat"><b>107 / 107</b><span>后端单测全绿（CR-028 后）</span></div>
+    <div class="stat"><b>12 / 30</b><span>契约端点 / schema</span></div>
+    <div class="stat"><b>5 + 6</b><span>真实页面 + 占位页</span></div>
+    <div class="stat"><b>0</b><span>经正式变更评审（如实登记）</span></div>
+  </div>
+  <table style="margin-top:14px;background:rgba(255,255,255,.10);border-radius:8px;font-size:12px;color:#fff;width:100%">
+    <tr><td style="border:none;padding:4px 10px;opacity:.85;white-space:nowrap">版本</td><td style="border:none;padding:4px 10px">v1.0（结构性版本，数据以「最后更新」日期为准）</td>
+        <td style="border:none;padding:4px 10px;opacity:.85;white-space:nowrap">状态</td><td style="border:none;padding:4px 10px">视图产物 · 已登记（docs/README.md §2 / §3）</td></tr>
+    <tr><td style="border:none;padding:4px 10px;opacity:.85;white-space:nowrap">维护人</td><td style="border:none;padding:4px 10px">AI 协作会话（按 AGENTS.md「工作收尾约定」更新）</td>
+        <td style="border:none;padding:4px 10px;opacity:.85;white-space:nowrap">最后更新</td><td style="border:none;padding:4px 10px">2026-09-12</td></tr>
+    <tr><td style="border:none;padding:4px 10px;opacity:.85;white-space:nowrap">事实来源</td><td colspan="3" style="border:none;padding:4px 10px">change-log / next-steps / tailoring-waivers / gate-3 / sprint-2 —— 驾驶舱不得登记这些文档中没有的新事实</td></tr>
+  </table>
+</header>
+
+<nav class="tabs">
+  <button class="active" data-tab="overview">① 总览：项目走到哪了</button>
+  <button data-tab="timeline">② 变更时间线：30 次 CR</button>
+  <button data-tab="issues">③ 问题与欠账台账</button>
+  <button data-tab="todo">④ 待办与新需求</button>
+</nav>
+
+<!-- ============ ① 总览 ============ -->
+<section class="tab active" id="tab-overview">
+  <div class="card">
+    <h3>📍 六阶段流程位置</h3>
+    <div class="phases">
+      <div class="phase done"><div class="p-title">① 立项 ✅</div><div class="p-status">BRD + 章程</div><div class="p-note">单校范围等 4 项决议</div></div>
+      <div class="phase done"><div class="p-title">② 需求 ✅</div><div class="p-status">PRD（19 条 P0）</div><div class="p-note">需求门通过（W-01 已签）</div></div>
+      <div class="phase doing"><div class="p-title">③ 设计 🟡</div><div class="p-status">有条件通过</div><div class="p-note">11 项行动项闭环 7 / 开放 4（A3-5~A3-8）</div></div>
+      <div class="phase doing"><div class="p-title">④ 开发 ●进行中</div><div class="p-status">Sprint 2 已交付</div><div class="p-note">Sprint 3 未开工 · B4/B5 已闭环（CR-028）</div></div>
+      <div class="phase"><div class="p-title">⑤ 测试 ⬜</div><div class="p-status">阶段未启动</div><div class="p-note">提测门 7 项中 4 项未满足</div></div>
+      <div class="phase"><div class="p-title">⑥ 上线 ⬜</div><div class="p-status">部署形态挂起</div><div class="p-note">若公网须先 ICP 备案</div></div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>🏃 Sprint 进度（8 周 / 4 个 Sprint，CR-006）</h3>
+      <table>
+        <tr><th>Sprint</th><th>范围</th><th>状态</th></tr>
+        <tr><td>Sprint 1</td><td>地基 + 账号链路（T1~T9）</td><td><span class="badge b-ok">✅ 已交付</span></td></tr>
+        <tr><td>Sprint 2</td><td>论坛最小 MVP（发帖/列表/详情/楼层回复，M1~M6）</td><td><span class="badge b-ok">✅ 已交付 · A1~A5 真机验收通过</span></td></tr>
+        <tr><td>Sprint 3</td><td>互动与发现（采纳/点赞收藏/搜索/通知/热榜）</td><td><span class="badge b-info">未开始</span></td></tr>
+        <tr><td>Sprint 4</td><td>治理与收尾（机审/举报/后台/注销）</td><td><span class="badge b-info">未开始</span></td></tr>
+      </table>
+      <p class="muted" style="margin-top:8px">Sprint 1 与 Sprint 2 之间还插入了：契约缺口修复（CR-021）、前端样式体系（CR-023/024）、UI 设计稿还原（CR-025）、A3-11 复评（CR-026）、驾驶舱与 AGENTS.md 重构（CR-027）、流程瘦身（CR-029）、A3-9/A3-10 实施（CR-028，已完成 09-12）。</p>
+    </div>
+    <div class="card">
+      <h3>✅ 当前已能跑通的功能（真实栈实测）</h3>
+      <table>
+        <tr><th>功能</th><th>说明</th></tr>
+        <tr><td>注册 / 登录</td><td>学号+姓名核验（bypass 名册 4 条测试数据）+ 邮箱验证码</td></tr>
+        <tr><td>发帖</td><td>Markdown（服务端渲染 + XSS 白名单）+ 工具栏</td></tr>
+        <tr><td>版块列表</td><td>6 个版块种子 · 骨架屏 · 面包屑 · 分页</td></tr>
+        <tr><td>帖子详情</td><td>楼层回复 · 3001 专用不存在态 · 手写鉴权 2 端点</td></tr>
+        <tr><td>前端</td><td>5 页按 UI 设计稿还原 + 移动端响应式（CR-025）</td></tr>
+      </table>
+      <p class="muted" style="margin-top:8px">⚠️ 设计稿还原度未经浏览器目视核验（CR-025 实施会话无法开浏览器），需发起人逐页确认。</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>🚨 一句话现状（最需要盯住的事）</h3>
+    <div class="risk"><span class="dot" style="background:var(--ok)"></span><div>
+      <div class="r-title">B4 / B5（= 设计门 A3-9 / A3-10）已完成 —— [CR-028] 已于 2026-09-12 实施并闭环</div>
+      <div class="r-desc">ArchUnit 架构守护测试 10 例（负向对照实验 7 例拦截）+ N-4 闭环（CurrentUser / PublicEndpoint 统一鉴权入口，含 R-1 裁决：禁止 web 注入 domain 端口）+ F-1/F-3/F-4/N-5/N-6；单测 87 → 107 全绿、4 个受保护端点真机 401。W-02 / W-07 转「可关闭，待发起人签署」（任何文档不代签）；残留：SecurityConfig 仍 permitAll()、路径级拦截未做。</div>
+    </div></div>
+    <div class="risk"><span class="dot" style="background:var(--danger)"></span><div>
+      <div class="r-title">B1 / B2（学籍名册）是唯一剩下的外部依赖</div>
+      <div class="r-desc">B4 / B5 清零后，四个阻塞项只剩这一项「无法做」（缺外部输入）。找辅导员/班长要「学号 + 姓名」名册即可。到位前注册链路只能靠 bypass 开关验证（生产红线：bypass 必须 false）。</div>
+    </div></div>
+    <div class="risk"><span class="dot" style="background:var(--info)"></span><div>
+      <div class="r-title">治理模式声明（如实登记，非批评）</div>
+      <div class="r-desc">30 次 CR「经正式变更评审」0 次；手册最低 5 动作：① 需求评审 ❌ ② 技术评审 ❌ ③ 自测+CR 🟡 ④⑤ 阶段未启动。发起人已签署 W-01~W-07 接受此模式，风险转为「已知已接受」。</div>
+    </div></div>
+  </div>
+</section>
+
+<!-- ============ ② 时间线 ============ -->
+<section class="tab" id="tab-timeline">
+  <div class="toolbar">
+    <select id="f-date"><option value="">全部日期</option></select>
+    <select id="f-status">
+      <option value="">全部影响评估</option>
+      <option value="full">✅ 完整</option>
+      <option value="part">🟡 部分</option>
+      <option value="none">❌ 未做</option>
+    </select>
+    <input id="f-search" type="text" placeholder="搜索关键词，如 名册 / 主色 / MVP …" style="flex:1;min-width:200px">
+    <span class="muted" id="cr-count"></span>
+  </div>
+  <div id="timeline"></div>
+  <div class="card">
+    <h3>📊 影响评估统计（如实登记口径）</h3>
+    <p>30 次变更：完整 <b>20</b>（CR-004/005/007/009/010/011/015/017/018/019/020/021/023/024/025/026/027/028/029/030）· 部分 <b>8</b> · 未做 <b>2</b>（CR-001/003）。<b>经正式变更评审 0 次</b>——手册 4.2 要求四方同步，单人项目无第二角色可同步。<b>CR-029 起改轻量登记（一行式），状态只维护台账 + 本驾驶舱两处。</b></p>
+  </div>
+</section>
+
+<!-- ============ ③ 问题与欠账 ============ -->
+<section class="tab" id="tab-issues">
+  <div class="grid2">
+    <div class="card">
+      <h3>🔴 已到期项：已清零（B4 / B5 于 2026-09-12 由 CR-028 补做完毕）</h3>
+      <div class="risk"><span class="dot" style="background:var(--ok)"></span><div>
+        <div class="r-title">B4 = A3-9 架构守护测试（含 N-4）· ✅ 已闭环（CR-028）</div>
+        <div class="r-desc">ArchUnit `ArchitectureGuardTest` 10 例使四层依赖方向首次获得机器强制（负向对照实验 7 例拦截）；N-4 以 CurrentUser + @PublicEndpoint 显式化并由守护测试机器校验，4 个受保护端点真机 401。残留：SecurityConfig 仍 permitAll()、路径级拦截未做（N-4 闭环的是「漏写静默变公开」，非框架拦截）。</div>
+      </div></div>
+      <div class="risk"><span class="dot" style="background:var(--ok)"></span><div>
+        <div class="r-title">B5 = A3-10 消除 F-1/F-3/F-4（含 N-5/N-6/R-3）· ✅ 已闭环（CR-028）</div>
+        <div class="r-desc">domain 去 @Service 改 infrastructure 装配、AuditMapper 移入 .mapper 包（@MapperScan 收窄且真机验证）、§2.4/§5 措辞修正、N-6 名册 CSV 中英表头 + 学号校验（10 个回归用例）。单测 87 → 107 全绿；快照再生成 diff 仅 1 行。</div>
+      </div></div>
+      <div class="risk"><span class="dot" style="background:var(--danger)"></span><div>
+        <div class="r-title">提测准入门欠账（阶段四出口）· 7 项中 4 项未满足</div>
+        <div class="r-desc">覆盖率不可测（jacoco 未接入，107 个测试无覆盖率数值）、静态扫描未接入（SpotBugs/ESLint）、Code Review 无第二角色、W-03 逐页走查未做。发起人未指定截止点（W-05 如实登记）。</div>
+      </div></div>
+    </div>
+    <div class="card">
+      <h3>🟡 开放的让步放行（已签署接受，未闭环）</h3>
+      <table>
+        <tr><th>条目</th><th>状态 / 关闭前置</th></tr>
+        <tr><td>W-01 单人评审替代会审</td><td>开放 · 外部评审补偿单人项目无对象，实质落空</td></tr>
+        <tr><td>W-02 设计门未闭环即开工</td><td><b>可关闭，待发起人签署</b> · 前置 A3-9 已由 CR-028 落地（台账只回填状态、任何文档不代签）</td></tr>
+        <tr><td>W-03 UI 稿裁剪（= A3-6）</td><td>开放 · 补偿②截图已齐（12 张，⚠️ 又已过时）；① 手册 5.1 那一半、③ 提测前走查未做</td></tr>
+        <tr><td>W-04 B1/B2 未清零即开工</td><td>开放 · 名册到位后须关 bypass 全链路回归（唯一无法工程消除项）</td></tr>
+        <tr><td>W-05 提测门指标不可执行</td><td><b>不得关闭</b> · jacoco / 静态扫描 / 书面 CR 三项未做（与本批无关）</td></tr>
+        <tr><td>W-07 最小 MVP 优先</td><td><b>可关闭，待发起人签署</b> · 补偿④「A3-9/A3-10 必须补做」已履行（A3-11 + CR-028 全部完成）</td></tr>
+        <tr><td>W-06 版本控制缺失</td><td><span class="badge b-ok">✅ 已关闭</span> · 遗留：备份 zip 删除（待确认）、main 分支保护</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>🟠 复评 / 复测新发现（六项已全部处置）</h3>
+      <table>
+        <tr><th>#</th><th>问题</th><th>处置（CR-028）</th></tr>
+        <tr><td>N-4 🔴</td><td>契约声明 bearerAuth ≠ 运行时强制（SecurityConfig 仍 permitAll）</td><td>✅ 已闭环 · CurrentUser/@PublicEndpoint + 守护测试机器校验；残留路径级拦截未做</td></tr>
+        <tr><td>N-5</td><td>技术方案 §5 鉴权表述与实现机制不符</td><td>✅ 已修正（§5 与机器校验机制一致）</td></tr>
+        <tr><td>N-6</td><td>名册 CSV 导入只认中文表头（P3）</td><td>✅ 已修复（中英双认 + 学号校验，10 个回归用例）</td></tr>
+        <tr><td>R-1</td><td>UserController 直接注入 domain 端口，forum 三个 Controller 只注入 application——两样本不一致</td><td>✅ 已裁决「禁止」并落地（改经 application.accountOf）</td></tr>
+        <tr><td>R-2</td><td>web→domain 类型级引用两处都有：规则只禁「端口注入/领域服务调用」</td><td>✅ 已落地（守护规则放行只读类型引用）</td></tr>
+        <tr><td>R-3</td><td>「domain 不依赖框架」被两上下文共同证伪（引用 common）</td><td>✅ 已落地（ArchUnit 放行 domain → common；§2.4 措辞修正）</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h3>⚪ 设计门行动项 A3-1 ~ A3-11（11 项：闭环 7 / 开放 4）</h3>
+      <table>
+        <tr><th>#</th><th>事项</th><th>状态</th></tr>
+        <tr><td>A3-1~4</td><td>D-1/D-2~7 修正 · v0.3/v0.4 追认 · OpenAPI 快照归档</td><td><span class="badge b-ok">✅ 闭环</span></td></tr>
+        <tr><td>A3-9</td><td>架构守护测试（含 N-4 闭环）· CR-028</td><td><span class="badge b-ok">✅ 09-12 闭环</span></td></tr>
+        <tr><td>A3-10</td><td>消除 F-1/F-3/F-4（含 N-5 / N-6）· CR-028</td><td><span class="badge b-ok">✅ 09-12 闭环</span></td></tr>
+        <tr><td>A3-11</td><td>四层范式第二样本复评（module/forum）</td><td><span class="badge b-ok">✅ 09-12 闭环</span></td></tr>
+        <tr><td>A3-6</td><td>UI 产出与走查（W-03 补偿③）</td><td><span class="badge b-warn">☐ 提测门前置</span></td></tr>
+        <tr><td>A3-5</td><td>ER 图与数据量级预估</td><td><span class="badge b-warn">☐ 阶段五前</span></td></tr>
+        <tr><td>A3-7</td><td>技术方案检查清单剩余 6 项</td><td><span class="badge b-info">☐ 截止随 CR-022 失效</span></td></tr>
+        <tr><td>A3-8</td><td>部署形态 + 机审服务商选型</td><td><span class="badge b-info">☐ 阶段六 / Sprint 4 前</span></td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>📄 想看细节去哪份文档</h3>
+    <table>
+      <tr><th>想了解</th><th>单一入口</th></tr>
+      <tr><td>每次变更的来龙去脉</td><td><a href="变更日志/变更台账.md">变更日志/变更台账.md</a>（30 条 CR，§1 汇总表先看）</td></tr>
+      <tr><td>现在该干什么</td><td><a href="下一步行动.md">下一步行动.md</a> §1 阻塞项 + §4 三件事</td></tr>
+      <tr><td>流程偏离与签署</td><td><a href="流程偏离记录.md">流程偏离记录.md</a> §4 签署汇总</td></tr>
+      <tr><td>Sprint 执行与验收证据</td><td><a href="开发/Sprint2计划.md">sprint-2.md</a> §5（A1~A5 逐条实测证据）</td></tr>
+      <tr><td>UI 规范与截图</td><td><a href="设计/UI规范/界面规范.md">设计/UI规范/界面规范.md</a>（§8.1 12 张截图，已过时）</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ============ ④ 待办与新需求 ============ -->
+<section class="tab" id="tab-todo">
+  <div class="card">
+    <h3>🎯 你现在就能动手的三件事（next-steps §4）</h3>
+    <div class="risk"><span class="todo-num">1</span><div>
+      <div class="r-title">去要名册（B1 / B2）——唯一剩下的外部依赖</div>
+      <div class="r-desc">找辅导员 / 班长 / 教学办，说清楚：校内学习平台、只做学号姓名哈希比对、不落明文。CSV 导入即可。名册到位前注册链路只能靠 bypass 开关验证（生产红线：bypass 必须 false）。</div>
+    </div></div>
+    <div class="risk"><span class="todo-num">2</span><div>
+      <div class="r-title">补齐 W-03 剩余两项（= A3-6 最后一环）</div>
+      <div class="r-desc">① 把 UI 稿裁剪写入手册 5.1「可裁剪项」（写文档即可，现在就能做）；② 提测前逐页走查（时点未到，但别再等「页面全齐」）。另：12 张截图色值+布局均已过时，重摄待定。</div>
+    </div></div>
+    <div class="risk"><span class="todo-num">3</span><div>
+      <div class="r-title">收尾本轮执行入口的凭证与签署（两项小动作，均不需写代码）</div>
+      <div class="r-desc">① 提交本轮工作区：CR-027 / CR-028 的代码与文档改动均未提交，凭证按 CR-029 约定随 commit message 对齐（提交前先展示变更摘要、不自动 push）；② 由发起人签署关闭 W-02 / W-07：A3-9 已落地、关闭条件已具备，须发起人签署后方可关闭——任何文档都不代签（W-05 与本批无关、仍不得关闭）。另：快照来源为未提交的工作区，提交后须按 api/README §2 复核。</div>
+    </div></div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>🗺️ 后续 Sprint 的既定范围</h3>
+      <p style="font-weight:500;margin-bottom:4px">Sprint 3 · 互动与发现</p>
+      <p class="muted" style="margin-bottom:10px">F-QA-001 采纳最佳答案 · F-FORUM-005 点赞收藏 · F-FORUM-008 站内搜索 · F-SOC-001 通知中心 · 热榜定时任务（ADR-006）</p>
+      <p style="font-weight:500;margin-bottom:4px">Sprint 4 · 治理与收尾</p>
+      <p class="muted">F-SAFE-001 机审对接（降级开关）· F-SAFE-002 举报 · F-SAFE-003 内容处置 · F-ADMIN-001~003 后台 · F-ACC-003 账号注销（7 天冷静期）</p>
+      <p class="muted" style="margin-top:8px">提测准入门：冒烟 100% · CI 全绿 · 覆盖率 ≥60%（核心 ≥80%）· Code Review 无未解决评论</p>
+    </div>
+    <div class="card">
+      <h3>💡 新提出的业务需求（CR-025 登记，接口就绪后另开 CR）</h3>
+      <table>
+        <tr><th>需求</th><th>卡点</th></tr>
+        <tr><td>个人主页 /u/:id（设计稿已有）</td><td>无接口，页面仍是占位</td></tr>
+        <tr><td>通知中心 /notifications（设计稿已有）</td><td>无接口</td></tr>
+        <tr><td>搜索 /search（设计稿已有）</td><td>无接口，顶栏搜索框保持禁用</td></tr>
+        <tr><td>发帖标签 / 存草稿</td><td>无字段 / 无接口</td></tr>
+        <tr><td>首页「最新/热门」切换</td><td>无热门排序参数</td></tr>
+        <tr><td>「已采纳」标记（列表 + 楼层级高亮）</td><td>Vo 无 accepted 字段</td></tr>
+        <tr><td>发布页 Markdown 实时预览</td><td>ADR-005 禁止前端渲染，现放占位说明</td></tr>
+      </table>
+      <p class="muted" style="margin-top:8px">这些需求已在 CR-025 的「不做清单」如实登记——防止被误读成「已实现」。</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>📋 并行事项（不阻塞开发）</h3>
+    <table>
+      <tr><th>#</th><th>事项</th><th>截止</th></tr>
+      <tr><td>P2</td><td>隐私政策与用户协议文本（上线前置）</td><td>提测前</td></tr>
+      <tr><td>P3</td><td>机审服务商选型与报价（阿里云 vs 腾讯天御）</td><td>Sprint 4 前（= A3-8）</td></tr>
+      <tr><td>P4</td><td>部署形态决策（若公网，ICP 备案要提前启动）</td><td>M6 / 阶段六前（= A3-8）</td></tr>
+      <tr><td>P5</td><td>10~15 人用户访谈，校准版块划分</td><td>内测前</td></tr>
+      <tr><td>—</td><td>main 分支保护 + PR 流程 + feature/* 分支实践（W-06 遗留）</td><td>建议 Sprint 3 内</td></tr>
+    </table>
+  </div>
+</section>
+
+<footer>Campus-Link 进度驾驶舱（进度驾驶舱.html）· 数据快照 2026-09-12 · 由 change-log / next-steps / tailoring-waivers / gate-3 / sprint-2 五份事实文档提取生成 · <b>每次工作收尾由 AI 会话按 AGENTS.md「工作收尾约定」更新数据</b>，结构与样式不改</footer>
+</div>
+
+<script>
+/* ---------- CR 数据（提取自 变更日志/变更台账.md §1） ---------- */
+const CRS=[
+ {id:"CR-001",date:"2026-08-30",title:"产品定位与 PRD 定稿",type:"范围（重大）",status:"none",review:"发起人口头确认"},
+ {id:"CR-002",date:"2026-08-30",title:"服务范围锁定重庆工程学院单校，本期不外扩",type:"范围（收敛）",status:"part",review:"发起人决议"},
+ {id:"CR-003",date:"2026-08-30",title:"学籍核验 P1→P0（学号 + 姓名比对）",type:"范围（扩张）",status:"none",review:"发起人决议"},
+ {id:"CR-004",date:"2026-08-30",title:"后端技术栈 NestJS → Spring Boot",type:"技术选型",status:"full",review:"发起人决议"},
+ {id:"CR-005",date:"2026-08-30",title:"部署形态挂起，阶段六启动前决策",type:"技术选型（延后）",status:"full",review:"发起人决议"},
+ {id:"CR-006",date:"2026-08-30",title:"开发节奏 6 周/3 Sprint → 8 周/4 Sprint",type:"排期",status:"part",review:"未评审"},
+ {id:"CR-007",date:"2026-08-31",title:"JDK 17→21，Spring Boot 3.2→4.1.1",type:"技术选型",status:"full",review:"未评审"},
+ {id:"CR-008",date:"2026-09-07",title:"账号上下文 DDD 四层重构（ADR-012）",type:"架构（先落地后登记）",status:"part",review:"未评审（后经 CR-020 追认）"},
+ {id:"CR-009",date:"2026-09-11",title:"治理记录补录 + 文档一致性同步",type:"文档治理",status:"full",review:"发起人指令"},
+ {id:"CR-010",date:"2026-09-11",title:"三仓库合并为根目录 monorepo（先做后登记）",type:"工程结构",status:"full",review:"未评审"},
+ {id:"CR-011",date:"2026-09-11",title:"配置远程托管 + CI 首跑；开发用本机原生 MySQL/Redis 替代 Docker",type:"工程结构",status:"full",review:"发起人指令 · W-06 据此关闭"},
+ {id:"CR-012",date:"2026-09-11",title:"开发期环境变量化（DB_HOST/REDIS_HOST 等，.env 不入库）",type:"工程结构（开发环境）",status:"part",review:"发起人指令（实施前登记）"},
+ {id:"CR-013",date:"2026-09-11",title:"字段校验收紧 + 学号 9 位规则 + dev 便利开关",type:"范围 + 开发环境",status:"part",review:"发起人指令（实施前登记）"},
+ {id:"CR-014",date:"2026-09-11",title:"数据库变更改 Flyway 迁移（V1 建 12 表 / V2 种 6 版块）",type:"工程结构",status:"part",review:"发起人指令（实施前登记）"},
+ {id:"CR-015",date:"2026-09-11",title:"Redis 键统一加 campuslink: 前缀",type:"工程结构（缓存）",status:"full",review:"发起人指令（实施后提交前登记）"},
+ {id:"CR-016",date:"2026-09-11",title:"唯一键冲突翻译为业务错误（端口契约补齐）",type:"缺陷修复 + 架构",status:"part",review:"发起人指令（实施前登记）"},
+ {id:"CR-017",date:"2026-09-11",title:"修正技术方案 7 处设计文档矛盾（D-1~D-7）→ 闭环 A3-1/A3-3",type:"文档治理",status:"full",review:"发起人指令（实施中登记）"},
+ {id:"CR-018",date:"2026-09-11",title:"v0.3/v0.4 追认评审材料归档 → 闭环 A3-2",type:"文档治理",status:"full",review:"发起人指令（实施后登记）"},
+ {id:"CR-019",date:"2026-09-11",title:"OpenAPI 契约快照归档 → 闭环 A3-4",type:"文档治理",status:"full",review:"发起人指令（实施前登记）"},
+ {id:"CR-020",date:"2026-09-11",title:"治理签署：W-01~W-06 全部签署（W-06 关闭）；设 A3-9/A3-10 为 Sprint 2 开工阻断",type:"排期 + 治理",status:"full",review:"发起人本人签署"},
+ {id:"CR-021",date:"2026-09-12",title:"契约缺口 N-1/N-2/N-3 修复（畸形请求体 5 类 500→400 等，单测 45→62）",type:"缺陷修复（P2）+ 契约",status:"full",review:"发起人指令（实施前登记）",hash:"—"},
+ {id:"CR-022",date:"2026-09-12",title:"改按最小 MVP 推进，推迟 A3-9/A3-10（W-07）；Sprint 2 范围锁定 4 项 + 13 项不做",type:"排期（范围收敛）",status:"part",review:"发起人当面决定",hash:"4c40a1a / de7eed7 / b5b2ea6"},
+ {id:"CR-023",date:"2026-09-12",title:"前端样式体系重构：Tailwind v4 + 设计令牌 tokens.css（主色一度改深青）",type:"技术选型 + 工程结构",status:"full",review:"发起人当面指令",hash:"4f7c0e9"},
+ {id:"CR-024",date:"2026-09-12",title:"主色回退 EP 默认蓝 #409eff；链接色脱钩 #1a6fc4（白底 5.10:1 过 AA）",type:"技术选型（配色回退）",status:"full",review:"发起人当面指令",hash:"4f7c0e9"},
+ {id:"CR-025",date:"2026-09-12",title:"照 10 张 UI 设计稿还原前端 5 页 + 顶栏 + 移动端；补落 CR-024 链接色缺口",type:"UI 还原（纯前端）",status:"full",review:"发起人当面指令（逐批验收）",hash:"e94c1e0"},
+ {id:"CR-026",date:"2026-09-12",title:"执行 A3-11 复评：四层范式第二样本复查（零代码），新发现 R-1/R-2/R-3",type:"文档治理",status:"full",review:"签署条件执行（无新决定）",hash:"e94c1e0"},
+ {id:"CR-027",date:"2026-09-12",title:"进度可视化管理：新增进度驾驶舱（本页）入库 docs 并登记；AGENTS.md 重构（首要阅读/状态速览/工作收尾约定）",type:"文档治理",status:"full",review:"发起人当面指令（实施前登记）",hash:"待提交"},
+ {id:"CR-028",date:"2026-09-12",title:"实施 A3-9 + A3-10（= B4/B5）✅ 已闭环：ArchUnit 架构守护测试（R-1 裁决禁止 web 注入 domain 端口）+ N-4 闭环（CurrentUser/PublicEndpoint 统一鉴权入口）+ F-1/F-3/F-4/N-5/N-6（单测 87→107）",type:"架构（机器强制）+ 缺陷修复",status:"full",review:"发起人指令（实施前登记）",hash:"待提交"},
+ {id:"CR-029",date:"2026-09-12",title:"流程瘦身（轻量登记首条）：CR 一行式登记、状态两处收口（台账+驾驶舱）、取消凭证回填仪式、AGENTS.md 新增汇报约定",type:"流程（治理降密度）",status:"full",review:"发起人当面指令",hash:"待提交"},
+ {id:"CR-030",date:"2026-09-12",title:"文档治理转向：文档/文件夹改中文名（README.md 除外）+ 流程文档只留结论、日志式记录统一入 docs/变更日志/；批量迁移待 CR-028 会话结束后执行",type:"流程（文档治理）",status:"full",review:"发起人当面指令",hash:"待提交"}
+];
+const S_LABEL={full:["✅ 完整","s-full"],part:["🟡 部分","s-part"],none:["❌ 未做","s-none"]};
+const groups={};
+CRS.forEach(c=>{(groups[c.date]=groups[c.date]||[]).push(c)});
+
+function renderTimeline(){
+  const fd=document.getElementById("f-date").value,
+        fs=document.getElementById("f-status").value,
+        q=document.getElementById("f-search").value.trim().toLowerCase();
+  const box=document.getElementById("timeline");box.innerHTML="";
+  let shown=0;
+  Object.keys(groups).sort().forEach(d=>{
+    if(fd&&d!==fd)return;
+    const items=groups[d].filter(c=>
+      (!fs||c.status===fs)&&(!q||(c.id+c.title+c.type+c.review).toLowerCase().includes(q)));
+    if(!items.length)return;
+    const g=document.createElement("div");g.className="tl-group";
+    g.innerHTML=`<div class="tl-date">📅 ${d}${d==="2026-09-12"?"（当天 10 条，含两次主色往返、设计稿还原与 A3-9/A3-10 实施）":""}</div>`;
+    items.forEach(c=>{
+      shown++;
+      const [lb,cls]=S_LABEL[c.status];
+      const el=document.createElement("div");el.className="cr-item "+cls;
+      el.innerHTML=`<div class="cr-head"><b>${c.id}</b>
+        <span class="badge b-primary">${c.type}</span><span class="badge ${cls==="s-full"?"b-ok":cls==="s-part"?"b-warn":"b-danger"}">影响评估 ${lb}</span></div>
+        <div class="cr-title">${c.title}</div>
+        <div class="cr-meta">评审方式：${c.review}${c.hash?` · 提交凭证 <code>${c.hash}</code>`:""}</div>`;
+      g.appendChild(el);
+    });
+    box.appendChild(g);
+  });
+  document.getElementById("cr-count").textContent=`显示 ${shown} / ${CRS.length} 条`;
+}
+const fdate=document.getElementById("f-date");
+Object.keys(groups).sort().forEach(d=>{const o=document.createElement("option");o.value=d;o.textContent=d;fdate.appendChild(o)});
+["f-date","f-status"].forEach(id=>document.getElementById(id).addEventListener("change",renderTimeline));
+document.getElementById("f-search").addEventListener("input",renderTimeline);
+renderTimeline();
+
+/* ---------- Tab 切换 ---------- */
+document.querySelectorAll("nav.tabs button").forEach(b=>b.addEventListener("click",()=>{
+  document.querySelectorAll("nav.tabs button").forEach(x=>x.classList.remove("active"));
+  document.querySelectorAll("section.tab").forEach(x=>x.classList.remove("active"));
+  b.classList.add("active");
+  document.getElementById("tab-"+b.dataset.tab).classList.add("active");
+}));
+</script>
+</body>
+</html>

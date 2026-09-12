@@ -1442,7 +1442,7 @@
     "securitySchemes": {
       "bearerAuth": {
         "type": "http",
-        "description": "登录返回的 JWT，请求头 `Authorization: Bearer <token>`。注意：这只是契约声明，运行时的强制点是 JwtAuthenticationFilter + Controller 内校验（SecurityConfig 目前为 permitAll），新增受保护端点若漏写校验不会被框架拦下。",
+        "description": "登录返回的 JWT，请求头 `Authorization: Bearer <token>`。运行时的强制点是 JwtAuthenticationFilter 解析 + Controller 内 CurrentUser 统一入口校验（SecurityConfig 仍为 permitAll，无路径级拦截）。受保护端点必须声明本 security 并真的调用 CurrentUser，该纪律由 ArchitectureGuardTest 机器校验（N-4 已闭环，CR-028）。",
         "scheme": "bearer",
         "bearerFormat": "JWT"
       }
