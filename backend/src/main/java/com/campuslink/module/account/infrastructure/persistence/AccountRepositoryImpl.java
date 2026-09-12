@@ -10,6 +10,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 /** 适配器：AccountRepository 端口的 MyBatis-Plus 实现（适配器模式） */
@@ -65,5 +67,15 @@ public class AccountRepositoryImpl implements AccountRepository {
     public Optional<Account> findById(Long id) {
         return Optional.ofNullable(userMapper.selectById(id))
                 .map(d -> AccountConverter.toDomain(d, codec));
+    }
+
+    @Override
+    public List<Account> findByIds(Collection<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return userMapper.selectBatchIds(ids).stream()
+                .map(d -> AccountConverter.toDomain(d, codec))
+                .toList();
     }
 }

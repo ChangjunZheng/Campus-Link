@@ -52,7 +52,7 @@ function logout() {
       <RouterView />
     </el-main>
     <el-footer class="footer">
-      Campus-Link · 重庆工程学院计算机专业学生社区 · Sprint 1
+      Campus-Link · 重庆工程学院计算机专业学生社区
     </el-footer>
   </el-container>
 </template>

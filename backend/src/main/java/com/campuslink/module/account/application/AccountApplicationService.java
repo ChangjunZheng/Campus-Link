@@ -27,6 +27,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Collection;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 账号用例编排（应用层）：核验 → 注册 → 登录。
@@ -117,5 +120,17 @@ public class AccountApplicationService {
         String token = tokenIssuer.issue(account.getId(), account.getRole().name());
         long expiresAt = Instant.now().plusSeconds(tokenIssuer.ttlSeconds()).getEpochSecond();
         return new LoginResult(token, expiresAt, account);
+    }
+
+    /**
+     * 批量取昵称：其他上下文（forum）展示作者名的唯一入口（ADR-012 跨上下文只调对方 application）。
+     * 一次查询取齐整页作者，不做 N+1；查不到的 id 不出现在结果中，由调用方决定回落文案。
+     */
+    public Map<Long, String> nicknamesOf(Collection<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return Map.of();
+        }
+        return accountRepository.findByIds(ids).stream()
+                .collect(Collectors.toMap(Account::getId, Account::getNickname));
     }
 }

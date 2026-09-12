@@ -1,0 +1,197 @@
+package com.campuslink.module.forum.application;
+
+import com.campuslink.common.exception.ApiException;
+import com.campuslink.common.markdown.MarkdownRenderer;
+import com.campuslink.common.result.ResultCode;
+import com.campuslink.module.account.application.AccountApplicationService;
+import com.campuslink.module.forum.application.cmd.ForumResults.PostDetail;
+import com.campuslink.module.forum.application.cmd.ForumResults.PostSummary;
+import com.campuslink.module.forum.application.cmd.ForumResults.ReplyItem;
+import com.campuslink.module.forum.domain.gateway.BoardRepository;
+import com.campuslink.module.forum.domain.gateway.PageResult;
+import com.campuslink.module.forum.domain.gateway.PostRepository;
+import com.campuslink.module.forum.domain.gateway.ReplyRepository;
+import com.campuslink.module.forum.domain.model.Board;
+import com.campuslink.module.forum.domain.model.BoardType;
+import com.campuslink.module.forum.domain.model.Post;
+import com.campuslink.module.forum.domain.model.PostStatus;
+import com.campuslink.module.forum.domain.model.Reply;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+/**
+ * 查询用例：摘要服务端截断（设计 §3.2）、分页口径归一（page≥1 / size≤100）、
+ * 昵称跨上下文一次批量查 + 缺失回落（设计 §4.3）、不可读帖子一律 3001。
+ */
+@ExtendWith(MockitoExtension.class)
+class ForumQueryApplicationServiceTest {
+
+    private static final Instant CREATED_AT = Instant.parse("2026-09-12T08:00:00Z");
+
+    @Mock
+    private BoardRepository boardRepository;
+    @Mock
+    private PostRepository postRepository;
+    @Mock
+    private ReplyRepository replyRepository;
+    @Mock
+    private AccountApplicationService accountApplicationService;
+
+    private ForumQueryApplicationService service;
+
+    @BeforeEach
+    void setUp() {
+        service = new ForumQueryApplicationService(boardRepository, postRepository, replyRepository,
+                accountApplicationService, new MarkdownRenderer());
+    }
+
+    @Test
+    @DisplayName("帖子列表：昵称一页一次批量查，版块名随项带出，查不到的昵称回落「已注销用户」")
+    void listPostsResolvesBoardAndNicknamesInBatch() {
+        when(postRepository.findPage(null, 1, 20))
+                .thenReturn(new PageResult<>(List.of(post(1L, 100L), post(2L, 200L)), 2, 1, 20));
+        when(boardRepository.findAllEnabled()).thenReturn(List.of(board(1L, "qna", "技术问答")));
+        when(accountApplicationService.nicknamesOf(List.of(100L, 200L))).thenReturn(Map.of(100L, "张三"));
+
+        PageResult<PostSummary> page = service.listPosts(null, 1, 20);
+
+        assertThat(page.total()).isEqualTo(2);
+        assertThat(page.items()).extracting(PostSummary::authorNickname)
+                .containsExactly("张三", "已注销用户");
+        assertThat(page.items()).extracting(PostSummary::boardCode).containsExactly("qna", "qna");
+        assertThat(page.items()).extracting(PostSummary::boardName).containsExactly("技术问答", "技术问答");
+        verify(accountApplicationService, times(1)).nicknamesOf(any());
+    }
+
+    @Test
+    @DisplayName("分页归一：page<1 → 1、size>100 → 100，响应回显生效值")
+    void pagingIsNormalized() {
+        when(postRepository.findPage(null, 1, 100)).thenReturn(new PageResult<>(List.of(), 0, 1, 100));
+        when(boardRepository.findAllEnabled()).thenReturn(List.of());
+
+        PageResult<PostSummary> page = service.listPosts(null, 0, 500);
+
+        assertThat(page.page()).isEqualTo(1);
+        assertThat(page.size()).isEqualTo(100);
+        verify(postRepository).findPage(null, 1, 100);
+    }
+
+    @Test
+    @DisplayName("未知版块 code → 3001，且不查帖子")
+    void unknownBoardCodeIsNotFound() {
+        when(boardRepository.findByCode("nope")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.listPosts("nope", 1, 20))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_FOUND));
+
+        verify(postRepository, never()).findPage(any(), anyInt(), anyInt());
+    }
+
+    @Test
+    @DisplayName("摘要：去 Markdown 记号后截断到 120 字（服务端截断，前端不兜底）")
+    void summaryIsStrippedAndTruncated() {
+        String longMarkdown = "# 标题\n\n" + "正文".repeat(70);
+        when(postRepository.findPage(null, 1, 20))
+                .thenReturn(new PageResult<>(List.of(post(1L, 100L, longMarkdown)), 1, 1, 20));
+        when(boardRepository.findAllEnabled()).thenReturn(List.of());
+        when(accountApplicationService.nicknamesOf(any())).thenReturn(Map.of(100L, "张三"));
+
+        String summary = service.listPosts(null, 1, 20).items().get(0).summary();
+
+        assertThat(summary).doesNotContain("#").hasSize(120);
+    }
+
+    @Test
+    @DisplayName("详情：返回发布时渲染好的 contentHtml 与作者昵称")
+    void detailReturnsRenderedHtml() {
+        when(postRepository.findById(9L)).thenReturn(Optional.of(post(9L, 100L)));
+        when(boardRepository.findAllEnabled()).thenReturn(List.of(board(1L, "qna", "技术问答")));
+        when(accountApplicationService.nicknamesOf(List.of(100L))).thenReturn(Map.of(100L, "张三"));
+
+        PostDetail detail = service.postDetail(9L);
+
+        assertThat(detail.contentHtml()).isEqualTo("<p>正文</p>");
+        assertThat(detail.boardCode()).isEqualTo("qna");
+        assertThat(detail.boardName()).isEqualTo("技术问答");
+        assertThat(detail.authorNickname()).isEqualTo("张三");
+    }
+
+    @Test
+    @DisplayName("不可读的帖子（不存在 / REMOVED）→ 3001，楼层不暴露")
+    void invisiblePostHidesDetailAndReplies() {
+        when(postRepository.findById(9L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.postDetail(9L))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_FOUND));
+        assertThatThrownBy(() -> service.listReplies(9L, 1, 20))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_FOUND));
+
+        verify(replyRepository, never()).findPageByPostId(any(), anyInt(), anyInt());
+    }
+
+    @Test
+    @DisplayName("REMOVED 的帖子对详情与楼层同样不可见 → 3001")
+    void removedPostIsNotVisible() {
+        when(postRepository.findById(9L)).thenReturn(Optional.of(
+                Post.rehydrate(9L, 1L, 100L, BoardType.QUESTION, "标题", "正文", "<p>正文</p>",
+                        PostStatus.REMOVED, 0, 0, false, CREATED_AT, CREATED_AT)));
+
+        assertThatThrownBy(() -> service.postDetail(9L))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_FOUND));
+    }
+
+    @Test
+    @DisplayName("楼层列表：floorNo 原样透出、昵称一并解析（楼层 = 回复序号）")
+    void repliesExposeFloorNoAndNicknames() {
+        when(postRepository.findById(9L)).thenReturn(Optional.of(post(9L, 100L)));
+        when(replyRepository.findPageByPostId(9L, 1, 20))
+                .thenReturn(new PageResult<>(List.of(reply(11L, 100L, 1), reply(12L, 200L, 2)), 2, 1, 20));
+        when(accountApplicationService.nicknamesOf(List.of(100L, 200L)))
+                .thenReturn(Map.of(100L, "张三", 200L, "李四"));
+
+        PageResult<ReplyItem> page = service.listReplies(9L, 1, 20);
+
+        assertThat(page.items()).extracting(ReplyItem::floorNo).containsExactly(1, 2);
+        assertThat(page.items()).extracting(ReplyItem::authorNickname).containsExactly("张三", "李四");
+        assertThat(page.total()).isEqualTo(2);
+    }
+
+    private static Post post(Long id, Long authorId) {
+        return post(id, authorId, "正文");
+    }
+
+    private static Post post(Long id, Long authorId, String contentMd) {
+        return Post.rehydrate(id, 1L, authorId, BoardType.QUESTION, "标题", contentMd, "<p>正文</p>",
+                PostStatus.PUBLISHED, 0, 0, false, CREATED_AT, CREATED_AT);
+    }
+
+    private static Board board(Long id, String code, String name) {
+        return Board.rehydrate(id, code, name, "描述", BoardType.QUESTION, 1);
+    }
+
+    private static Reply reply(Long id, Long authorId, int floorNo) {
+        return Reply.rehydrate(id, 9L, authorId, floorNo, "内容", "<p>内容</p>", CREATED_AT);
+    }
+}

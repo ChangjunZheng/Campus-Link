@@ -49,4 +49,15 @@ public class MarkdownRenderer {
         Node document = parser.parse(markdown == null ? "" : markdown);
         return Jsoup.clean(htmlRenderer.render(document), SAFELIST);
     }
+
+    /**
+     * 列表摘要：Markdown → 纯文本后按字符数截断（服务端截断，前端不做兜底——sprint-2-design §3.2）。
+     *
+     * <p>走与 {@link #render} 同一条解析 + 净化链路再取纯文本，而不是自行剥 Markdown 记号：
+     * 记号规则（表格 / 链接 / 代码块）只需在此维护一份，摘要与正文永不漂移。
+     */
+    public String toPlainSummary(String markdown, int maxChars) {
+        String text = Jsoup.parse(render(markdown)).text().trim();
+        return text.length() <= maxChars ? text : text.substring(0, maxChars);
+    }
 }

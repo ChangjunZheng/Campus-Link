@@ -3,6 +3,8 @@ package com.campuslink.module.account.domain.gateway;
 import com.campuslink.module.account.domain.exception.AccountConflictException;
 import com.campuslink.module.account.domain.model.Account;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -24,4 +26,7 @@ public interface AccountRepository {
     Optional<Account> findByEmailHash(String emailHash);
 
     Optional<Account> findById(Long id);
+
+    /** 批量按 id 查询（跨上下文读昵称的唯一入口，一次查询不做 N+1）；不存在的 id 不返回 */
+    List<Account> findByIds(Collection<Long> ids);
 }
