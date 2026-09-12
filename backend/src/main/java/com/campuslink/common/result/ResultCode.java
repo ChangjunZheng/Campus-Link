@@ -11,6 +11,9 @@ public enum ResultCode {
     OK(0, 200, "成功"),
 
     INVALID_PARAM(1001, 400, "参数错误"),
+    METHOD_NOT_ALLOWED(1002, 405, "请求方法不支持"),
+    UNSUPPORTED_MEDIA_TYPE(1003, 415, "不支持的请求内容类型"),
+    ENDPOINT_NOT_FOUND(1004, 404, "接口不存在"),
     INTERNAL_ERROR(9999, 500, "系统繁忙，请稍后再试"),
 
     CAPTCHA_INVALID(2001, 400, "验证码错误或已过期"),

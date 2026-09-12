@@ -6,7 +6,7 @@
 
 Campus-Link：面向**重庆工程学院计算机专业学生**的垂直交流论坛（"问有所答、学有同伴、求职有路"）。
 核心功能：固定 6 版块（技术问答/学习资源/面经求职/竞赛交流/课程交流/闲聊灌水）、Markdown 帖子与代码高亮、问答最佳答案采纳、站内通知与搜索、**学籍核验注册（限本校，学号 + 姓名比对）**。
-当前阶段：**阶段四开发 · Sprint 1 完成 + DDD 二次开发重构**（账号上下文 `module/account` 四层化，ADR-012），执行依据见 `docs/development/sprint-1.md`。
+当前阶段：**阶段四开发 · Sprint 1 完成 + DDD 二次开发重构**（账号上下文 `module/account` 四层化，ADR-012），执行依据见 `docs/development/sprint-1.md`。**治理待签项已于 2026-09-11 全部签署**（[CR-020](docs/change-log.md)：W-01~W-06、三份门纪要批准行、v0.3/v0.4「②有条件追认」）；**Sprint 2 开工前必须先闭环 A3-9（架构守护测试）与 A3-10（消除 F-1/F-3/F-4，涉及改代码须另开 CR）**。
 
 ## 仓库结构（单仓库 monorepo）
 
@@ -22,13 +22,13 @@ Campus-Link：面向**重庆工程学院计算机专业学生**的垂直交流�
 |------|------|
 | `docs/README.md` | **文档版本号唯一登记处**（第 2 节）+ 阶段门状态表（第 1 节）；交叉引用其他文档时**不要写版本号**，只写链接 |
 | `docs/process-handbook.md` | 7 阶段 6 评审门流程、缺陷等级 P0–P3、环境与分支策略、4.5 节文档归档规则 |
-| `docs/next-steps.md` | 阻塞项（B1/B2 名册、B3 根仓库远程托管）与并行项，"现在该干什么"入口 |
+| `docs/next-steps.md` | 阻塞项与并行项，"现在该干什么"入口。**外部依赖阻塞**：B1 / B2 学籍名册（B3 根仓库远程托管已闭环）；**Sprint 2 开工阻断**：B4 = 设计门 A3-9（架构守护测试，**范围含 [CR-021](docs/change-log.md) 新登记的 N-4：契约声明了 `bearerAuth` 但 `SecurityConfig` 仍 `permitAll()`**）、B5 = A3-10（消除 F-1 / F-3 / F-4，**余量约 0.5 天**——原建议合并的 N-1 / N-2 / N-3 已由 CR-021 单独修完；建议并入 N-5 / N-6） |
 | `docs/change-log.md` | **变更台账（CR-xxx）**。任何影响范围 / 排期 / 技术选型 / 架构 / 工程结构的改动，实施前先在此登记并做影响评估（范围 / 排期 / 质量），CR 编号写入 commit message |
-| `docs/tailoring-waivers.md` | 流程偏离与让步放行记录（W-xxx / T-xxx）；新增偏离须登记于此，不得只在对话里说明 |
-| `docs/reviews/gate-*.md` | 三道已过评审门的纪要（立项 / 需求 / 设计），含未闭环行动项——设计门 **A3-1（Sprint 2 开工阻断项）、A3-3、A3-4 已闭环**（[CR-017](docs/change-log.md) / [CR-019](docs/change-log.md)）；仍未闭环的是 A3-2（v0.3/v0.4 追认，**材料已备齐待签署**）、A3-5~A3-8 |
-| `docs/reviews/retro-review-design-v03-v04.md` | 技术方案 v0.3/v0.4 的**追认评审材料**（A3-2）：已核实的证据 + 架构评审意见 **F-1~F-7**（其中 **F-2「后端无架构守护测试」**与写代码直接相关）+ 待签署的结论页 |
+| `docs/tailoring-waivers.md` | 流程偏离与让步放行记录（W-xxx / T-xxx）；新增偏离须登记于此，不得只在对话里说明。**已于 2026-09-11 由发起人签署**（[CR-020](docs/change-log.md)）：W-01 ~ W-05 接受、W-06 接受并关闭；**W-02 不得关闭**（前置 = A3-9）、**W-05 不得关闭**（jacoco / 静态扫描 / 书面 Code Review 三项未执行）；各条**未执行的补偿措施不因签署而完成** |
+| `docs/reviews/gate-*.md` | 三道已过评审门的纪要（立项 / 需求 / 设计），**批准记录均已签署**（2026-09-11）——但**批准 ≠ 行动项闭环**：A1-1~A1-6、A2-1~A2-8 全部仍开放；设计门 **A3-1 / A3-2 / A3-3 / A3-4 已闭环**，仍开放 **A3-5 ~ A3-11 共 7 项**，其中 **A3-9 / A3-10 为 Sprint 2 开工阻断项** |
+| `docs/reviews/retro-review-design-v03-v04.md` | 技术方案 v0.3/v0.4 的**追认评审材料**（A3-2，**已签署「②有条件追认」，范围 A + B + C**）：已核实的证据 + 架构评审意见 **F-1~F-7**（其中 **F-2「后端无架构守护测试」**与写代码直接相关）+ 三条件已生效为 **A3-9 / A3-10 / A3-11**。**§1~§5 的意见未因签署改动**，F-1~F-7 仍是有效的问题清单 |
 | `docs/design/tech-design.md` | 技术方案与 ADR-001~012，技术选型以它为准。§2.4 为 **ADR-012 四层架构**与依赖方向说明（原 D-1~D-7 七项文档缺陷已于 2026-09-11 修正，见 [CR-017](docs/change-log.md)） |
-| `docs/design/api/README.md` | **API 契约快照**（`openapi.json` + 主链路请求/响应示例 + 与技术方案 §5 的逐条差异）。springdoc 从运行中的后端导出的**只读副本**：接口契约变更后须按该文档 §2 的命令**再生成**；快照当前**不声明错误响应与鉴权**（缺口 N-1 / N-2），前端错误处理与权限判断须以 `GlobalExceptionHandler`、`ResultCode` 与技术方案 §5 为准，**不能只读快照**（见该文档 §6） |
+| `docs/design/api/README.md` | **API 契约快照**（`openapi.json` + 主链路请求/响应示例 + **§4.4 错误响应实测** + 与技术方案 §5 的逐条差异）。springdoc 从运行中的后端导出的**只读副本**：接口契约变更后须按该文档 §2 的命令**再生成**。**2026-09-12 起快照已声明错误响应与 `bearerAuth`**（[CR-021](docs/change-log.md) 修完 N-1 / N-2 / N-3）。⚠️ **但 N-4 未闭环：契约声明了鉴权 ≠ 运行时强制了鉴权**——`SecurityConfig` 仍是 `anyRequest().permitAll()`，登录态由各 Controller 手工校验，**新增受保护端点时必须人工确认校验真的写了**（见该文档 §6.2）。三类响应（`1002` / `1003` / `1004`）**永远进不了快照**，以 §6.3 的文字约定为准 |
 | `docs/requirements/prd.md` | 需求基线（含学籍核验 F-ACC-004 升 P0） |
 | `docs/development/sprint-1.md` | Sprint 1 任务状态与出口自查 |
 
@@ -68,7 +68,8 @@ npm run build
 
 ## 架构与编码约定
 
-- 后端为**模块化单体 + DDD 分层（ADR-012）**：限界上下文 `module/{account,board,...}`，上下文内四层 `domain`（聚合根/值对象/领域服务/端口 gateway/领域事件）→ `application`（用例编排 + Command）→ `infrastructure`（MyBatis-Plus 仓储、Redis、通知等适配器）→ `web`（Controller + VO）；依赖方向：web/infrastructure → application → domain，**端口定义在 domain、实现在 infrastructure（DIP）**；跨上下文只允许调用对方 application 服务；MyBatis-Plus Mapper 统一放 `*.mapper` 包（`@MapperScan("com.campuslink.**.mapper")`；**实际值还含 `com.campuslink.common.audit`**，因 `AuditMapper` 不在 `.mapper` 包下——追认评审 **F-3**）；**⚠️ 四层与跨上下文规则当前无任何机器强制**（无 ArchUnit 等架构守护测试，`@MapperScan` 为宽松通配，写错包也能扫到），新增上下文时**必须人工自查依赖方向**；该敞口记为追认评审 **F-2**，处置待发起人签署 [追认纪要](docs/reviews/retro-review-design-v03-v04.md) §4 后确定；
+- 后端为**模块化单体 + DDD 分层（ADR-012）**：限界上下文 `module/{account,board,...}`，上下文内四层 `domain`（聚合根/值对象/领域服务/端口 gateway/领域事件）→ `application`（用例编排 + Command）→ `infrastructure`（MyBatis-Plus 仓储、Redis、通知等适配器）→ `web`（Controller + VO）；依赖方向：web/infrastructure → application → domain，**端口定义在 domain、实现在 infrastructure（DIP）**；跨上下文只允许调用对方 application 服务；MyBatis-Plus Mapper 统一放 `*.mapper` 包（`@MapperScan("com.campuslink.**.mapper")`；**实际值还含 `com.campuslink.common.audit`**，因 `AuditMapper` 不在 `.mapper` 包下——追认评审 **F-3**）；**⚠️ 四层与跨上下文规则当前无任何机器强制**（无 ArchUnit 等架构守护测试，`@MapperScan` 为宽松通配，写错包也能扫到），新增上下文时**必须人工自查依赖方向**；该敞口记为追认评审 **F-2**，**处置已确定**：发起人于 2026-09-11 签署「②有条件追认」（[CR-020](docs/change-log.md)），条件 1 即设计门 **A3-9 —— Sprint 2 开工前补架构守护测试**（同时是 [W-02](docs/tailoring-waivers.md) 的关闭前置）；**A3-9 落地前，四层依赖方向仍只能靠人工自查，新增上下文时务必逐条核对**；
+- **错误响应与契约声明（[CR-021](docs/change-log.md) 起）**：错误外壳是 `common/result/ApiError{code,message,traceId}`（**无 `data`**，与成功外壳 `ApiResponse` 分开）；**所有 ≥400 的响应只能由 `common/exception/GlobalExceptionHandler` 产出**，Controller 只 `throw new ApiException(ResultCode.X)`，不自己拼错误体；**HTTP 状态码不另行约定**——每个 `ResultCode` 自带 `httpStatus`，改状态码只改枚举这一处。**契约里的错误响应由 `config/OpenApiErrorResponseCustomizer` 从 `ResultCode` 单点派生**：端点用项目自有注解 `@ErrorCodes({ResultCode.X, ...})` 声明可能返回的业务错误码（通用 `400` / `500` 由定制器自动补，不必声明），受保护操作用 `@SecurityRequirement(name = ApiDocs.BEARER_AUTH)`——**不要加全局 security**，否则会把公开端点错标为需鉴权。**禁止改用 swagger 的 `@ApiResponses` 手写错误响应**：那等于把 `getHttpStatus()` / `getMessage()` 已有的事实存两份，改错误码必然漂移。**日志分档**：业务错误不记日志、框架级客户端错误记 1 行 WARN 且不打全栈、只有兜底 `Exception` 记 ERROR + 全栈——客户端错误打进 ERROR 会污染 5xx 监控（这就是 N-3 这个 P2 缺陷的成因）。⚠️ **N-4 未闭环**：`config/SecurityConfig` 仍是 `anyRequest().permitAll()`，`@SecurityRequirement` **只是契约声明、不构成运行时强制**，登录态实际由各 Controller 手工校验；A3-9 落地前**新增受保护端点必须人工确认校验代码真的写了**，否则它会静默成为公开接口，而快照上的声明反而制造"已受保护"的错觉；
 - 统一响应 `ApiResponse{code,message,data,traceId}`，错误码分段（1xxx 通用 / 2xxx 账号 / 21xx 学籍 / 3xxx 帖子 / 4xxx 权限 / 5xxx 安全机审），见技术方案第 5 节；**数据库结构变更一律新增 Flyway 迁移** `src/main/resources/db/migration/V<n>__<描述>.sql`（**已执行的迁移不可修改**，回滚靠新增前向迁移，规范见该目录 README），**纯数据增删走** `backend/scripts/data/D<序号>__<描述>.py`（PyMySQL，默认 dry-run）；禁止 Hibernate 自动建表；
 - **敏感信息**（邮箱/手机号/学号）：明文一律 AES-GCM 加密存 `*_enc`，等值查询用 HMAC 哈希 `*_hash`；任何接口不得返回 `*_enc` / `*_hash`；密钥只从环境变量读取（`APP_HASH_KEY` / `APP_CRYPT_KEY`），**源码、示例、测试不得写入可用凭据字面量**；
 - **学籍核验**：学号须 9 位数字、姓名须为中文名或外文名格式（`VerifyStudentCommand` 校验 + `StudentId` 值对象不变量）；三种失败（学号不存在/姓名不匹配/已注册）统一提示，防名册枚举；`app.roster.bypass` 仅限开发联调，**生产必须为 false**（上线检查清单项）；
@@ -81,7 +82,7 @@ npm run build
 - **单测**：`mvn verify` 必须全绿；`MarkdownRendererTest` 的 6 个 XSS 回归用例是论坛安全生命线，渲染/白名单相关改动必须先补用例再改实现；
 - **联调冒烟**：新链路合入前必须真实起栈（本机原生 MySQL / Redis + 后端 + 前端，见"常用命令"）并**用浏览器打开 `http://localhost:5173` 实测**，不能只依赖单测；
 - **数据库结构变更必须随附新的 Flyway 迁移** `db/migration/V<n>__<描述>.sql`，不得手工改库、不得依赖 Hibernate 自动建表；`mvn verify` 不校验迁移可执行性（无集成测试），故结构变更后须真实启动一次确认迁移成功。
-- **接口契约变更必须重生成 OpenAPI 快照** `docs/design/api/openapi.json`：凡改了 Controller 的路径 / HTTP 方法 / 入参出参类型 / 校验注解，或改了 `ApiResponse` 外壳、`OpenApiConfig`，都须起后端后按 [api/README.md](docs/design/api/README.md) §2 的命令重抓并格式化，然后看 `git diff`——**非空即契约已变**，须同步技术方案 §5 接口表与该 README 的端点清单/示例。快照是静态副本、**无任何机器校验**（CI 起不了栈，无法加"重新生成并 diff"步骤），漂移只能靠这条约定拦住；过期快照比没有快照更危险，因为前端会把它当契约真相。
+- **接口契约变更必须重生成 OpenAPI 快照** `docs/design/api/openapi.json`：凡改了 Controller 的路径 / HTTP 方法 / 入参出参类型 / 校验注解，或改了 `ApiResponse` / `ApiError` 外壳、`OpenApiConfig`，**或改了 `common/result/ResultCode` 的错误码 / 提示语 / `getHttpStatus()` 映射**（契约里的错误响应由它单点派生），**或把 `SecurityConfig` 从 `permitAll()` 改成真正按路径授权**（N-4 闭环），都须起后端后按 [api/README.md](docs/design/api/README.md) §2 的命令重抓并格式化，然后看 `git diff`——**非空即契约已变**，须同步技术方案 §5 接口表与该 README 的端点清单/示例。快照是静态副本、**无任何机器校验**（CI 起不了栈，无法加"重新生成并 diff"步骤），漂移只能靠这条约定拦住；过期快照比没有快照更危险，因为前端会把它当契约真相。**另注意**：`1002`（方法不支持）/ `1003`（415）/ `1004`（无此路由）三类响应**永远进不了快照**（没有对应 operation 可挂），只能以该 README §6.3 的文字约定为准。
 
 ## 文档与流程约定
 

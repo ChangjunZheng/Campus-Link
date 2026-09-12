@@ -2,13 +2,13 @@
 
 | 文档信息 | 内容 |
 |---------|------|
-| 文档版本 | v0.5（草案） |
+| 文档版本 | v0.6（草案） |
 | 状态 | 草案 |
 | 维护人 | 技术负责人（发起人兼任） |
-| 评审状态 | **仅 v0.1 经评审**：有条件通过（发起人简化评审，2026-08-30；UI 稿为遗留行动项，开发并行补齐）。v0.2 技术栈反转由发起人同日决议，自述"设计评审会补充确认"但**实际未召开会议**；**v0.3（JDK 21 + Boot 4.1）与 v0.4（账号上下文 DDD 重构，ADR-012）从未经任何形式评审**，且 v0.4 已落地实现——逐项核对见[设计门纪要](../reviews/gate-3-design.md)、[W-02](../tailoring-waivers.md)；**追认材料已于 2026-09-11 备齐并归档**（[v0.3/v0.4 追认纪要](../reviews/retro-review-design-v03-v04.md)，[CR-018](../change-log.md)），**待发起人签署，签署前 v0.3 / v0.4 仍属未评审** |
+| 评审状态 | **v0.1 经评审**：有条件通过（发起人简化评审，2026-08-30；UI 稿为遗留行动项，开发并行补齐）。**v0.2 未评审**：技术栈反转由发起人同日决议，自述"设计评审会补充确认"但**实际未召开会议**，至今仍无任何形式评审。**v0.3 / v0.4 已于 2026-09-11 追认**：发起人在 [v0.3/v0.4 追认纪要](../reviews/retro-review-design-v03-v04.md) 签署 **②有条件追认**（范围 A + B + C，即 v0.3 / v0.4 / CR-012~CR-017），[设计门](../reviews/gate-3-design.md) **A3-2 闭环**（[CR-018](../change-log.md) 备料、[CR-020](../change-log.md) 签署）。<br>**三点必须如实标注，不得读成"设计已评审通过"**：① 追认形式是**发起人单人书面确认**，不是手册 3.3 要求的设计评审会，[W-01](../tailoring-waivers.md) 所记"单人评审"偏离未消除；② 追认是**事后**作出的，v0.4 的 DDD 重构（ADR-012）在追认前即已落地实现，属"先改代码、后补文档"（[W-02](../tailoring-waivers.md) 已签署接受但**不得关闭**）；③ 追认所附三个条件已生效为 **A3-9**（架构守护测试，处置 F-2"四层依赖方向零机器强制"）/ **A3-10**（消除 F-1 · F-3 · F-4 文档-代码不一致）/ **A3-11**（board / post 合入后复评范式），**A3-9 与 A3-10 为 Sprint 2 开工阻断项**，A3-10 涉及改代码须另开 CR。<br>**v0.5 / v0.6 均未单独评审**：v0.5 是 A3-1 的文档-代码对齐（不改任何设计决策），v0.6 是 §5 补入错误响应约定（[CR-021](../change-log.md)，把**已落地并实测**的实现如实写进文档，未引入新决策）。两者都属"先改代码、后补文档"同一模式，其评审归口为 **A3-10 / A3-11**，不得因本文档头标着版本号就读成"该版已评审" |
 | 关联阶段 | 设计（阶段三） |
 | 关联文档 | [PRD](../requirements/prd.md) · [项目章程](../initiation/project-charter.md) · [设计门纪要](../reviews/gate-3-design.md) · [v0.3/v0.4 追认纪要](../reviews/retro-review-design-v03-v04.md) · [变更台账](../change-log.md) |
-| 最后更新 | 2026-09-11 |
+| 最后更新 | 2026-09-12 |
 
 > 版本号以 [docs/README.md](../README.md) 第 2 节为单一登记处，本文交叉引用不写版本号（手册 4.5）。2026-09-11 的编辑性修订（头部元数据与评审状态如实化）设计内容零改动，登记于 [CR-009](../change-log.md)。
 >
@@ -16,7 +16,8 @@
 
 > **变更记录**
 >
-> - **v0.5（2026-09-11）**——**修正 D-1 ~ D-7（文档与代码对齐，不改任何设计决策）**，闭环设计门 A3-1（Sprint 2 开工阻断项）与 A3-3，登记于 [CR-017](../change-log.md)：§2.4 旧分包约定 → **ADR-012 四层架构**（含分层职责表、单向依赖、DIP、跨上下文规则、Mapper 位置）+ 目录树拆为 backend / frontend 两块并同步 `sql/`→`db/migration` 与 `scripts/`；§3 模块表 auth/roster/user → 单个 **`account`** 行；§4.3 时序图参与者 → `AccountController` / `AccountApplicationService` / `StudentVerificationService` / `RosterGateway`；§7.3 引用 → 发布检查清单模板；§2.2 标题去版本号。D-4 由 [CR-014](../change-log.md) 顺带修正。
+> - **v0.6（2026-09-12）**——**§5 补入错误响应契约（[CR-021](../change-log.md)，不改任何既有设计决策）**：① 新增 **1xxx 通用码清单**（`1001`→400、`1002`→405 带 `Allow`、`1003`→415、`1004`→404、`9999`→500），并写明 HTTP 状态码**单一来源**是 `ResultCode.httpStatus`；② 新增 **错误响应约定**五条——错误体 `ApiError{code,message,traceId}`（**无 `data`**）、所有 ≥400 由 `GlobalExceptionHandler` 统一产出、日志三档（客户端 WARN 不打栈 / 业务不记 / 未知才 ERROR 打全栈）、契约由 `@ErrorCodes` + `OpenApiErrorResponseCustomizer` 派生且**禁止改用 swagger `@ApiResponses`**（同一事实存两份必漂移）、`1002`/`1003`/`1004` 三类响应**永远进不了快照**（OpenAPI 表达极限）。动因：[CR-019](../change-log.md) 归档快照时实测发现契约缺口 **N-1/N-2/N-3**（N-3 为 P2 缺陷），CR-021 修复后须把新约定写进基线，否则 Sprint 2 新增端点无章可循。**遗留**：**N-4**（契约声明 bearerAuth 但 `SecurityConfig` 仍 `permitAll()`，声明 ≠ 强制）归口 **A3-9**；**N-5**（本节"未登录可读、写操作 401"的表述与"各 Controller 手工校验"的实现机制不符）归口 **A3-10**，本次**未改该表述**；**N-6**（名册 CSV 表头识别只认中文，P3）未修。③ **文末评审检查清单"接口契约完整"项同步**：原不满足理由②"快照未声明错误响应与鉴权（N-1/N-2）、畸形请求体返回 500（N-3），三项待修"已过期，换为当前三条理由（仅覆盖 6 端点 / N-4·N-5·N-6 / `1002`·`1003`·`1004` 进不了快照）；**该项仍不勾选**，未借修复之名改写检查项文字。
+> - **v0.5（2026-09-11）**——**修正 D-1 ~ D-7（文档与代码对齐，不改任何设计决策）**，闭环设计门 A3-1（Sprint 2 开工阻断项）与 A3-3，登记于 [CR-017](../change-log.md)：§2.4 旧分包约定 → **ADR-012 四层架构**（含分层职责表、单向依赖、DIP、跨上下文规则、Mapper 位置）+ 目录树拆为 backend / frontend 两块并同步 `sql/`→`db/migration` 与 `scripts/`；§3 模块表 auth/roster/user → 单个 **`account`** 行；§4.3 时序图参与者 → `AccountController` / `AccountApplicationService` / `StudentVerificationService` / `RosterGateway`；§7.3 引用 → 发布检查清单模板；§2.2 标题去版本号。D-4 由 [CR-014](../change-log.md) 顺带修正。**注**：本条**未覆盖**同日 [CR-019](../change-log.md) 对 §5 接口表的补入（`GET /api/v1/users/me`），当时随 v0.5 一并落盘而未单独记版——属登记疏漏，如实标注于此，该行的内容本身正确。
 > - **v0.4（2026-09-07）**——二次开发优化：**auth / roster / user 合并重构为 `account` 限界上下文（DDD 四层，ADR-012）**——domain（聚合根 Account + 值对象 EmailAddress/StudentId + 领域服务 + 9 个端口 gateway + 领域事件）/ application（用例编排 + Command）/ infrastructure（仓储、Redis、log/mail 策略等适配器）/ web（契约不变）；落地模式：端口-适配器（DIP）、策略（CodeSender、RosterGateway bypass/DB 条件装配）、工厂方法、观察者（注册事件 AFTER_COMMIT 审计）、防腐层（DO↔聚合转换器）、仓储、门面。`mvn verify` 14/14 全绿（含 4 个新增领域单测），对外 API 契约不变。前端同步优化：Element Plus 按需自动引入（主包 1056KB → 271KB）、boards 常量去重、useCountdown 组合式函数、ApiError 统一错误模型、路由登录守卫。
 > - **v0.3（2026-08-31）**——发起人决议技术栈升级：**JDK 17 → 21、Spring Boot 3.2 → 4.1.1**（基于 Spring Framework 7 / Security 7）。适配点：starter 更名 `spring-boot-starter-web` → `spring-boot-starter-webmvc`；MyBatis-Plus 改用官方 `mybatis-plus-spring-boot4-starter` 3.5.17（分页拦截器需配套 `mybatis-plus-jsqlparser` 模块）；springdoc 3.1.0、jjwt 0.13.0、jsoup 1.23.2。`mvn verify` 10/10 全绿，业务代码零改动兼容。
 > - **v0.2（2026-08-30）**——发起人决议三项，本方案同步改版：
@@ -227,9 +228,16 @@ sequenceDiagram
 
 ## 5. 接口契约
 
-- **风格**：REST，前缀 `/api/v1`；OpenAPI 由 springdoc-openapi 自动生成，部署于 `/api/docs`；**已归档快照** [`docs/design/api/openapi.json`](api/openapi.json)（来源 commit、再生成命令、实测请求响应示例见 [api/README.md](api/README.md)，[CR-019](../change-log.md)）——快照只覆盖**已实现**的端点，本节表格是完整规划；
+- **风格**：REST，前缀 `/api/v1`；OpenAPI 由 springdoc-openapi 自动生成，部署于 `/api/docs`；**已归档快照** [`docs/design/api/openapi.json`](api/openapi.json)（来源、再生成命令、实测请求响应示例见 [api/README.md](api/README.md)；首次归档 [CR-019](../change-log.md)，[CR-021](../change-log.md) 修复 N-1/N-2/N-3 后**已再生成**，现含错误响应与 `bearerAuth` 声明）——快照只覆盖**已实现**的端点，本节表格是完整规划；**注意快照的来源当前是未提交的工作区而非某个 commit**，见 api/README §2；
 - **鉴权**：`Authorization: Bearer <jwt>`，7 天滑动续期；未登录可读、写操作 401；后台接口额外校验 `role in (ops, superadmin)`；
 - **统一响应**：`{ code, message, data, traceId }`；`code = 0` 成功；错误码分段：1xxx 通用、2xxx 账号（**21xx 学籍核验**）、3xxx 版块与帖子、4xxx 权限、5xxx 安全与机审；
+- **1xxx 通用码（CR-021 补齐，`common/result/ResultCode`）**：`1001` 参数错误 → **400**、`1002` 请求方法不支持 → **405**（响应须带 `Allow` 头，RFC 9110）、`1003` 不支持的请求内容类型 → **415**、`1004` 接口不存在 → **404**、`9999` 系统繁忙 → **500**。**HTTP 状态码不是另行约定的**：每个 `ResultCode` 自带 `httpStatus`，处理器与契约都从它取值，避免同一事实存两份；
+- **错误响应约定（CR-021）**：
+  - **错误体为 `common/result/ApiError`，形状固定 `{ code, message, traceId }`——没有 `data`**（错误不携带业务数据，与成功外壳有意区分）；
+  - **所有 ≥400 的响应一律由 `common/exception/GlobalExceptionHandler` 统一产出**，Controller 只抛 `ApiException(ResultCode)`，不得自行拼装错误响应；
+  - **日志分档**：客户端错误（`1001`~`1004`）记 **1 行 WARN 不打栈**；业务错误（`2xxx`/`4xxx`）**不记日志**；只有落到兜底 `Exception` 分支的未知异常才 `log.error` 打全栈。**客户端错误绝不能落兜底分支**——那会把它报成 5xx 并污染监控（[CR-019](../change-log.md) 发现的 **N-3**，P2，已由 CR-021 修复）；
+  - **契约同步**：端点用项目自有注解 `common/result/ErrorCodes` 声明会抛的业务码，`config/OpenApiErrorResponseCustomizer` 据此生成 4xx/5xx 响应并把 `ApiError` 注册进 `components`；**禁止改用 swagger 的 `@ApiResponses`**，那会在每个端点重复书写 `ResultCode` 已有的状态码与提示语，改错误码必漂移；
+  - **三类响应进不了快照**（OpenAPI 表达极限，非缺陷）：`1002` / `1004` 无对应 operation 可挂，`1003` 因 springdoc 不生成 415 分支——详见 [api/README.md](api/README.md) §6.3；
 - **注册冲突的错误码策略（CR-016）**：唯一键冲突一律返回**业务错误码**，不得落到 `9999` 系统错误——
   - **学号已被占用 → `2101`（"学籍信息校验未通过"）**，与"学号不存在""姓名不匹配"**同码同提示**。三者必须不可区分，否则调用方可据提示差异枚举出"哪些学号在名册中且已被占用"（PRD F-ACC-004 防名册枚举）；
   - **邮箱已被占用 → `2004`（"该邮箱已注册"）**，可明确提示——邮箱不属于名册数据，不构成枚举风险；
@@ -330,7 +338,8 @@ sequenceDiagram
 | Markdown 白名单清单的安全走查与用例覆盖 | 风险 | 技术负责人 + 测试 | 提测前 |
 | 机审服务商选型与预算确认 | 待确认 | 产品 + 技术 | 开发启动前 |
 | ~~后端框架终稿~~ | — | — | **已定稿（ADR-003，Spring Boot）** |
-| UI 设计人力与 UI 稿产出（PRD 5.1 页面清单为输入） | 风险（遗留行动项） | 项目经理 | 开发并行补齐 |
+| UI 稿裁剪已获批，但走查与替代交付物仍未做 | 风险（遗留行动项 A3-6） | 项目经理 | 提测准入门前 |
+| ↳ 处置：[W-03](../tailoring-waivers.md) 已于 2026-09-11 由发起人签署"接受"（[CR-020](../change-log.md)），**不再产出交互稿与视觉稿**，路线正式定为按 PRD §5.1 页面清单直接用 Element Plus 拼装。**仍待做**：W-03 补偿①（把该裁剪写入手册 5.1 可裁剪项）、补偿②（已实现页面截图 + 页面清单归档 `docs/design/ui/`，该目录尚不存在）、补偿③（提测前逐页走查） | — | — | — |
 | ~~根仓库（monorepo）的远程托管与 CI 生效~~ | — | — | **✅ 已闭环（2026-09-11，CR-011）**：远程就绪、首次提交推送、两个 workflow 首跑成功；剩 `main` 分支保护与 PR 流程待配置 |
 | PRD Q2：注销内容匿名化细则的法务意见 | 待确认 | 产品 | 提测前 |
 | PRD Q6：热门排序权重参数 | 待确认 | 技术 | 试点期调优 |
@@ -344,9 +353,9 @@ sequenceDiagram
 
 - [x] 技术选型对比充分，ADR-003（后端框架）已终稿；
 - [ ] 数据模型覆盖 PRD 全部 P0 功能，索引设计可支撑列表与搜索指标；
-- [ ] 接口契约完整，可支撑前后端并行开发（OpenAPI 就绪）；**进展（2026-09-11，[CR-019](../change-log.md) / 设计门 A3-4）**：springdoc 实时生成（`/api/docs`）+ 快照已归档 [`docs/design/api/`](api/README.md)，含 2 条主链路实测请求响应结构。**仍未达"完整"，故不勾选**：① 只覆盖 Sprint 1 已实现的 6 个端点，§5 表另有 11 行（Sprint 2+）契约未设计；② 快照未声明错误响应与鉴权（**N-1 / N-2**），且畸形请求体实测返回 500 而非 400（**N-3**，P2 缺陷），三项待修；
+- [ ] 接口契约完整，可支撑前后端并行开发（OpenAPI 就绪）；**进展（2026-09-11，[CR-019](../change-log.md) / 设计门 A3-4）**：springdoc 实时生成（`/api/docs`）+ 快照已归档 [`docs/design/api/`](api/README.md)，含主链路实测请求响应结构。**2026-09-12 进展（[CR-021](../change-log.md)）**：归档时实测出的 **N-1**（错误响应未声明）/ **N-2**（未声明 `bearerAuth`）/ **N-3**（畸形请求体返回 500 而非 400，**P2 缺陷**）**三项已全部修复**并真机复测通过，快照已再生成（6 端点 / **14** schema，含 `ApiError`）。**仍未达"完整"，故不勾选**：① 只覆盖 Sprint 1 已实现的 6 个端点，§5 表另有 11 行（Sprint 2+）契约未设计；② 本次**新登记三项**——**N-4**（契约声明了 `bearerAuth`，但 `SecurityConfig` 仍 `permitAll()`，**声明 ≠ 强制**，归口 A3-9）、**N-5**（本文 §5 的鉴权表述与实现机制不符，归口 A3-10）、**N-6**（名册 CSV 表头识别只认中文，P3）；③ `1002` / `1003` / `1004` 三类响应**永远进不了快照**（无对应 operation 可挂），前端须读 [api/README](api/README.md) §6.3 的文字约定而非只读快照；
 - [ ] 安全设计覆盖：Markdown 白名单渲染、CSP、验证码限流、敏感信息加密、审计；
 - [ ] 学籍核验设计（4.3 节）评审通过，名册获取路径确认；
 - [ ] 非功能指标（PRD 第 4 节）均有对应措施（缓存、索引、降级、备份）；
-- [x] UI 稿产出与走查安排落实（遗留行动项：开发阶段并行补齐，发起人已接受）；
-- [ ] 无未决重大技术风险，遗留项有责任人与截止日期。
+- [x] UI 稿产出与走查安排落实（遗留行动项：开发阶段并行补齐，发起人已接受）；**签署进展（2026-09-11，[CR-020](../change-log.md)）**：[W-03](../tailoring-waivers.md) 已由发起人签署"接受"，裁剪正式获批——**不再产出交互稿与视觉稿**，改以"Element Plus 默认组件 + 页面截图归档 + 提测前逐页走查"替代。**但本项勾选的含义未变**：勾的是"**安排**落实"，不是[流程手册](../process-handbook.md) 3.3 要求的"**走查通过**"——[设计门纪要](../reviews/gate-3-design.md) §3 出口标准第 3 项已批评此为"检查项被改写后勾选"，该批评成立，本文**不回头改写勾选项文字**来掩盖它。故出口标准第 3 项**仍为 ❌ 未满足**，行动项 **A3-6 仍开放**，W-03 的三条补偿措施（组件规范约定 / `docs/design/ui/` 截图归档 / 提测前逐页走查）**均未执行**；
+- [ ] 无未决重大技术风险，遗留项有责任人与截止日期。**进展（2026-09-11，[CR-020](../change-log.md)）**：ADR-011 部署形态与机审服务商选型仍未决（**A3-8**）；v0.3 / v0.4 的追认已于同日签署 **②有条件追认**（[追认纪要](../reviews/retro-review-design-v03-v04.md)，**A3-2 闭环**），所附三条件生效为 **A3-9（架构守护测试）/ A3-10（消除 F-1 / F-3 / F-4）/ A3-11（新上下文落地后复评范式）**，其中 **A3-9 与 A3-10 为 Sprint 2 开工阻断项**，且 A3-10 涉及改代码须另开 CR。遗留项均已登记责任人与截止，但"**无未决重大技术风险**"这一断言在 A3-8 / A3-9 未闭环前**不成立，故不勾选**；

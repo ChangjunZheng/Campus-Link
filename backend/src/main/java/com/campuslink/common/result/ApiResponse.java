@@ -12,8 +12,4 @@ public record ApiResponse<T>(int code, String message, T data, String traceId) {
     public static ApiResponse<Void> ok() {
         return ok(null);
     }
-
-    public static <T> ApiResponse<T> fail(ResultCode resultCode) {
-        return new ApiResponse<>(resultCode.getCode(), resultCode.getMessage(), null, TraceIds.newTraceId());
-    }
 }
