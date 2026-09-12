@@ -6,7 +6,7 @@ const router = createRouter({
   routes: [
     { path: '/', name: 'home', component: () => import('../views/HomeView.vue'), meta: { title: '首页' } },
     { path: '/board/:code', name: 'board', component: () => import('../views/BoardView.vue'), meta: { title: '版块' } },
-    { path: '/login', name: 'login', component: () => import('../views/LoginView.vue'), meta: { title: '登录 / 注册' } },
+    { path: '/login', name: 'login', component: () => import('../views/LoginView.vue'), meta: { title: '登录 / 注册', bare: true } },
     { path: '/post/:id', name: 'post', component: () => import('../views/PostDetailView.vue'), meta: { title: '帖子详情' } },
     { path: '/publish', name: 'publish', component: () => import('../views/PublishView.vue'), meta: { title: '发布', requiresAuth: true } },
     { path: '/search', name: 'search', component: () => import('../components/Placeholder.vue'), props: { title: '搜索' }, meta: { title: '搜索' } },

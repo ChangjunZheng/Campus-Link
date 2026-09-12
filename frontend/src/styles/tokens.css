@@ -14,7 +14,9 @@
   --cl-color-primary-hover: color-mix(in srgb, var(--cl-color-primary) 90%, #000);
   --cl-color-primary-active: color-mix(in srgb, var(--cl-color-primary) 80%, #000);
   --cl-color-primary-soft: color-mix(in srgb, var(--cl-color-primary) 8%, #fff);
-  --cl-color-link: var(--cl-color-primary);
+  /* 正文链接色独立于主色（CR-024 ②，2026-09-12 补落地）：#409eff 白底 2.78:1 不达 AA，
+     链接固定用 #1a6fc4（白底 5.10:1）——改主色时本行不动、不派生 */
+  --cl-color-link: #1a6fc4;
   --cl-color-success: #67c23a;
   --cl-color-danger: #f56c6c;
 
@@ -103,6 +105,17 @@
   --el-box-shadow: 0 4px 16px rgb(15 23 42 / 10%);
 }
 
+/* 窄屏顶栏（设计稿 page-09）：折成两行，高度不能再写死 60px。
+   注意与顶部全局桥接的差别：EP 把这两个变量声明在 `.el-header` 自身（不是 `:root`），
+   所以必须用 `.el-header.el-header` 直接压组件规则，`:root` 覆写在这里无效。
+   左右收窄到 16px，App.vue 版块胶囊带的出血量（-mx-4 / +2rem）与此对应。 */
+@media (max-width: 767px) {
+  .el-header.el-header {
+    --el-header-height: auto;
+    --el-header-padding: 0 var(--cl-space-4);
+  }
+}
+
 /* ---- 组件级结构规则：EP 把这些值写死在组件规则里，变量够不到 ---- */
 
 .el-card.el-card {
@@ -129,6 +142,48 @@
 
 .el-tag.el-tag {
   --el-tag-border-radius: var(--cl-radius-sm);
+}
+
+/* 主色标签（版块名）的文字是 12px：主色作小号文字不达 AA（ui-guideline §4.3 硬约定 2），
+   文字改链接色，底色 / 描边仍由主色派生 */
+:root:root .el-tag.el-tag--primary {
+  --el-tag-text-color: var(--cl-color-link);
+}
+
+/* 分页（设计稿 page-02）：当前页是主色实心圆角方块；EP 默认只把当前页文字变主色 */
+.el-pagination.el-pagination .el-pager li,
+.el-pagination.el-pagination .btn-prev,
+.el-pagination.el-pagination .btn-next {
+  min-width: 28px;
+  height: 28px;
+  border: var(--cl-hairline) solid var(--cl-border-base);
+  border-radius: var(--cl-radius-sm);
+  background: var(--cl-bg-card);
+}
+
+.el-pagination.el-pagination .el-pager li {
+  margin: 0 var(--cl-space-1);
+  line-height: 27px;
+}
+
+.el-pagination.el-pagination .el-pager li.more {
+  margin: 0;
+  border-color: transparent;
+  background: none;
+}
+
+.el-pagination.el-pagination .el-pager li:not(.is-active):not(.more):hover,
+.el-pagination.el-pagination .btn-prev:hover,
+.el-pagination.el-pagination .btn-next:hover {
+  border-color: var(--cl-color-primary);
+  color: var(--cl-color-link);
+}
+
+.el-pagination.el-pagination .el-pager li.is-active {
+  border-color: var(--cl-color-primary);
+  background: var(--cl-color-primary);
+  color: #fff;
+  font-weight: 500;
 }
 
 /* 实心主色按钮 hover 必须变深：EP 默认 hover 用 primary-light-3（掺 30% 白），

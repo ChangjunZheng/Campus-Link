@@ -63,68 +63,83 @@ async function doRegister() {
 </script>
 
 <template>
-  <el-card shadow="never" class="mx-auto mt-6 max-w-[480px]">
-    <el-tabs v-model="tab">
-      <el-tab-pane label="登录" name="login">
-        <el-form label-position="top" @submit.prevent>
-          <el-form-item label="邮箱">
-            <el-input v-model="loginForm.email" placeholder="注册时使用的邮箱" />
-          </el-form-item>
-          <el-form-item label="验证码">
-            <div class="flex w-full gap-2">
-              <el-input v-model="loginForm.code" placeholder="6 位验证码" maxlength="6" />
-              <el-button
-                :disabled="loginCaptcha.remaining.value > 0 || loginCaptcha.sending.value"
-                @click="loginCaptcha.run(() => sendCaptcha(loginForm.email))"
-              >
-                {{ loginCaptcha.remaining.value > 0 ? `${loginCaptcha.remaining.value}s` : '发送验证码' }}
-              </el-button>
-            </div>
-          </el-form-item>
-          <el-button type="primary" class="w-full" @click="doLogin">登录</el-button>
-          <p class="mt-2 text-caption text-ink-meta">未注册？切换到"注册"，先用学号 + 姓名完成学籍核验。</p>
-        </el-form>
-      </el-tab-pane>
+  <div class="mx-auto w-full max-w-[480px] py-16">
+    <el-card shadow="never">
+      <h1 class="mb-3 text-h1 font-medium text-ink">{{ tab === 'login' ? '登录' : '注册' }} Campus-Link</h1>
 
-      <el-tab-pane label="注册" name="register">
-        <el-steps :active="reg.step - 1" align-center finish-status="success">
-          <el-step title="学籍核验" />
-          <el-step title="邮箱验证" />
-        </el-steps>
+      <el-tabs v-model="tab">
+        <el-tab-pane label="登录" name="login">
+          <el-form label-position="top" @submit.prevent>
+            <el-form-item label="邮箱">
+              <el-input v-model="loginForm.email" placeholder="注册时使用的邮箱" />
+            </el-form-item>
+            <el-form-item label="验证码">
+              <div class="flex w-full gap-2">
+                <el-input v-model="loginForm.code" placeholder="6 位验证码" maxlength="6" />
+                <el-button
+                  :disabled="loginCaptcha.remaining.value > 0 || loginCaptcha.sending.value"
+                  @click="loginCaptcha.run(() => sendCaptcha(loginForm.email))"
+                >
+                  {{ loginCaptcha.remaining.value > 0 ? `${loginCaptcha.remaining.value}s` : '发送验证码' }}
+                </el-button>
+              </div>
+            </el-form-item>
+            <el-button type="primary" class="w-full" @click="doLogin">登录</el-button>
+          </el-form>
+          <p class="mt-4 text-center text-body text-ink-regular">
+            还没有账号？
+            <button type="button" class="text-link hover:underline" @click="tab = 'register'">去注册</button>
+          </p>
+        </el-tab-pane>
 
-        <el-form v-if="reg.step === 1" label-position="top" @submit.prevent>
-          <el-form-item label="学号">
-            <el-input v-model="reg.studentId" placeholder="请输入学号" />
-          </el-form-item>
-          <el-form-item label="姓名">
-            <el-input v-model="reg.name" placeholder="请输入真实姓名" />
-          </el-form-item>
-          <el-button type="primary" class="w-full" @click="doVerify">核验学籍</el-button>
-          <p class="mt-2 text-caption text-ink-meta">学号仅用于与学校名册做哈希比对，不会展示在个人主页。</p>
-        </el-form>
+        <el-tab-pane label="注册" name="register">
+          <el-steps :active="reg.step - 1" finish-status="success" class="mb-4">
+            <el-step title="学籍核验" />
+            <el-step title="邮箱验证" />
+          </el-steps>
 
-        <el-form v-else label-position="top" @submit.prevent>
-          <el-form-item label="邮箱">
-            <el-input v-model="reg.email" placeholder="用于登录与找回，仅本人可见" />
-          </el-form-item>
-          <el-form-item label="验证码">
-            <div class="flex w-full gap-2">
-              <el-input v-model="reg.code" placeholder="6 位验证码" maxlength="6" />
-              <el-button
-                :disabled="regCaptcha.remaining.value > 0 || regCaptcha.sending.value"
-                @click="regCaptcha.run(() => sendCaptcha(reg.email))"
-              >
-                {{ regCaptcha.remaining.value > 0 ? `${regCaptcha.remaining.value}s` : '发送验证码' }}
-              </el-button>
-            </div>
-          </el-form-item>
-          <el-form-item label="昵称">
-            <el-input v-model="reg.nickname" placeholder="社区展示昵称（2~32 字符）" maxlength="32" />
-          </el-form-item>
-          <el-button type="primary" class="w-full" @click="doRegister">完成注册</el-button>
-          <p class="mt-2 text-caption text-ink-meta">核验票据 5 分钟内有效，过期请返回上一步重新核验。</p>
-        </el-form>
-      </el-tab-pane>
-    </el-tabs>
-  </el-card>
+          <el-form v-if="reg.step === 1" label-position="top" @submit.prevent>
+            <el-form-item label="学号">
+              <el-input v-model="reg.studentId" placeholder="请输入 9 位数字学号" maxlength="9" />
+              <p class="mt-1 w-full text-caption text-ink-meta">将与教务学籍名册比对核验（仅本校）</p>
+            </el-form-item>
+            <el-form-item label="姓名">
+              <el-input v-model="reg.name" placeholder="请输入真实姓名" />
+              <p class="mt-1 w-full text-caption text-ink-meta">
+                中文名（2~16 汉字，可含 ·）或外文名，须与学籍信息一致
+              </p>
+            </el-form-item>
+            <el-button type="primary" class="w-full" @click="doVerify">下一步：邮箱验证</el-button>
+          </el-form>
+
+          <el-form v-else label-position="top" @submit.prevent>
+            <el-form-item label="邮箱">
+              <el-input v-model="reg.email" placeholder="用于登录与找回，仅本人可见" />
+            </el-form-item>
+            <el-form-item label="验证码">
+              <div class="flex w-full gap-2">
+                <el-input v-model="reg.code" placeholder="6 位验证码" maxlength="6" />
+                <el-button
+                  :disabled="regCaptcha.remaining.value > 0 || regCaptcha.sending.value"
+                  @click="regCaptcha.run(() => sendCaptcha(reg.email))"
+                >
+                  {{ regCaptcha.remaining.value > 0 ? `${regCaptcha.remaining.value}s` : '发送验证码' }}
+                </el-button>
+              </div>
+            </el-form-item>
+            <el-form-item label="昵称">
+              <el-input v-model="reg.nickname" placeholder="社区展示昵称（2~32 字符）" maxlength="32" />
+            </el-form-item>
+            <el-button type="primary" class="w-full" @click="doRegister">完成注册</el-button>
+            <p class="mt-2 w-full text-caption text-ink-meta">核验票据 5 分钟内有效，过期请返回上一步重新核验。</p>
+          </el-form>
+
+          <p class="mt-4 text-center text-body text-ink-regular">
+            已有账号？
+            <button type="button" class="text-link hover:underline" @click="tab = 'login'">直接登录</button>
+          </p>
+        </el-tab-pane>
+      </el-tabs>
+    </el-card>
+  </div>
 </template>
