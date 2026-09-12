@@ -1,10 +1,10 @@
 package com.campuslink.module.account.web;
 
-import com.campuslink.common.exception.ApiException;
 import com.campuslink.common.result.ApiResponse;
 import com.campuslink.common.result.ErrorCodes;
 import com.campuslink.common.result.ResultCode;
 import com.campuslink.common.web.ApiDocs;
+import com.campuslink.common.web.CurrentUser;
 import com.campuslink.module.account.application.RosterImportApplicationService;
 import com.campuslink.module.account.application.cmd.RosterImportResult;
 import io.swagger.v3.oas.annotations.Operation;
@@ -26,6 +26,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AdminRosterController {
 
+    /** Spring authority 全名；与 {@code CurrentUser.requireRole} 配套（未登录 401、角色不足 403，技术方案 §5） */
+    private static final String SUPERADMIN = "ROLE_SUPERADMIN";
+
     private final RosterImportApplicationService rosterImportService;
 
     @Operation(summary = "CSV 导入：body 为 CSV 文本，格式“学号,姓名[,年级[,专业]]”")
@@ -35,21 +38,8 @@ public class AdminRosterController {
     public ApiResponse<RosterImportResult> importRoster(@RequestBody String csvBody,
                                                         @RequestParam(defaultValue = "manual") String batch,
                                                         Authentication authentication) {
-        requireSuperadmin(authentication);
+        Long operatorId = CurrentUser.requireRole(authentication, SUPERADMIN);
         List<String> lines = csvBody.lines().toList();
-        Long operatorId = authentication.getPrincipal() instanceof Long uid ? uid : null;
         return ApiResponse.ok(rosterImportService.importCsv(lines, batch, operatorId));
-    }
-
-    /** 未登录与已登录但角色不足必须分开：前者 401、后者 403（技术方案 §5） */
-    private void requireSuperadmin(Authentication authentication) {
-        if (authentication == null || !(authentication.getPrincipal() instanceof Long)) {
-            throw new ApiException(ResultCode.NOT_LOGGED_IN);
-        }
-        boolean isSuperadmin = authentication.getAuthorities().stream()
-                .anyMatch(a -> "ROLE_SUPERADMIN".equals(a.getAuthority()));
-        if (!isSuperadmin) {
-            throw new ApiException(ResultCode.FORBIDDEN);
-        }
     }
 }

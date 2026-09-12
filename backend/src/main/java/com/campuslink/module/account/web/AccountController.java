@@ -4,6 +4,7 @@ import com.campuslink.common.result.ApiResponse;
 import com.campuslink.common.result.ErrorCodes;
 import com.campuslink.common.result.ResultCode;
 import com.campuslink.common.web.IpUtil;
+import com.campuslink.common.web.PublicEndpoint;
 import com.campuslink.module.account.application.AccountApplicationService;
 import com.campuslink.module.account.application.CaptchaService;
 import com.campuslink.module.account.application.cmd.AccountCommands.CaptchaCommand;
@@ -37,6 +38,7 @@ public class AccountController {
 
     @Operation(summary = "学籍核验（F-ACC-004）：学号 + 姓名，通过返回一次性核验票据")
     @ErrorCodes({ResultCode.STUDENT_VERIFY_FAILED, ResultCode.VERIFY_RATE_LIMITED})
+    @PublicEndpoint
     @PostMapping("/verify-student")
     public ApiResponse<VerifyStudentResult> verifyStudent(@Valid @RequestBody VerifyStudentCommand command,
                                                           HttpServletRequest http) {
@@ -45,6 +47,7 @@ public class AccountController {
 
     @Operation(summary = "发送邮箱验证码（60s 重发间隔，单账号日上限 10 条）")
     @ErrorCodes({ResultCode.CAPTCHA_TOO_FREQUENT, ResultCode.CAPTCHA_EXCEEDED})
+    @PublicEndpoint
     @PostMapping("/captcha")
     public ApiResponse<Void> captcha(@Valid @RequestBody CaptchaCommand command) {
         captchaService.send(command.target());
@@ -54,6 +57,7 @@ public class AccountController {
     @Operation(summary = "注册：需先通过学籍核验并携带票据")
     @ErrorCodes({ResultCode.CAPTCHA_INVALID, ResultCode.VERIFY_TICKET_INVALID,
             ResultCode.STUDENT_VERIFY_FAILED, ResultCode.EMAIL_EXISTS})
+    @PublicEndpoint
     @PostMapping("/register")
     public ApiResponse<AuthResponse> register(@Valid @RequestBody RegisterCommand command) {
         return ApiResponse.ok(AuthResponse.from(accountApplicationService.register(command)));
@@ -61,6 +65,7 @@ public class AccountController {
 
     @Operation(summary = "登录：邮箱 + 验证码")
     @ErrorCodes({ResultCode.LOGIN_FAILED, ResultCode.USER_BANNED})
+    @PublicEndpoint
     @PostMapping("/login")
     public ApiResponse<AuthResponse> login(@Valid @RequestBody LoginCommand command) {
         return ApiResponse.ok(AuthResponse.from(accountApplicationService.login(command)));

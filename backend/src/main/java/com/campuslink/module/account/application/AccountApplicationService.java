@@ -133,4 +133,13 @@ public class AccountApplicationService {
         return accountRepository.findByIds(ids).stream()
                 .collect(Collectors.toMap(Account::getId, Account::getNickname));
     }
+
+    /**
+     * 按 id 取账号（只读）：web 层展示当前用户资料的入口。
+     * 存在意义是 R-1 裁决（CR-028）：web 不得注入 domain 端口，只允许经 application。
+     */
+    public Account accountOf(Long accountId) {
+        return accountRepository.findById(accountId)
+                .orElseThrow(() -> new ApiException(ResultCode.USER_NOT_FOUND));
+    }
 }

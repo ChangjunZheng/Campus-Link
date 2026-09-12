@@ -1,10 +1,11 @@
 package com.campuslink.module.forum.web;
 
-import com.campuslink.common.exception.ApiException;
 import com.campuslink.common.result.ApiResponse;
 import com.campuslink.common.result.ErrorCodes;
 import com.campuslink.common.result.ResultCode;
 import com.campuslink.common.web.ApiDocs;
+import com.campuslink.common.web.CurrentUser;
+import com.campuslink.common.web.PublicEndpoint;
 import com.campuslink.module.forum.application.ForumQueryApplicationService;
 import com.campuslink.module.forum.application.PostApplicationService;
 import com.campuslink.module.forum.application.cmd.ForumResults.PostDetail;
@@ -32,9 +33,9 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * 帖子接口（web 层）：只做协议转换，用例逻辑在 application 层。
  *
- * <p>⚠️ {@code SecurityConfig} 仍是 {@code anyRequest().permitAll()}（N-4 未闭环），
- * 故 {@code POST /api/v1/posts} 的登录态**必须在本类手写校验**——漏写会静默变成公开接口，
- * 而 {@code @SecurityRequirement} 只声明契约、不构成运行时强制（技术方案 §5 / 设计 §4.2）。
+ * <p>鉴权约定（N-4 已闭环，CR-028）：每个端点**必须且只能**声明 {@link PublicEndpoint}（公开）
+ * 或 {@code @SecurityRequirement}（受保护）；受保护端点必须调用 {@link CurrentUser} 的统一入口。
+ * 该约定由 {@code ArchitectureGuardTest} 机器校验——漏写即测试失败，不会静默变成公开接口。
  */
 @Tag(name = "post", description = "帖子")
 @RestController
@@ -47,6 +48,7 @@ public class PostController {
 
     @Operation(summary = "帖子列表（公开）：boardCode 缺省为全站最新，排序固定 created_at DESC")
     @ErrorCodes({ResultCode.NOT_FOUND})
+    @PublicEndpoint
     @GetMapping
     public ApiResponse<PageVo<PostSummaryVo>> list(@RequestParam(required = false) String boardCode,
                                                    @RequestParam(defaultValue = "1") int page,
@@ -58,6 +60,7 @@ public class PostController {
 
     @Operation(summary = "帖子详情（公开）：返回服务端渲染好的 contentHtml")
     @ErrorCodes({ResultCode.NOT_FOUND})
+    @PublicEndpoint
     @GetMapping("/{id}")
     public ApiResponse<PostDetailVo> detail(@PathVariable("id") Long id) {
         return ApiResponse.ok(PostDetailVo.from(forumQueryService.postDetail(id)));
@@ -69,9 +72,7 @@ public class PostController {
     @PostMapping
     public ApiResponse<PublishedPost> publish(@Valid @RequestBody PublishPostCommand command,
                                               Authentication authentication) {
-        if (authentication == null || !(authentication.getPrincipal() instanceof Long userId)) {
-            throw new ApiException(ResultCode.NOT_LOGGED_IN);
-        }
+        long userId = CurrentUser.requireId(authentication);
         return ApiResponse.ok(postApplicationService.publish(userId, command));
     }
 }

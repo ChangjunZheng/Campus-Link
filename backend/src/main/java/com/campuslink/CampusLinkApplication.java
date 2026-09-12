@@ -7,7 +7,7 @@ import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 
 @SpringBootApplication
 @ConfigurationPropertiesScan
-@MapperScan({"com.campuslink.**.mapper", "com.campuslink.common.audit"})
+@MapperScan("com.campuslink.**.mapper")
 public class CampusLinkApplication {
 
     public static void main(String[] args) {

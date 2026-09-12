@@ -1,5 +1,6 @@
 package com.campuslink.common.audit;
 
+import com.campuslink.common.audit.mapper.AuditMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

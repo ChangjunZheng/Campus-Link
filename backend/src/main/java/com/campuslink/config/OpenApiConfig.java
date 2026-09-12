@@ -11,9 +11,10 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class OpenApiConfig {
 
-    @Bean
-    public OpenAPI openAPI() {
-        return new OpenAPI()
+
+        @Bean
+        public OpenAPI openAPI() {
+                return new OpenAPI()
                 .info(new Info()
                         .title("Campus-Link API")
                         .description("重庆工程学院计算机专业学生交流论坛（MVP）。错误码分段见技术方案第 5 节。")
@@ -23,7 +24,9 @@ public class OpenApiConfig {
                         .scheme("bearer")
                         .bearerFormat("JWT")
                         .description("登录返回的 JWT，请求头 `Authorization: Bearer <token>`。"
-                                + "注意：这只是契约声明，运行时的强制点是 JwtAuthenticationFilter + Controller 内校验"
-                                + "（SecurityConfig 目前为 permitAll），新增受保护端点若漏写校验不会被框架拦下。")));
-    }
+                                + "运行时的强制点是 JwtAuthenticationFilter 解析 + Controller 内 CurrentUser 统一入口校验"
+                                + "（SecurityConfig 仍为 permitAll，无路径级拦截）。"
+                                + "受保护端点必须声明本 security 并真的调用 CurrentUser，"
+                                + "该纪律由 ArchitectureGuardTest 机器校验（N-4 已闭环，CR-028）。")));
+                } 
 }

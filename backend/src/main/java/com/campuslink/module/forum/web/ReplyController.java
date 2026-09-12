@@ -1,10 +1,11 @@
 package com.campuslink.module.forum.web;
 
-import com.campuslink.common.exception.ApiException;
 import com.campuslink.common.result.ApiResponse;
 import com.campuslink.common.result.ErrorCodes;
 import com.campuslink.common.result.ResultCode;
 import com.campuslink.common.web.ApiDocs;
+import com.campuslink.common.web.CurrentUser;
+import com.campuslink.common.web.PublicEndpoint;
 import com.campuslink.module.forum.application.ForumQueryApplicationService;
 import com.campuslink.module.forum.application.ReplyApplicationService;
 import com.campuslink.module.forum.application.cmd.ForumResults.PublishedReply;
@@ -30,8 +31,8 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * 楼层接口（web 层）。
  *
- * <p>⚠️ 同 {@link PostController}：{@code POST /api/v1/posts/{postId}/replies} 的登录态
- * **必须手写校验**（N-4 未闭环，设计 §4.2）。
+ * <p>鉴权约定同 {@link PostController}（N-4 已闭环，CR-028）：公开端点标 {@link PublicEndpoint}、
+ * 受保护端点声明 {@code @SecurityRequirement} 并调用 {@link CurrentUser}，由 {@code ArchitectureGuardTest} 机器校验。
  */
 @Tag(name = "reply", description = "楼层回复")
 @RestController
@@ -44,6 +45,7 @@ public class ReplyController {
 
     @Operation(summary = "楼层列表（公开）：按 floor_no 升序；楼层 = 回复序号，帖子本体不占楼层号")
     @ErrorCodes({ResultCode.NOT_FOUND})
+    @PublicEndpoint
     @GetMapping
     public ApiResponse<PageVo<ReplyVo>> list(@PathVariable("postId") Long postId,
                                              @RequestParam(defaultValue = "1") int page,
@@ -60,9 +62,7 @@ public class ReplyController {
     public ApiResponse<PublishedReply> reply(@PathVariable("postId") Long postId,
                                              @Valid @RequestBody PublishReplyCommand command,
                                              Authentication authentication) {
-        if (authentication == null || !(authentication.getPrincipal() instanceof Long userId)) {
-            throw new ApiException(ResultCode.NOT_LOGGED_IN);
-        }
+        long userId = CurrentUser.requireId(authentication);
         return ApiResponse.ok(replyApplicationService.reply(postId, userId, command));
     }
 }

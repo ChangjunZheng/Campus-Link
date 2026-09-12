@@ -4,14 +4,15 @@ import com.campuslink.module.account.domain.gateway.RosterGateway;
 import com.campuslink.module.account.domain.gateway.SensitiveCodec;
 import com.campuslink.module.account.domain.model.StudentId;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
 
 /**
  * 学籍核验领域服务（技术方案 4.3 / PRD F-ACC-004）：
  * 比对规则 = 名册按学号哈希定位 + 姓名归一化容错匹配 + 未占用。
  * 三种失败（学号不存在 / 姓名不匹配 / 已注册）由应用层统一收敛为同一提示，防名册枚举。
+ *
+ * <p>domain 层不挂框架注解（F-1，CR-028）：本服务由 {@code account.infrastructure.config.AccountDomainConfig}
+ * 以 {@code @Bean} 装配——装配点属组合根关注点，放 infrastructure。
  */
-@Service
 @RequiredArgsConstructor
 public class StudentVerificationService {
 
