@@ -2,11 +2,12 @@
 
 | 文档信息 | 内容 |
 |---------|------|
-| 版本 | v1.0 |
-| 状态 | 已生效（实现依据） |
+| 版本 | v1.1 |
+| 状态 | 已生效（实现依据）；**M2~M5 已按本文落码**，实施偏差集中登记于 §8 |
 | 维护人 | 技术负责人（发起人兼任） |
 | 关联阶段 | 开发（阶段四） |
 | 上游依据 | [Sprint 2 计划（MVP）](sprint-2.md) · [技术方案 §2.4 / §5](../design/tech-design.md) · [PRD](../requirements/prd.md)（F-FORUM-001~004）· [API 契约快照](../design/api/README.md) |
+| 下游记录 | [CR-022](../change-log.md) 的后续实施记录（落码与验收结果）· [Sprint 2 计划](sprint-2.md) §6 验收记录 |
 | 最后更新 | 2026-09-12 |
 
 > 版本号以 [docs/README.md](../README.md) 第 2 节为单一登记处，本文交叉引用不写版本号（手册 4.5）。
@@ -114,7 +115,7 @@ module/forum/
 ### 3.4 `GET /api/v1/posts/{id}` — 帖子详情（公开）
 
 ```
-200 { code:0, data:{ id, boardCode, boardName, title, contentHtml, authorNickname, replyCount, likeCount, createdAt, isAccepted:false } }
+200 { code:0, data:{ id, boardCode, boardName, title, contentHtml, authorNickname, replyCount, likeCount, createdAt, accepted:false } }
 404 → 404 / 3001（不存在、已删、或 status != PUBLISHED）
 ```
 返回 `contentHtml`（**已渲染好的 HTML，前端用 `v-html`**）。XSS 防线在 `MarkdownRenderer` 的白名单，**不在前端**。
@@ -210,6 +211,27 @@ if (authentication == null || !(authentication.getPrincipal() instanceof Long us
 | M5 | 前端 3 页接真实数据 | 版块列表 / 发帖 / 详情+回帖 | M4 | `npm run build` 通过 |
 | M6 | 契约同步 + 验收 | 快照再生成、技术方案 §5、5 条验收标准实测 | M4 | [sprint-2.md](sprint-2.md) §1 的 A1~A5 |
 
-## 8. 变更记录
+## 8. 落码偏差记录（M2~M5 实施时与本文的差异，逐条如实登记）
 
+> 记录原则同本项目的其他一致性记录：**偏差不隐藏、也不回头改写设计原文**——§3~§6 保持落码前的样子，差异集中登记于此，需要时由后续版本修订正文。**无一项改变 §1 的范围、§3 的契约形状（除下表中已标注的两处命名）或 §6 的取舍**。
+
+| # | 偏差 | 实际落码 | 性质与处置 |
+|---|------|---------|-----------|
+| **P-1** | §3.4 写 `isAccepted` | 实际字段名为 **`accepted`**（Java record 组件名 `accepted` → Jackson 序列化即 `accepted`，无 `is` 前缀） | **文档错误，已修正 §3.4 正文**（本版唯一改动正文的偏差）。前端 `forum.ts` 已按 `accepted` 对接；[api/README](../design/api/README.md) §3.2 已加显式警示 |
+| **P-2** | §3.3 / §3.4 的路径参数写 `{id}` | `ReplyController` 用类级 `@RequestMapping("/api/v1/posts/{postId}/replies")`，故回复两个端点的路径参数名为 **`{postId}`** | **非错误、不改**：两个 Controller 各自命名，OpenAPI 里如实呈现为 `/posts/{id}` 与 `/posts/{postId}/replies`。[api/README](../design/api/README.md) §3.2 已加说明，避免读者误读为两个资源 |
+| **P-3** | §2 文件清单未列 `domain/gateway/PageResult` | 新增 `PageResult<T>` record（`domain/gateway` 包内）作为仓储层分页返回类型 | **合理的补充**：分页是仓储端口的能力，返回类型须定义在 domain 才不违反依赖方向（不引入 Spring Data 的 `Page`）。登记但不改 §2 |
+| **P-4** | §2 文件清单未列 `application/cmd/ForumResults` | 新增 `ForumResults`（`PublishedPost` / `PublishedReply` 两个返回记录的载体） | **合理的补充**：与既有 `account` 的 `AuthResponse` 同类的用例返回类型，位置合规。登记但不改 §2 |
+| **P-5** | §2 文件清单未列 `MarkdownRenderer` 的新方法 | 为生成 `summary` 新增 `common/markdown/MarkdownRenderer#toPlainSummary`（去 Markdown 记号、截 120 字） | **必要的补充**：§3.2 要求 `summary` **由服务端截断**，而 Markdown 渲染的唯一出口是 `MarkdownRenderer`（AGENTS.md 约定），故新方法只能加在那里。**该文件属 `common/`，不改任何既有渲染行为、`MarkdownRendererTest` 6 个 XSS 用例保持全绿** |
+| **P-6** | §2 未列前端文件（该节只列后端） | 实际新增/改写 `frontend/src/api/forum.ts`、`utils/time.ts`、`views/PostDetailView.vue`、`views/PublishView.vue`，改写 `views/BoardView.vue`、`views/HomeView.vue`、`router/index.ts`、`App.vue` | **非偏差、说明**：§2 标题即"后端 `module/forum` 结构"，前端不在其范围。登记以便追溯 |
+| **P-7** | §6 未登记"分页边界归一化的位置" | 归一化（`page<1→1`、`size<1→20`、`size>100→100`）落在 **application 层**，而非 `@Min`/`@Max` 注解校验 | **有意的实现选择**：注解校验失败会抛 `ConstraintViolationException`，若未被专用处理器接住就会落兜底分支报成 500（**即 N-3 那类缺陷**）。放在 application 层做**归一化**而非报错，既避免该类风险、又对调用方更宽容。已同步写入技术方案 §5 分页条目 |
+| **P-8** | §4.3 未写明 `account` 侧方法的返回形状 | 实为 `AccountApplicationService#nicknamesOf(Collection<Long>) → Map<Long,String>`，昵称缺失回落 `"已注销用户"` | 与 §4.3 文字一致，仅补记确切签名。**`account` 模块本次改动仅"新增一个只读方法"，未改既有行为**（单测 `AccountApplicationServiceNicknameTest` 覆盖） |
+
+**两处 §2.1 自检的实测证据**（该清单是 A3-9 缺位期唯一的替代防线，故列出可复核的命令级结论）：
+
+- `domain/` 下 import 仅见 lombok / `java.util` / `java.time` / `common` 的 `ApiException`·`ResultCode`，**无 Spring / MyBatis / Jackson**——`domain/gateway/` 内只有 3 个接口 + `PageResult` record，无实现；
+- `infrastructure/persistence/mapper/` 内 3 个 Mapper（`BoardMapper` / `PostMapper` / `ReplyMapper`），**无包外 Mapper**（不重演 F-3）；`web/` 内不出现 Mapper / DO / Converter；全模块 **零** `module.account.infrastructure` import（跨上下文只经 `account.application`）。
+
+## 9. 变更记录
+
+- **v1.1（2026-09-12）——M2~M6 落码后的同步，范围与取舍未变**：① **修正 §3.4 的 `isAccepted` → `accepted`**（P-1，文档错误）；② 新增 **§8 落码偏差记录**（8 条：P-1 文档错误 / P-2 路径参数名 / P-3~P-5 文件清单外的合理补充 / P-6 前端文件说明 / P-7 分页归一化位置 / P-8 方法签名），并附 **§2.1 六条自检的实测证据**（grep 级结论：domain 无框架 import、Mapper 在 `.mapper` 包内、web 无持久化类型、零 `account.infrastructure` import）；③ **§1~§7 的范围、契约形状（除 P-1）、取舍与风险一律未改**——本版只做"把落码事实登记清楚"，不借机改写设计原文；④ 任务 M1~M6 的实际完成情况见 [sprint-2.md](sprint-2.md) 与 [CR-022](../change-log.md) 的后续实施记录。
 - v1.0（2026-09-12）——创建（[CR-022](../change-log.md) 的后续实施产物）。**只出一份增量文档、不出单独增量 PRD**（理由见 §0，直接回应 [W-07](../tailoring-waivers.md) 所记"流程复杂度远超代码量"）；§1 核实并写明**新增迁移 0 个、论坛端点 0 个已存在**；§2 给出 `module/forum` 四层文件清单与 **§2.1 六条人工自检**（A3-9 缺位期的替代）；§3 给出 6 个端点的请求/响应形状与**统一分页口径 `page/size`**；§4 交代四处必须专门的决策——**楼层号与 `reply_count` 的一致性**（行锁派生、不加唯一约束）、**N-4 下两个受保护端点必须手写鉴权并各配一个 401 单测**、**作者昵称走 `account.application` 新增只读方法而非直连对方数据表**、**契约快照与技术方案 §5 同步**；§6 如实登记 7 条取舍与风险（含 🔴 N-4 与 ⚠️ A3-9 缺位）；§7 把任务落到具体文件。
