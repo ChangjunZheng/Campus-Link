@@ -249,8 +249,8 @@
       <p class="sub">重庆工程学院计算机专业学生交流论坛 · 企业七阶段流程（BRD → PRD → 设计 → 开发 → …）· 单人 + AI 协作</p>
       <div class="chips">
         <span class="chip">数据快照 <b>2026-09-13</b></span>
-        <span class="chip">change-log <b>v1.34</b></span>
-        <span class="chip">next-steps <b>v1.11</b></span>
+        <span class="chip">change-log <b>v1.41</b></span>
+        <span class="chip">next-steps <b>v1.12</b></span>
         <span class="chip">waivers <b>v1.9</b></span>
         <span class="chip">视图产物 · 已登记（docs/README.md §2 / §3）</span>
       </div>
@@ -258,9 +258,9 @@
     <div class="kpis" id="kpis">
       <div class="kpi"><b id="k-cr">–</b><span>变更记录（CR）</span></div>
       <div class="kpi"><b>2<small> / 4</small></b><span>Sprint 已交付（S1 · S2 MVP）</span></div>
-      <div class="kpi"><b>125<small> / 125</small></b><span>后端单测全绿（CR-043 后）</span></div>
-      <div class="kpi"><b>13<small> / 31</small></b><span>契约端点 / schema</span></div>
-      <div class="kpi"><b>5<small> + </small>6</b><span>真实页面 + 占位页</span></div>
+      <div class="kpi"><b>145<small> / 145</small></b><span>后端单测全绿（CR-049 后）</span></div>
+      <div class="kpi"><b>18<small> / 33</small></b><span>契约端点 / schema</span></div>
+      <div class="kpi"><b>7<small> + </small>3</b><span>真实页面 + 占位页</span></div>
       <div class="kpi"><b>0</b><span>经正式变更评审（如实登记）</span></div>
     </div>
   </div>
@@ -298,7 +298,7 @@
       <div class="node">④</div>
       <div class="p-name">开发</div>
       <div class="p-gate g-open">提测门 4 / 7 未满足</div>
-      <div class="p-note">Sprint 3 进行中 · 已落地 2 个功能（CR-043 采纳 · CR-048 点赞收藏）<br>B4/B5 已闭环（CR-028）· 路径级鉴权已补（CR-031）</div>
+      <div class="p-note">Sprint 3 进行中 · 已落地 3 个功能（CR-043 采纳 · CR-048 点赞收藏 · CR-049 站内搜索）<br>B4/B5 已闭环（CR-028）· 路径级鉴权已补（CR-031）</div>
       <div class="here-tag">YOU ARE HERE</div>
     </li>
     <li>
@@ -344,7 +344,7 @@
       <div class="car-body">
         <div class="car-top"><b>Sprint 3</b><span class="tag t-doing">🟡 进行中</span></div>
         <div class="car-scope">互动与发现（采纳 / 点赞收藏 / 搜索 / 通知 / 热榜）</div>
-        <div class="car-note">已落地 2 个功能：采纳最佳答案（CR-043）· 点赞收藏（CR-048）</div>
+        <div class="car-note">已落地 3 个功能：采纳最佳答案（CR-043）· 点赞收藏（CR-048）· 站内搜索（CR-049）</div>
       </div>
     </div>
     <div class="car">
@@ -363,7 +363,7 @@
 <!-- ============ 详情 Tab 导航 ============ -->
 <nav class="tabs">
   <button class="active" data-tab="overview">① 总览：项目走到哪了</button>
-  <button data-tab="timeline">② 变更时间线：42 次 CR</button>
+  <button data-tab="timeline">② 变更时间线：43 次 CR</button>
   <button data-tab="issues">③ 问题与欠账台账</button>
   <button data-tab="todo">④ 待办与新需求</button>
 </nav>
@@ -397,7 +397,7 @@
         </div></div>
         <div class="risk"><span class="dot" style="background:var(--ink-3)"></span><div>
           <div class="r-title">治理模式声明（如实登记，非批评）</div>
-          <div class="r-desc">42 次 CR「经正式变更评审」0 次；手册最低 5 动作：① 需求评审 ❌ ② 技术评审 ❌ ③ 自测+CR 🟡 ④⑤ 阶段未启动。发起人已签署 W-01~W-07 接受此模式，风险转为「已知已接受」。</div>
+          <div class="r-desc">43 次 CR「经正式变更评审」0 次；手册最低 5 动作：① 需求评审 ❌ ② 技术评审 ❌ ③ 自测+CR 🟡 ④⑤ 阶段未启动。发起人已签署 W-01~W-07 接受此模式，风险转为「已知已接受」。</div>
         </div></div>
       </div>
       <div class="panel">
@@ -424,7 +424,7 @@
   <div class="gitlog" id="timeline"></div>
   <div class="panel" style="margin-top:16px">
     <div class="panel-head"><h2>📊 影响评估统计（如实登记口径）</h2></div>
-    <p>42 次变更：完整 <b>32</b>（CR-004/005/007/009/010/011/015/017/018/019/020/021/023/024/025/026/027/028/029/030/031/032/034/035/040/041/043/044/045/046/047/048）· 部分 <b>8</b> · 未做 <b>2</b>（CR-001/003）。<b>经正式变更评审 0 次</b>——手册 4.2 要求四方同步，单人项目无第二角色可同步。<b>CR-029 起改轻量登记（一行式），状态只维护台账 + 本驾驶舱两处</b>；<b>编号不连续为预期</b>（CR-033 / CR-036~039 / CR-042 已由六份增量 PRD 草案预留，均待发起人评审）。</p>
+    <p>43 次变更：完整 <b>33</b>（CR-004/005/007/009/010/011/015/017/018/019/020/021/023/024/025/026/027/028/029/030/031/032/034/035/040/041/043/044/045/046/047/048/049）· 部分 <b>8</b> · 未做 <b>2</b>（CR-001/003）。<b>经正式变更评审 0 次</b>——手册 4.2 要求四方同步，单人项目无第二角色可同步。<b>CR-029 起改轻量登记（一行式），状态只维护台账 + 本驾驶舱两处</b>；<b>编号不连续为预期</b>（CR-033 / CR-036~039 / CR-042 已由六份增量 PRD 草案预留，均待发起人评审）。</p>
   </div>
 </section>
 
@@ -443,7 +443,7 @@
       </div></div>
       <div class="risk"><span class="dot" style="background:var(--danger)"></span><div>
         <div class="r-title">提测准入门欠账（阶段四出口）· 7 项中 4 项未满足</div>
-        <div class="r-desc">覆盖率不可测（jacoco 未接入，117 个测试无覆盖率数值）、静态扫描未接入（SpotBugs/ESLint）、Code Review 无第二角色、W-03 逐页走查未做。发起人未指定截止点（W-05 如实登记）。</div>
+        <div class="r-desc">覆盖率不可测（jacoco 未接入，145 个测试无覆盖率数值）、静态扫描未接入（SpotBugs/ESLint）、Code Review 无第二角色、W-03 逐页走查未做。发起人未指定截止点（W-05 如实登记）。</div>
       </div></div>
     </div>
     <div class="panel">
@@ -452,7 +452,7 @@
         <tr><th>条目</th><th>状态 / 关闭前置</th></tr>
         <tr><td>W-01 单人评审替代会审</td><td>开放 · 外部评审补偿单人项目无对象，实质落空</td></tr>
         <tr><td>W-02 设计门未闭环即开工</td><td><b>可关闭，待发起人签署</b> · 前置 A3-9 已由 CR-028 落地（台账只回填状态、任何文档不代签）</td></tr>
-        <tr><td>W-03 UI 稿裁剪（= A3-6）</td><td>开放 · 补偿①（手册 5.1 已补入，CR-032）与补偿②截图（12 张，⚠️ 又已过时）已齐备；仅剩 ③ 提测前走查</td></tr>
+        <tr><td>W-03 UI 稿裁剪（= A3-6）</td><td>开放 · 补偿①（手册 5.1 已补入，CR-032）与补偿②截图（12 张，⚠️ 又已过时）已齐备；<b>但 CR-048 / CR-049 后页面清单增至 8 项、截图仍只覆盖前 6 页</b>（<code>/favorites</code> 与 <code>/search</code> 从未归档，补偿② 出现新覆盖缺口）；仅剩 ③ 提测前走查</td></tr>
         <tr><td>W-04 B1/B2 未清零即开工</td><td>开放 · 名册到位后须关 bypass 全链路回归（唯一无法工程消除项）</td></tr>
         <tr><td>W-05 提测门指标不可执行</td><td><b>不得关闭</b> · jacoco / 静态扫描 / 书面 CR 三项未做（与本批无关）</td></tr>
         <tr><td>W-07 最小 MVP 优先</td><td><b>可关闭，待发起人签署</b> · 补偿④「A3-9/A3-10 必须补做」已履行（A3-11 + CR-028 全部完成）</td></tr>
@@ -498,7 +498,7 @@
       <tr><td>现在该干什么</td><td><a href="下一步行动.md">下一步行动.md</a> §1 阻塞项 + §4 三件事</td></tr>
       <tr><td>流程偏离与签署</td><td><a href="流程偏离记录.md">流程偏离记录.md</a> §4 签署汇总</td></tr>
       <tr><td>Sprint 执行与验收证据</td><td><a href="开发/Sprint2计划.md">开发/Sprint2计划.md</a> §5（A1~A5 逐条实测证据）</td></tr>
-      <tr><td>UI 规范与截图</td><td><a href="设计/UI规范/界面规范.md">设计/UI规范/界面规范.md</a>（§8.1 12 张截图，已过时）</td></tr>
+      <tr><td>UI 规范与截图</td><td><a href="设计/UI规范/界面规范.md">设计/UI规范/界面规范.md</a>（v1.5；§8.1 清单 8 页 / 截图仍 12 张，只覆盖前 6 页且已过时）</td></tr>
     </table>
   </div>
 </section>
@@ -513,7 +513,7 @@
     </div></div>
     <div class="risk"><span class="todo-num">2</span><div>
       <div class="r-title">补齐 W-03 剩余一项（= A3-6 最后一环）</div>
-      <div class="r-desc">① ✅ 已完成（CR-032，2026-09-13）：UI 稿裁剪已写入手册 5.1「可裁剪项」，手册升 v1.2——W-03 补偿①② 齐备；② 提测前逐页走查（时点未到），含 ui-guideline §7 已登记、未修的窄屏 :rows 两处。另：12 张截图色值+布局均已过时，重摄待定。</div>
+      <div class="r-desc">① ✅ 已完成（CR-032，2026-09-13）：UI 稿裁剪已写入手册 5.1「可裁剪项」，手册升 v1.2——W-03 补偿① 齐备；② 提测前逐页走查（时点未到），<b>范围现为 8 个真页面</b>（CR-048 的 <code>/favorites</code>、CR-049 的 <code>/search</code> 均在内，且这两页从未采集截图）。另：12 张截图色值+布局均已过时、只覆盖前 6 页，重摄待定。<b>据实更正（本次）</b>：原文「ui-guideline §7 已登记、未修的窄屏 <code>:rows</code> 两处」与事实源不符——界面规范 §7 记为 v1.3（CR-025）<b>已落地</b>（发帖 8/14、回复 4/6），只是<b>未经目视验证</b>；故待办是「走查确认」而非「修改代码」。</div>
     </div></div>
     <div class="risk"><span class="todo-num">3</span><div>
       <div class="r-title">收尾本轮执行入口的凭证与签署（两项小动作，均不需写代码）</div>
@@ -525,7 +525,7 @@
     <div class="panel">
       <div class="panel-head"><h2>🗺️ 后续 Sprint 的既定范围</h2></div>
       <p style="font-weight:600;margin-bottom:4px">Sprint 3 · 互动与发现</p>
-      <p class="muted" style="margin-bottom:10px">~~F-QA-001 采纳最佳答案~~（✅ 已由 CR-043 落地，2026-09-13）· ~~F-FORUM-005 点赞收藏~~（✅ 已由 CR-048 落地，2026-09-13；通知发放挂起归 F-SOC-001）· F-FORUM-008 站内搜索 · F-SOC-001 通知中心 · 热榜定时任务（ADR-006）</p>
+      <p class="muted" style="margin-bottom:10px"><s>F-QA-001 采纳最佳答案</s>（✅ 已由 CR-043 落地，2026-09-13）· <s>F-FORUM-005 点赞收藏</s>（✅ 已由 CR-048 落地，2026-09-13；通知发放挂起归 F-SOC-001）· <s>F-FORUM-008 站内搜索</s>（✅ 已由 CR-049 落地，2026-09-13；⚠️ 正文全文检索归 F-FORUM-009 P1、标签侧因发帖链路未建模标签而暂无真实数据来源）· F-SOC-001 通知中心 · 热榜定时任务（ADR-006）</p>
       <p style="font-weight:600;margin-bottom:4px">Sprint 4 · 治理与收尾</p>
       <p class="muted">F-SAFE-001 机审对接（降级开关）· F-SAFE-002 举报 · F-SAFE-003 内容处置 · F-ADMIN-001~003 后台 · F-ACC-003 账号注销（7 天冷静期）</p>
       <p class="muted" style="margin-top:8px">提测准入门：冒烟 100% · CI 全绿 · 覆盖率 ≥60%（核心 ≥80%）· Code Review 无未解决评论</p>
@@ -610,7 +610,8 @@ const CRS=[
 {id:"CR-045",date:"2026-09-13",title:"文档一致性校准：修正下一步行动清单头部版本号漂移——全仓 27 份登记文档「头部版本 vs README §2 登记版本」逐份比对，真漂移仅 1 处（头部停在 v1.10、登记已是 v1.11）；另 3 处疑似经核为误报（变更记录倒序、首条才是最新）；头部升 v1.12、关联阶段改「Sprint 3 进行中」，正文一字未改",type:"流程（文档一致性校准）",status:"full",review:"发起人指令（“顺手校准”）",hash:"—"},
 {id:"CR-046",date:"2026-09-13",title:"修正 backend/README.md 的 3 处失效链接（CR-030 文档中文化改名时该文件不在修复范围内，仍指向旧英文路径 docs/design/tech-design.md 与 docs/change-log.md；已改新路径并补 CR 锚点，正文一字未改；修正后全仓相对链接 2045 条 / 失效 0）",type:"流程（文档一致性修正）",status:"full",review:"发起人指令（“需要修改”）",hash:"—"},
 {id:"CR-047",date:"2026-09-13",title:"进度驾驶舱视觉重构（视图 v1.0 → v2.0）：发起人反馈「太丑、缺少项目开发流程感」——六阶段研发管线 + ◆ 评审门 + YOU ARE HERE 脉冲与 Sprint 交付列车恒定置顶、CR 时间线改 git-log 风格、KPI 卡上移横幅并动态取数；只改结构与样式、事实零新增，顺带把 CRS 由 38 补到 40（增 CR-045/046）",type:"流程（视图重构）",status:"full",review:"发起人当面指令（“重新设计优化”）",hash:"—"},
-{id:"CR-048",date:"2026-09-13",title:"Sprint 3 第二个功能：F-FORUM-005 点赞收藏——帖子/楼层点赞与帖子收藏均 toggle 语义（主键唯一约束去重），4 个新受保护端点（POST /posts/{id}/like、POST /posts/{postId}/replies/{replyId}/like、POST /posts/{id}/favorite 返回 {active,count} + GET /favorites/mine 分页）；详情出参补 likedByMe/favoritedByMe 与楼层 likedByMe/likeCount（登录填充、匿名恒 false，详情端点保持公开）；零迁移、ResultCode 无新增（复用 3001）；前端详情页交互 + 新增「我的收藏」页 /favorites + 顶栏入口；不做：通知（归 F-SOC-001）/ 个人主页整体 / 禁止自赞 / 回复收藏 / 热榜联动（单测 125→138 全绿，快照 v1.7 再生成 17 端点/33 schema；提交后须补快照「提交后核对」）",type:"功能（论坛互动）",status:"full",review:"发起人确认方案后实施（“开始实施”）",hash:"—"}
+{id:"CR-048",date:"2026-09-13",title:"Sprint 3 第二个功能：F-FORUM-005 点赞收藏——帖子/楼层点赞与帖子收藏均 toggle 语义（主键唯一约束去重），4 个新受保护端点（POST /posts/{id}/like、POST /posts/{postId}/replies/{replyId}/like、POST /posts/{id}/favorite 返回 {active,count} + GET /favorites/mine 分页）；详情出参补 likedByMe/favoritedByMe 与楼层 likedByMe/likeCount（登录填充、匿名恒 false，详情端点保持公开）；零迁移、ResultCode 无新增（复用 3001）；前端详情页交互 + 新增「我的收藏」页 /favorites + 顶栏入口；不做：通知（归 F-SOC-001）/ 个人主页整体 / 禁止自赞 / 回复收藏 / 热榜联动（单测 125→138 全绿，快照 v1.7 再生成 17 端点/33 schema；「提交后核对」已完成（c510493 逐字节一致））",type:"功能（论坛互动）",status:"full",review:"发起人确认方案后实施（“开始实施”）",hash:"c510493"},
+{id:"CR-049",date:"2026-09-13",title:"Sprint 3 第三个功能：F-FORUM-008 站内搜索——新增公开端点 GET /posts/search（keyword 必填 2~50 字、boardCode / days（仅受理 7·30·90）可选筛选、分页 page/size），检索走 V1 已就位的 FULLTEXT ft_posts_title（ngram 分词）取相关度 + posts.tags LIKE 兜底、相关度相同再按 created_at DESC, id DESC；出参复用 PostSummaryVo；零迁移、ResultCode 无新增（复用 1001 / 3001）；前端顶栏搜索框由「禁而可视」解禁为可输入（宽屏回车即搜 / 窄屏图标进搜索页）+ 新增搜索结果页 /search（按 searched 标志分四种非结果态，无结果给「去提问」引导）；不做：正文全文检索（F-FORUM-009 P1）、tags / post_tags 关联表启用与发帖标签输入、搜索热词与历史、外部搜索引擎（单测 138→145 全绿，真机 24 例冒烟通过，快照 v1.8 再生成 18 端点/33 schema、diff 98 行纯新增；⚠️ 浏览器视口 0×0 → 前端只做到 DOM 结构校验 + 合成事件，像素级目视走查与截图归 W-03 补偿③/②，仍未执行）",type:"功能（论坛搜索）",status:"full",review:"发起人确认方案后实施（“开始实施”）",hash:"—"}
 ];
 const S_LABEL={full:["✅ 完整","s-full"],part:["🟡 部分","s-part"],none:["❌ 未做","s-none"]};
 const groups={};
@@ -631,7 +632,7 @@ function renderTimeline(){
       (!fs||c.status===fs)&&(!q||(c.id+c.title+c.type+c.review).toLowerCase().includes(q)));
     if(!items.length)return;
     const g=document.createElement("div");g.className="log-date";
-    g.innerHTML=`<b>📅 ${d}</b><span class="cnt">${d==="2026-09-12"?"当天 11 条 · 含两次主色往返、设计稿还原、A3-9/A3-10 实施与路径级鉴权 CR-031":d==="2026-09-13"?"当天 11 条 · CR-032 手册 5.1 · CR-034 实施方案约定 · CR-035 A3-5 ER 图 · CR-040 A3-7 检查清单 · CR-041 A3-8 决策备料 · CR-043 Sprint 3 首个功能 · CR-044 提交信息改中文 · CR-045/046 文档一致性校准 · CR-047 驾驶舱视觉重构 · CR-048 Sprint 3 第二个功能":items.length+" 条"}</span>`;
+    g.innerHTML=`<b>📅 ${d}</b><span class="cnt">${d==="2026-09-12"?"当天 11 条 · 含两次主色往返、设计稿还原、A3-9/A3-10 实施与路径级鉴权 CR-031":d==="2026-09-13"?"当天 12 条 · CR-032 手册 5.1 · CR-034 实施方案约定 · CR-035 A3-5 ER 图 · CR-040 A3-7 检查清单 · CR-041 A3-8 决策备料 · CR-043 Sprint 3 首个功能 · CR-044 提交信息改中文 · CR-045/046 文档一致性校准 · CR-047 驾驶舱视觉重构 · CR-048 Sprint 3 第二个功能 · CR-049 Sprint 3 第三个功能":items.length+" 条"}</span>`;
     box.appendChild(g);
     items.forEach(c=>{
       shown++;

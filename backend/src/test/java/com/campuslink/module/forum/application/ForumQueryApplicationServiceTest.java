@@ -200,6 +200,79 @@ class ForumQueryApplicationServiceTest {
         assertThat(detail.favoritedByMe()).isFalse();
     }
 
+    @Test
+    @DisplayName("搜索：keyword 去首尾空白后传仓储，版块与昵称同列表口径解析（F-FORUM-008）")
+    void searchResolvesBoardAndNicknamesLikeList() {
+        when(postRepository.search("Redis", 1L, null, 1, 20))
+                .thenReturn(new PageResult<>(List.of(post(1L, 100L), post(2L, 200L)), 2, 1, 20));
+        when(boardRepository.findByCode("qna")).thenReturn(Optional.of(board(1L, "qna", "技术问答")));
+        when(boardRepository.findAllEnabled()).thenReturn(List.of(board(1L, "qna", "技术问答")));
+        when(accountApplicationService.nicknamesOf(List.of(100L, 200L))).thenReturn(Map.of(100L, "张三"));
+
+        PageResult<PostSummary> page = service.searchPosts("  Redis  ", "qna", null, 1, 20);
+
+        assertThat(page.total()).isEqualTo(2);
+        assertThat(page.items()).extracting(PostSummary::authorNickname).containsExactly("张三", "已注销用户");
+        assertThat(page.items()).extracting(PostSummary::boardCode).containsExactly("qna", "qna");
+        verify(postRepository).search("Redis", 1L, null, 1, 20);
+    }
+
+    @Test
+    @DisplayName("搜索：keyword 过短（1 字，ngram 分不出词）→ 1001，且不查仓储")
+    void searchRejectsSingleCharKeyword() {
+        assertThatThrownBy(() -> service.searchPosts("R", null, null, 1, 20))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.INVALID_PARAM));
+
+        verify(postRepository, never()).search(any(), any(), any(), anyInt(), anyInt());
+    }
+
+    @Test
+    @DisplayName("搜索：keyword 缺失 / 空白 → 1001（缺参另由框架层 400 兜住，这里是应用层兜底）")
+    void searchRejectsBlankKeyword() {
+        assertThatThrownBy(() -> service.searchPosts(null, null, null, 1, 20))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.INVALID_PARAM));
+        assertThatThrownBy(() -> service.searchPosts("   ", null, null, 1, 20))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.INVALID_PARAM));
+
+        verify(postRepository, never()).search(any(), any(), any(), anyInt(), anyInt());
+    }
+
+    @Test
+    @DisplayName("搜索：keyword 超 50 字 → 1001")
+    void searchRejectsOverlongKeyword() {
+        assertThatThrownBy(() -> service.searchPosts("词".repeat(51), null, null, 1, 20))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.INVALID_PARAM));
+    }
+
+    @Test
+    @DisplayName("搜索：days 不在白名单（7 / 30 / 90）→ 1001，白名单值原样传仓储")
+    void searchRejectsUnknownTimeWindow() {
+        assertThatThrownBy(() -> service.searchPosts("Redis", null, 15, 1, 20))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.INVALID_PARAM));
+
+        when(postRepository.search("Redis", null, 30, 1, 20)).thenReturn(new PageResult<>(List.of(), 0, 1, 20));
+        when(boardRepository.findAllEnabled()).thenReturn(List.of());
+        service.searchPosts("Redis", null, 30, 1, 20);
+        verify(postRepository).search("Redis", null, 30, 1, 20);
+    }
+
+    @Test
+    @DisplayName("搜索：未知版块 code → 3001，且不查帖子")
+    void searchUnknownBoardCodeIsNotFound() {
+        when(boardRepository.findByCode("nope")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.searchPosts("Redis", "nope", null, 1, 20))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_FOUND));
+
+        verify(postRepository, never()).search(any(), any(), any(), anyInt(), anyInt());
+    }
+
     private static Post post(Long id, Long authorId) {
         return post(id, authorId, "正文");
     }

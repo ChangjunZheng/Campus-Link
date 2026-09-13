@@ -17,6 +17,12 @@ public interface PostRepository {
     PageResult<Post> findPage(Long boardId, int page, int size);
 
     /**
+     * 站内搜索（F-FORUM-008）：标题全文（ngram）+ tags 冗余列 LIKE 兜底，只搜 PUBLISHED 且未删除，
+     * 按相关度得分 DESC、created_at DESC 排序。{@code boardId} 为 null 表示全站；{@code days} 为 null 表示不限时间窗。
+     */
+    PageResult<Post> search(String keyword, Long boardId, Integer days, int page, int size);
+
+    /**
      * 按 id 查**未删除**的帖子（{@code is_deleted=1} 视为不存在，属仓储读侧约定：软删是行级墓碑，
      * 不进入聚合）；{@code status} 是否可见由应用层按 {@link Post#isVisible()} 判定。
      */

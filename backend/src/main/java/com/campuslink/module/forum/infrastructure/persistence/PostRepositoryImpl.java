@@ -37,6 +37,13 @@ public class PostRepositoryImpl implements PostRepository {
     }
 
     @Override
+    public PageResult<Post> search(String keyword, Long boardId, Integer days, int page, int size) {
+        IPage<PostDO> result = postMapper.search(new Page<>(page, size), keyword, boardId, days);
+        return new PageResult<>(result.getRecords().stream().map(PostConverter::toDomain).toList(),
+                result.getTotal(), page, size);
+    }
+
+    @Override
     public Optional<Post> findById(Long id) {
         return Optional.ofNullable(postMapper.selectOne(new LambdaQueryWrapper<PostDO>()
                         .eq(PostDO::getId, id)

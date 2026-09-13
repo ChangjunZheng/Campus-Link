@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ArrowDown, ArrowLeft, Bell, Search } from '@element-plus/icons-vue'
 import { useAuthStore } from './stores/auth'
@@ -15,13 +15,17 @@ const isLoggedIn = computed(() => auth.isLoggedIn)
 /** 登录页用独立极简页头（设计稿 page-05），不渲染全局顶栏与页脚 */
 const bare = computed(() => Boolean(route.meta.bare))
 
+const searchKeyword = ref('')
+
 function logout() {
   auth.logout()
   router.push('/')
 }
 
-function onSearchClick() {
-  ElMessage.info('搜索功能即将开放')
+/** 顶栏回车即搜；关键词为空时进搜索页（该页自带输入框并自动聚焦） */
+function onSearchSubmit() {
+  const kw = searchKeyword.value.trim()
+  router.push(kw ? { path: '/search', query: { keyword: kw } } : { path: '/search' })
 }
 </script>
 
@@ -51,19 +55,25 @@ function onSearchClick() {
           <img src="/wordmark.png" alt="Campus-Link" class="h-[20px] w-auto" height="20" />
         </RouterLink>
         <div class="order-2 ml-auto flex shrink-0 items-center gap-4 md:order-3 md:ml-0">
-          <div class="hidden w-[200px] cursor-pointer md:block" @click="onSearchClick">
-            <el-input placeholder="搜索帖子标题 / 标签" readonly>
+          <div class="hidden w-[200px] md:block">
+            <el-input
+              v-model="searchKeyword"
+              placeholder="搜索帖子标题 / 标签"
+              maxlength="50"
+              clearable
+              @keyup.enter="onSearchSubmit"
+            >
               <template #prefix>
                 <el-icon><Search /></el-icon>
               </template>
             </el-input>
           </div>
-          <!-- 窄屏折叠为图标（ui-guideline §7），行为与宽屏搜索框一致 -->
+          <!-- 窄屏折叠为图标（ui-guideline §7）：进搜索页，该页输入框自动聚焦 -->
           <button
             type="button"
             class="cursor-pointer text-ink-regular hover:text-link md:hidden"
             aria-label="搜索"
-            @click="onSearchClick"
+            @click="onSearchSubmit"
           >
             <el-icon :size="18"><Search /></el-icon>
           </button>

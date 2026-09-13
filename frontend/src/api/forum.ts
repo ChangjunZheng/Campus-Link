@@ -107,3 +107,25 @@ export const toggleReplyLike = (postId: number | string, replyId: number) =>
 /** 我的收藏（需登录）：本人收藏的帖子，按收藏时间倒序（F-FORUM-005） */
 export const listMyFavorites = (page = 1, size = 20) =>
   get<PageVo<PostSummaryVo>>(`/favorites/mine?page=${page}&size=${size}`)
+
+/**
+ * 站内搜索（公开，F-FORUM-008）：keyword 2~50 字（后端 ngram 分词，单字不受理 → 1001），
+ * boardCode / days（仅 7、30、90）可选筛选，按相关度 + 时间排序。
+ */
+export const searchPosts = (
+  keyword: string,
+  opts: { boardCode?: string; days?: number; page?: number; size?: number } = {},
+) => {
+  const query = new URLSearchParams({
+    keyword,
+    page: String(opts.page ?? 1),
+    size: String(opts.size ?? 20),
+  })
+  if (opts.boardCode) {
+    query.set('boardCode', opts.boardCode)
+  }
+  if (opts.days) {
+    query.set('days', String(opts.days))
+  }
+  return get<PageVo<PostSummaryVo>>(`/posts/search?${query.toString()}`)
+}

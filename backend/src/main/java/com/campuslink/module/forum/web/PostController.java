@@ -62,6 +62,20 @@ public class PostController {
                 result.total(), result.page(), result.size()));
     }
 
+    @Operation(summary = "站内搜索（公开）：keyword 2~50 字搜标题（ngram 全文）与标签；boardCode / days（仅 7、30、90）可筛选；按相关度 + 时间排序")
+    @ErrorCodes({ResultCode.NOT_FOUND})
+    @PublicEndpoint
+    @GetMapping("/search")
+    public ApiResponse<PageVo<PostSummaryVo>> search(@RequestParam String keyword,
+                                                     @RequestParam(required = false) String boardCode,
+                                                     @RequestParam(required = false) Integer days,
+                                                     @RequestParam(defaultValue = "1") int page,
+                                                     @RequestParam(defaultValue = "20") int size) {
+        PageResult<PostSummary> result = forumQueryService.searchPosts(keyword, boardCode, days, page, size);
+        return ApiResponse.ok(new PageVo<>(result.items().stream().map(PostSummaryVo::from).toList(),
+                result.total(), result.page(), result.size()));
+    }
+
     @Operation(summary = "帖子详情（公开）：返回服务端渲染好的 contentHtml；登录请求附带 likedByMe / favoritedByMe，匿名时恒 false")
     @ErrorCodes({ResultCode.NOT_FOUND})
     @PublicEndpoint

@@ -1,6 +1,8 @@
 package com.campuslink.module.forum.application;
 
+import com.campuslink.common.exception.ApiException;
 import com.campuslink.common.markdown.MarkdownRenderer;
+import com.campuslink.common.result.ResultCode;
 import com.campuslink.module.account.application.AccountApplicationService;
 import com.campuslink.module.forum.application.cmd.ForumResults.PostDetail;
 import com.campuslink.module.forum.application.cmd.ForumResults.PostSummary;
@@ -42,6 +44,11 @@ public class ForumQueryApplicationService {
     private static final int SUMMARY_MAX_CHARS = 120;
     /** 作者已注销等取不到昵称时的回落文案（设计 §4.3） */
     private static final String NICKNAME_FALLBACK = "已注销用户";
+    /** 搜索关键词长度：下限对齐 ngram 分词（默认 ngram_token_size=2，单字分不出词），上限防超长串放大查询 */
+    private static final int KEYWORD_MIN_CHARS = 2;
+    private static final int KEYWORD_MAX_CHARS = 50;
+    /** 搜索时间窗白名单（天）；不在白名单即 1001，不做静默归一 */
+    private static final Set<Integer> SEARCH_TIME_WINDOWS = Set.of(7, 30, 90);
 
     private final BoardRepository boardRepository;
     private final PostRepository postRepository;
@@ -59,30 +66,30 @@ public class ForumQueryApplicationService {
     public PageResult<PostSummary> listPosts(String boardCode, int page, int size) {
         int currentPage = normalizePage(page);
         int pageSize = normalizeSize(size);
-        Long boardId = null;
-        if (boardCode != null && !boardCode.isBlank()) {
-            boardId = boardRepository.findByCode(boardCode)
-                    .orElseThrow(BoardNotFoundException::new)
-                    .getId();
-        }
+        Long boardId = boardIdOf(boardCode);
         PageResult<Post> found = postRepository.findPage(boardId, currentPage, pageSize);
-        Map<Long, Board> boardsById = boardsById();
-        Map<Long, String> nicknames = accountApplicationService.nicknamesOf(
-                found.items().stream().map(Post::getAuthorId).toList());
-        List<PostSummary> items = found.items().stream()
-                .map(post -> {
-                    Board board = boardsById.get(post.getBoardId());
-                    return new PostSummary(post.getId(),
-                            board == null ? null : board.getCode(),
-                            board == null ? null : board.getName(),
-                            post.getTitle(),
-                            nicknames.getOrDefault(post.getAuthorId(), NICKNAME_FALLBACK),
-                            post.getReplyCount(), post.getLikeCount(),
-                            markdownRenderer.toPlainSummary(post.getContentMd(), SUMMARY_MAX_CHARS),
-                            post.getCreatedAt(), post.isAccepted());
-                })
-                .toList();
-        return new PageResult<>(items, found.total(), currentPage, pageSize);
+        return new PageResult<>(toSummaries(found.items()), found.total(), currentPage, pageSize);
+    }
+
+    /**
+     * 站内搜索（F-FORUM-008）：标题全文（ngram，中文 2 字起可命中）+ tags 冗余列 LIKE 兜底，
+     * 按相关度 + 时间排序，可按版块 / 时间窗筛选；出参与帖子列表同口径（{@link PostSummary}）。
+     * keyword 去首尾空白后长度须 2~50，days 只接受 7 / 30 / 90——不满足即 1001，不静默归一（与分页口径不同：
+     * 分页越界只是翻页放大，关键词过短会退化成全表扫描且 ngram 分不出词）。
+     */
+    public PageResult<PostSummary> searchPosts(String keyword, String boardCode, Integer days, int page, int size) {
+        String kw = keyword == null ? "" : keyword.trim();
+        if (kw.length() < KEYWORD_MIN_CHARS || kw.length() > KEYWORD_MAX_CHARS) {
+            throw new ApiException(ResultCode.INVALID_PARAM);
+        }
+        if (days != null && !SEARCH_TIME_WINDOWS.contains(days)) {
+            throw new ApiException(ResultCode.INVALID_PARAM);
+        }
+        int currentPage = normalizePage(page);
+        int pageSize = normalizeSize(size);
+        Long boardId = boardIdOf(boardCode);
+        PageResult<Post> found = postRepository.search(kw, boardId, days, currentPage, pageSize);
+        return new PageResult<>(toSummaries(found.items()), found.total(), currentPage, pageSize);
     }
 
     /**
@@ -135,23 +142,7 @@ public class ForumQueryApplicationService {
         int currentPage = normalizePage(page);
         int pageSize = normalizeSize(size);
         PageResult<Post> found = favoriteRepository.findFavoritePosts(userId, currentPage, pageSize);
-        Map<Long, Board> boardsById = boardsById();
-        Map<Long, String> nicknames = accountApplicationService.nicknamesOf(
-                found.items().stream().map(Post::getAuthorId).toList());
-        List<PostSummary> items = found.items().stream()
-                .map(post -> {
-                    Board board = boardsById.get(post.getBoardId());
-                    return new PostSummary(post.getId(),
-                            board == null ? null : board.getCode(),
-                            board == null ? null : board.getName(),
-                            post.getTitle(),
-                            nicknames.getOrDefault(post.getAuthorId(), NICKNAME_FALLBACK),
-                            post.getReplyCount(), post.getLikeCount(),
-                            markdownRenderer.toPlainSummary(post.getContentMd(), SUMMARY_MAX_CHARS),
-                            post.getCreatedAt(), post.isAccepted());
-                })
-                .toList();
-        return new PageResult<>(items, found.total(), currentPage, pageSize);
+        return new PageResult<>(toSummaries(found.items()), found.total(), currentPage, pageSize);
     }
 
     /** 不可读（不存在 / 已删除 / 非 PUBLISHED）统一 404 / 3001，三种情况不对外区分——防按 id 探测 */
@@ -164,6 +155,36 @@ public class ForumQueryApplicationService {
     private Map<Long, Board> boardsById() {
         return boardRepository.findAllEnabled().stream()
                 .collect(Collectors.toMap(Board::getId, Function.identity()));
+    }
+
+    /** boardCode 空 / 空白 → 全站（null）；查不到该版块 → 3001，与列表口径一致 */
+    private Long boardIdOf(String boardCode) {
+        if (boardCode == null || boardCode.isBlank()) {
+            return null;
+        }
+        return boardRepository.findByCode(boardCode)
+                .orElseThrow(BoardNotFoundException::new)
+                .getId();
+    }
+
+    /** 列表 / 收藏 / 搜索三处共用的摘要映射：版块名与作者昵称一页一次批量解析（设计 §4.3，不做 N+1） */
+    private List<PostSummary> toSummaries(List<Post> posts) {
+        Map<Long, Board> boardsById = boardsById();
+        Map<Long, String> nicknames = accountApplicationService.nicknamesOf(
+                posts.stream().map(Post::getAuthorId).toList());
+        return posts.stream()
+                .map(post -> {
+                    Board board = boardsById.get(post.getBoardId());
+                    return new PostSummary(post.getId(),
+                            board == null ? null : board.getCode(),
+                            board == null ? null : board.getName(),
+                            post.getTitle(),
+                            nicknames.getOrDefault(post.getAuthorId(), NICKNAME_FALLBACK),
+                            post.getReplyCount(), post.getLikeCount(),
+                            markdownRenderer.toPlainSummary(post.getContentMd(), SUMMARY_MAX_CHARS),
+                            post.getCreatedAt(), post.isAccepted());
+                })
+                .toList();
     }
 
     /** page 归一到 ≥1；size 归一到 1~100（设计 §3：默认 20、上限 100）——不报错，避免 size 被用来放大查询 */

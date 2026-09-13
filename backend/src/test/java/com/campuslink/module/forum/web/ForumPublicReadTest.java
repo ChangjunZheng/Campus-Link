@@ -21,7 +21,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * 四个公开端点必须**无需登录即可读**（sprint-2.md A3：未登录可看列表与详情）。
+ * 五个公开端点必须**无需登录即可读**（sprint-2.md A3：未登录可看列表与详情；F-FORUM-008 起含站内搜索）。
  *
  * <p>本类的断言价值主要在编译期：读端点保持 {@code @PublicEndpoint}、匿名调用（authentication 为 null）可读。
  * CR-048 起详情 / 楼层列表的签名带 {@code Authentication}（登录请求附带 likedByMe 等回显），但匿名时
@@ -70,6 +70,19 @@ class ForumPublicReadTest {
         assertThat(detail.data().contentHtml()).isEqualTo("<p>正文</p>");
         assertThat(detail.data().likedByMe()).isFalse();
         assertThat(detail.data().favoritedByMe()).isFalse();
+    }
+
+    @Test
+    @DisplayName("站内搜索：匿名可读（F-FORUM-008）")
+    void searchIsReadableAnonymously() {
+        when(forumQueryService.searchPosts("Redis", null, null, 1, 20)).thenReturn(new PageResult<>(
+                List.of(new PostSummary(1L, "qna", "技术问答", "Redis 怎么用", "张三", 0, 0, "摘要", CREATED_AT, false)),
+                1, 1, 20));
+
+        var response = postController.search("Redis", null, null, 1, 20);
+
+        assertThat(response.data().list()).extracting("title").containsExactly("Redis 怎么用");
+        assertThat(response.data().total()).isEqualTo(1);
     }
 
     @Test
