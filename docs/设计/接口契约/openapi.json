@@ -360,6 +360,103 @@
         ]
       }
     },
+    "/api/v1/posts/{id}/accept": {
+      "post": {
+        "tags": [
+          "post"
+        ],
+        "summary": "采纳最佳答案（需登录，仅提问者）：技术问答帖的指定回复标记为最佳，可更换；body 为 {replyId}",
+        "operationId": "accept",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcceptReplyCommand"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseVoid"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数错误（1001）；仅技术问答帖可采纳最佳答案（3002）；不能采纳自己的回复（3003）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未登录（4001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "无权限（4002）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "资源不存在（3001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "系统繁忙，请稍后再试（9999）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/v1/auth/verify-student": {
       "post": {
         "tags": [
@@ -938,6 +1035,34 @@
           }
         }
       },
+      "AcceptReplyCommand": {
+        "type": "object",
+        "properties": {
+          "replyId": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "replyId"
+        ]
+      },
+      "ApiResponseVoid": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {},
+          "traceId": {
+            "type": "string"
+          }
+        }
+      },
       "VerifyStudentCommand": {
         "type": "object",
         "properties": {
@@ -1115,22 +1240,6 @@
           "target"
         ]
       },
-      "ApiResponseVoid": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "message": {
-            "type": "string"
-          },
-          "data": {},
-          "traceId": {
-            "type": "string"
-          }
-        }
-      },
       "ApiResponseRosterImportResult": {
         "type": "object",
         "properties": {
@@ -1258,6 +1367,9 @@
           "createdAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "accepted": {
+            "type": "boolean"
           }
         }
       },
@@ -1316,8 +1428,15 @@
           "contentHtml": {
             "type": "string"
           },
+          "authorId": {
+            "type": "integer",
+            "format": "int64"
+          },
           "authorNickname": {
             "type": "string"
+          },
+          "accepted": {
+            "type": "boolean"
           },
           "createdAt": {
             "type": "string",
@@ -1356,11 +1475,18 @@
           "boardName": {
             "type": "string"
           },
+          "boardType": {
+            "type": "string"
+          },
           "title": {
             "type": "string"
           },
           "contentHtml": {
             "type": "string"
+          },
+          "authorId": {
+            "type": "integer",
+            "format": "int64"
           },
           "authorNickname": {
             "type": "string"

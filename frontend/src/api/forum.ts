@@ -27,15 +27,20 @@ export interface PostSummaryVo {
   /** 服务端已去 Markdown 并截断为 120 字（设计 §3.2），前端不再兜底截断 */
   summary: string
   createdAt: string
+  /** 已有最佳答案（F-QA-001），列表页 [已采纳] 徽标 */
+  accepted: boolean
 }
 
 export interface PostDetailVo {
   id: number
   boardCode: string
   boardName: string
+  /** QUESTION = 技术问答帖（提问），其余为讨论帖 */
+  boardType: string
   title: string
   /** 服务端渲染并净化后的 HTML，前端直接 v-html（XSS 防线在 MarkdownRenderer） */
   contentHtml: string
+  authorId: number
   authorNickname: string
   replyCount: number
   likeCount: number
@@ -48,7 +53,10 @@ export interface ReplyVo {
   /** 楼层 = 回复序号（第一条回复为 1 楼，帖子本体不占楼层号，设计 §4.1） */
   floorNo: number
   contentHtml: string
+  authorId: number
   authorNickname: string
+  /** 最佳答案（F-QA-001）；楼层列表按 is_accepted DESC 排序，最佳答案自然置顶 */
+  accepted: boolean
   createdAt: string
 }
 
@@ -73,3 +81,7 @@ export const publishPost = (payload: { boardCode: string; title: string; content
 
 export const publishReply = (postId: number | string, contentMd: string) =>
   post<{ id: number; floorNo: number }>(`/posts/${postId}/replies`, { contentMd })
+
+/** 采纳最佳答案（仅提问者）：可更换（后一次覆盖前一次），不能采纳自己的回复（3003） */
+export const acceptReply = (postId: number | string, replyId: number) =>
+  post<void>(`/posts/${postId}/accept`, { replyId })

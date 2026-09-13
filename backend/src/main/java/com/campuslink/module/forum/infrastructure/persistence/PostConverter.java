@@ -28,6 +28,7 @@ public final class PostConverter {
         d.setReplyCount(post.getReplyCount());
         d.setLikeCount(post.getLikeCount());
         d.setIsAccepted(post.isAccepted());
+        d.setAcceptedReplyId(post.getAcceptedReplyId());
         d.setCreatedAt(post.getCreatedAt());
         d.setUpdatedAt(post.getUpdatedAt());
         return d;
@@ -37,6 +38,6 @@ public final class PostConverter {
         return Post.rehydrate(d.getId(), d.getBoardId(), d.getAuthorId(), BoardType.valueOf(d.getType()),
                 d.getTitle(), d.getContentMd(), d.getContentHtml(), PostStatus.valueOf(d.getStatus()),
                 d.getReplyCount(), d.getLikeCount(), Boolean.TRUE.equals(d.getIsAccepted()),
-                d.getCreatedAt(), d.getUpdatedAt());
+                d.getAcceptedReplyId(), d.getCreatedAt(), d.getUpdatedAt());
     }
 }

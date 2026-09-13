@@ -33,4 +33,11 @@ public interface PostRepository {
      * 该取舍登记在 sprint-2-design §6（D-2）。返回值为 floor_no。
      */
     int incrementReplyCountAndGet(Long postId);
+
+    /**
+     * 采纳最佳答案（F-QA-001）：定向 UPDATE {@code posts.is_accepted=1, accepted_reply_id=?}。
+     * 与 {@link #incrementReplyCountAndGet} 同理走定向 SQL 而非整行回写——聚合无整行状态需要持久化，
+     * 且 UPDATE posts 行锁先行使同一帖子的并发采纳在数据库层串行化（后写覆盖前写，即"可更换"语义）。
+     */
+    void updateAcceptedReply(Long postId, Long replyId);
 }

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getPost, listReplies, publishReply, type PostDetailVo, type ReplyVo } from '../api/forum'
+import { getPost, listReplies, publishReply, acceptReply, type PostDetailVo, type ReplyVo } from '../api/forum'
 import { ApiError } from '../api/client'
 import { useAuthStore } from '../stores/auth'
 import { useNarrowScreen } from '../composables/useNarrowScreen'
@@ -24,6 +24,38 @@ const repliesLoading = ref(false)
 const repliesError = ref('')
 const replyMd = ref('')
 const submitting = ref(false)
+const acceptingReplyId = ref<number | null>(null)
+
+// 采纳按钮可见性（F-QA-001）：仅提问者 + 问答帖；自己楼层不显示（后端 3003 兜底）
+const isAskerOfQuestion = computed(
+  () => !!post.value && post.value.boardType === 'QUESTION' && auth.user?.id === post.value.authorId,
+)
+
+function canAccept(r: ReplyVo): boolean {
+  return isAskerOfQuestion.value && !r.accepted && auth.user?.id !== r.authorId
+}
+
+async function adopt(r: ReplyVo) {
+  if (!post.value) return
+  const tip = post.value.accepted
+    ? `更换采纳为 #${r.floorNo} 楼？原最佳答案将被替换`
+    : `采纳 #${r.floorNo} 楼为最佳答案？`
+  try {
+    await ElMessageBox.confirm(tip, '采纳最佳答案', { confirmButtonText: '采纳', cancelButtonText: '取消' })
+  } catch {
+    return
+  }
+  acceptingReplyId.value = r.id
+  try {
+    await acceptReply(post.value.id, r.id)
+    ElMessage.success('已采纳为最佳答案')
+    await Promise.all([loadPost(), loadReplies()])
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '采纳失败')
+  } finally {
+    acceptingReplyId.value = null
+  }
+}
 
 async function loadPost() {
   missing.value = false
@@ -195,6 +227,18 @@ watch(
                   <span class="text-ink">{{ r.authorNickname }}</span>
                   <span>·</span>
                   <span>{{ formatTime(r.createdAt) }}</span>
+                  <el-tag v-if="r.accepted" type="success" effect="light" size="small">最佳答案</el-tag>
+                  <el-button
+                    v-if="canAccept(r)"
+                    type="success"
+                    effect="plain"
+                    size="small"
+                    class="ml-auto"
+                    :loading="acceptingReplyId === r.id"
+                    @click="adopt(r)"
+                  >
+                    采纳
+                  </el-button>
                 </div>
                 <div class="markdown-body" v-html="r.contentHtml" />
               </div>

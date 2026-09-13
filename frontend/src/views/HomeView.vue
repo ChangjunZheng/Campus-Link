@@ -121,6 +121,7 @@ onMounted(loadLatest)
               </RouterLink>
               <span>·</span>
               <span>{{ p.authorNickname }}</span>
+              <el-tag v-if="p.accepted" type="success" effect="light" size="small">已采纳</el-tag>
               <span>·</span>
               <span>{{ p.replyCount }} 回复</span>
               <span>·</span>

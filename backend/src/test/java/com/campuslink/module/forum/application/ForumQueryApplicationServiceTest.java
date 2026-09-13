@@ -155,7 +155,7 @@ class ForumQueryApplicationServiceTest {
     void removedPostIsNotVisible() {
         when(postRepository.findById(9L)).thenReturn(Optional.of(
                 Post.rehydrate(9L, 1L, 100L, BoardType.QUESTION, "标题", "正文", "<p>正文</p>",
-                        PostStatus.REMOVED, 0, 0, false, CREATED_AT, CREATED_AT)));
+                        PostStatus.REMOVED, 0, 0, false, null, CREATED_AT, CREATED_AT)));
 
         assertThatThrownBy(() -> service.postDetail(9L))
                 .isInstanceOfSatisfying(ApiException.class,
@@ -184,7 +184,7 @@ class ForumQueryApplicationServiceTest {
 
     private static Post post(Long id, Long authorId, String contentMd) {
         return Post.rehydrate(id, 1L, authorId, BoardType.QUESTION, "标题", contentMd, "<p>正文</p>",
-                PostStatus.PUBLISHED, 0, 0, false, CREATED_AT, CREATED_AT);
+                PostStatus.PUBLISHED, 0, 0, false, null, CREATED_AT, CREATED_AT);
     }
 
     private static Board board(Long id, String code, String name) {
@@ -192,6 +192,6 @@ class ForumQueryApplicationServiceTest {
     }
 
     private static Reply reply(Long id, Long authorId, int floorNo) {
-        return Reply.rehydrate(id, 9L, authorId, floorNo, "内容", "<p>内容</p>", CREATED_AT);
+        return Reply.rehydrate(id, 9L, authorId, floorNo, "内容", "<p>内容</p>", false, CREATED_AT);
     }
 }

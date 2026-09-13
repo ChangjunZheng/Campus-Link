@@ -1,6 +1,7 @@
 package com.campuslink.module.forum.infrastructure.persistence;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.campuslink.module.forum.domain.gateway.PageResult;
@@ -9,6 +10,8 @@ import com.campuslink.module.forum.domain.model.Reply;
 import com.campuslink.module.forum.infrastructure.persistence.mapper.ReplyMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
+
+import java.util.Optional;
 
 /** 适配器：ReplyRepository 端口的 MyBatis-Plus 实现 */
 @Repository
@@ -26,9 +29,30 @@ public class ReplyRepositoryImpl implements ReplyRepository {
                 .eq(ReplyDO::getPostId, postId)
                 .eq(ReplyDO::getStatus, STATUS_PUBLISHED)
                 .eq(ReplyDO::getIsDeleted, false)
+                // 最佳答案置顶（F-QA-001）：is_accepted 至多一行为 1，其余按楼层号升序，分页口径不变
+                .orderByDesc(ReplyDO::getIsAccepted)
                 .orderByAsc(ReplyDO::getFloorNo));
         return new PageResult<>(result.getRecords().stream().map(ReplyConverter::toDomain).toList(),
                 result.getTotal(), page, size);
+    }
+
+    @Override
+    public Optional<Reply> findById(Long id) {
+        return Optional.ofNullable(replyMapper.selectOne(new LambdaQueryWrapper<ReplyDO>()
+                        .eq(ReplyDO::getId, id)
+                        .eq(ReplyDO::getIsDeleted, false)))
+                .map(ReplyConverter::toDomain);
+    }
+
+    @Override
+    public void updateAcceptedFlags(Long postId, Long newlyAcceptedReplyId) {
+        replyMapper.update(null, new LambdaUpdateWrapper<ReplyDO>()
+                .set(ReplyDO::getIsAccepted, false)
+                .eq(ReplyDO::getPostId, postId)
+                .eq(ReplyDO::getIsAccepted, true));
+        replyMapper.update(null, new LambdaUpdateWrapper<ReplyDO>()
+                .set(ReplyDO::getIsAccepted, true)
+                .eq(ReplyDO::getId, newlyAcceptedReplyId));
     }
 
     @Override

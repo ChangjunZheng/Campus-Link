@@ -7,9 +7,12 @@ import com.campuslink.module.forum.application.cmd.ForumResults.PublishedPost;
 import com.campuslink.module.forum.application.cmd.PublishPostCommand;
 import com.campuslink.module.forum.domain.gateway.BoardRepository;
 import com.campuslink.module.forum.domain.gateway.PostRepository;
+import com.campuslink.module.forum.domain.gateway.ReplyRepository;
 import com.campuslink.module.forum.domain.model.Board;
 import com.campuslink.module.forum.domain.model.BoardType;
 import com.campuslink.module.forum.domain.model.Post;
+import com.campuslink.module.forum.domain.model.PostStatus;
+import com.campuslink.module.forum.domain.model.Reply;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -35,13 +38,16 @@ class PostApplicationServiceTest {
     private BoardRepository boardRepository;
     @Mock
     private PostRepository postRepository;
+    @Mock
+    private ReplyRepository replyRepository;
 
     private PostApplicationService service;
 
     @BeforeEach
     void setUp() {
         // MarkdownRenderer 是纯组件（无 I/O），直接 new，不必走 Spring 上下文
-        service = new PostApplicationService(boardRepository, postRepository, new MarkdownRenderer());
+        service = new PostApplicationService(boardRepository, postRepository, replyRepository,
+                new MarkdownRenderer());
     }
 
     @Test
@@ -53,7 +59,8 @@ class PostApplicationServiceTest {
             Post saved = invocation.getArgument(0);
             return Post.rehydrate(123L, saved.getBoardId(), saved.getAuthorId(), saved.getType(),
                     saved.getTitle(), saved.getContentMd(), saved.getContentHtml(), saved.getStatus(),
-                    saved.getReplyCount(), saved.getLikeCount(), saved.isAccepted(), null, null);
+                    saved.getReplyCount(), saved.getLikeCount(), saved.isAccepted(),
+                    saved.getAcceptedReplyId(), null, null);
         });
 
         PublishedPost result = service.publish(42L, new PublishPostCommand("qna", "  标题  ", "**加粗**"));
@@ -80,6 +87,58 @@ class PostApplicationServiceTest {
                         e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_FOUND));
 
         verify(postRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("采纳：提问者采纳他人回复 → posts 定向更新 + replies 旧标志清理/新标志置位")
+    void acceptUpdatesPostAndReplyFlags() {
+        when(postRepository.findById(123L)).thenReturn(Optional.of(questionPost(42L)));
+        when(replyRepository.findById(456L)).thenReturn(Optional.of(reply(456L, 999L)));
+
+        service.acceptReply(42L, 123L, 456L);
+
+        verify(postRepository).updateAcceptedReply(123L, 456L);
+        verify(replyRepository).updateAcceptedFlags(123L, 456L);
+    }
+
+    @Test
+    @DisplayName("采纳：非提问者 → 4002，不触达任何写操作")
+    void acceptByNonAskerIsForbidden() {
+        when(postRepository.findById(123L)).thenReturn(Optional.of(questionPost(42L)));
+
+        assertThatThrownBy(() -> service.acceptReply(777L, 123L, 456L))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.FORBIDDEN));
+
+        verify(postRepository, never()).updateAcceptedReply(any(), any());
+        verify(replyRepository, never()).updateAcceptedFlags(any(), any());
+    }
+
+    @Test
+    @DisplayName("采纳：回复不存在或不属于该帖 → 3001（防按 id 探测），不触达写操作")
+    void acceptForeignReplyIsNotFound() {
+        when(postRepository.findById(123L)).thenReturn(Optional.of(questionPost(42L)));
+        when(replyRepository.findById(456L)).thenReturn(Optional.of(reply(456L, 999L, 999L)));
+
+        assertThatThrownBy(() -> service.acceptReply(42L, 123L, 456L))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_FOUND));
+
+        verify(postRepository, never()).updateAcceptedReply(any(), any());
+        verify(replyRepository, never()).updateAcceptedFlags(any(), any());
+    }
+
+    private static Post questionPost(Long authorId) {
+        return Post.rehydrate(123L, 1L, authorId, BoardType.QUESTION, "标题", "正文", "<p>正文</p>",
+                PostStatus.PUBLISHED, 1, 0, false, null, null, null);
+    }
+
+    private static Reply reply(Long id, Long authorId, Long postId) {
+        return Reply.rehydrate(id, postId, authorId, 1, "内容", "<p>内容</p>", false, null);
+    }
+
+    private static Reply reply(Long id, Long authorId) {
+        return reply(id, authorId, 123L);
     }
 
     private static Board board(Long id, String code, BoardType type) {

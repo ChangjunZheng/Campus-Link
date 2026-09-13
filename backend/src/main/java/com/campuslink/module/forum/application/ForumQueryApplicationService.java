@@ -73,7 +73,7 @@ public class ForumQueryApplicationService {
                             nicknames.getOrDefault(post.getAuthorId(), NICKNAME_FALLBACK),
                             post.getReplyCount(), post.getLikeCount(),
                             markdownRenderer.toPlainSummary(post.getContentMd(), SUMMARY_MAX_CHARS),
-                            post.getCreatedAt());
+                            post.getCreatedAt(), post.isAccepted());
                 })
                 .toList();
         return new PageResult<>(items, found.total(), currentPage, pageSize);
@@ -88,7 +88,8 @@ public class ForumQueryApplicationService {
         return new PostDetail(post.getId(),
                 board == null ? null : board.getCode(),
                 board == null ? null : board.getName(),
-                post.getTitle(), post.getContentHtml(), nickname,
+                board == null ? null : board.getType().name(),
+                post.getTitle(), post.getContentHtml(), post.getAuthorId(), nickname,
                 post.getReplyCount(), post.getLikeCount(), post.isAccepted(), post.getCreatedAt());
     }
 
@@ -102,7 +103,8 @@ public class ForumQueryApplicationService {
                 found.items().stream().map(Reply::getAuthorId).toList());
         List<ReplyItem> items = found.items().stream()
                 .map(reply -> new ReplyItem(reply.getId(), reply.getFloorNo(), reply.getContentHtml(),
-                        nicknames.getOrDefault(reply.getAuthorId(), NICKNAME_FALLBACK), reply.getCreatedAt()))
+                        reply.getAuthorId(), nicknames.getOrDefault(reply.getAuthorId(), NICKNAME_FALLBACK),
+                        reply.isAccepted(), reply.getCreatedAt()))
                 .toList();
         return new PageResult<>(items, found.total(), currentPage, pageSize);
     }

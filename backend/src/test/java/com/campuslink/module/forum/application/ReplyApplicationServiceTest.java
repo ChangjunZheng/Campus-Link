@@ -58,7 +58,7 @@ class ReplyApplicationServiceTest {
         when(postRepository.findById(POST_ID)).thenReturn(Optional.of(post(PostStatus.PUBLISHED)));
         when(postRepository.incrementReplyCountAndGet(POST_ID)).thenReturn(1);
         when(replyRepository.save(any())).thenReturn(
-                Reply.rehydrate(456L, POST_ID, AUTHOR_ID, 1, "hi", "<p>hi</p>", Instant.now()));
+                Reply.rehydrate(456L, POST_ID, AUTHOR_ID, 1, "hi", "<p>hi</p>", false, Instant.now()));
 
         PublishedReply result = service.reply(POST_ID, AUTHOR_ID, new PublishReplyCommand("**hi**"));
 
@@ -100,6 +100,6 @@ class ReplyApplicationServiceTest {
 
     private static Post post(PostStatus status) {
         return Post.rehydrate(POST_ID, 1L, 7L, BoardType.QUESTION, "标题", "正文", "<p>正文</p>",
-                status, 0, 0, false, null, null);
+                status, 0, 0, false, null, null, null);
     }
 }

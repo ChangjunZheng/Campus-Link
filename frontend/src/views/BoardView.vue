@@ -124,6 +124,7 @@ watch(
           </RouterLink>
           <p class="my-1.5 line-clamp-2 text-note text-ink-regular">{{ p.summary }}</p>
           <div class="flex flex-wrap items-center gap-1.5 text-caption text-ink-meta">
+            <el-tag v-if="p.accepted" type="success" effect="light" size="small">已采纳</el-tag>
             <span>{{ p.authorNickname }}</span>
             <span>·</span>
             <span>{{ p.replyCount }} 回复</span>

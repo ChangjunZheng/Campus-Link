@@ -19,27 +19,29 @@ public class Reply {
     private final int floorNo;
     private final String contentMd;
     private final String contentHtml;
+    private final boolean accepted;
     private final Instant createdAt;
 
     private Reply(Long id, Long postId, Long authorId, int floorNo, String contentMd,
-                  String contentHtml, Instant createdAt) {
+                  String contentHtml, boolean accepted, Instant createdAt) {
         this.id = id;
         this.postId = postId;
         this.authorId = authorId;
         this.floorNo = floorNo;
         this.contentMd = contentMd;
         this.contentHtml = contentHtml;
+        this.accepted = accepted;
         this.createdAt = createdAt;
     }
 
     /** 发布回复：floorNo 已由调用方分配（见类注释），contentHtml 已渲染 */
     public static Reply post(Long postId, Long authorId, int floorNo, String contentMd, String contentHtml) {
-        return new Reply(null, postId, authorId, floorNo, contentMd, contentHtml, null);
+        return new Reply(null, postId, authorId, floorNo, contentMd, contentHtml, false, null);
     }
 
     /** 仓储重建入口（infrastructure 适配器调用） */
     public static Reply rehydrate(Long id, Long postId, Long authorId, int floorNo, String contentMd,
-                                  String contentHtml, Instant createdAt) {
-        return new Reply(id, postId, authorId, floorNo, contentMd, contentHtml, createdAt);
+                                  String contentHtml, boolean accepted, Instant createdAt) {
+        return new Reply(id, postId, authorId, floorNo, contentMd, contentHtml, accepted, createdAt);
     }
 }

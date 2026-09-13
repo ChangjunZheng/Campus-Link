@@ -2,20 +2,20 @@
 
 | 文档信息 | 内容 |
 |---------|------|
-| 版本 | v1.5 |
+| 版本 | v1.6 |
 | 状态 | 已归档（**快照**，接口契约变更后须再生成，见 §2） |
 | 维护人 | 技术负责人（发起人兼任） |
-| 最后更新 | 2026-09-12 |
+| 最后更新 | 2026-09-13 |
 | 对应行动项 | [设计门纪要](../../评审/设计门纪要.md) **A3-4**：补归档 OpenAPI 快照，或补 2~3 个主链路接口请求/响应结构（**两个备选项本文都做**） |
-| 变更登记 | [CR-019](../../变更日志/变更台账.md#cr-019)（首次归档）· [CR-021](../../变更日志/变更台账.md#cr-021)（修复 N-1 / N-2 / N-3 后**再生成**：契约新增错误响应与 bearerAuth 声明）· [CR-022](../../变更日志/变更台账.md#cr-022)（Sprint 2 MVP 新增 6 个论坛端点后**再生成**：6 → **12** 端点）· [CR-028](../../变更日志/变更台账.md#cr-028)（**N-4 闭环后**再生成：`bearerAuth` 描述据实改写，**端点 / schema 数一字未变**）· [CR-031](../../变更日志/变更台账.md#cr-031)（**路径级鉴权落地后再生成**：`bearerAuth` 描述随框架拦截据实改写，**端点 / schema / `security` 声明仍未变**） |
+| 变更登记 | [CR-019](../../变更日志/变更台账.md#cr-019)（首次归档）· [CR-021](../../变更日志/变更台账.md#cr-021)（修复 N-1 / N-2 / N-3 后**再生成**：契约新增错误响应与 bearerAuth 声明）· [CR-022](../../变更日志/变更台账.md#cr-022)（Sprint 2 MVP 新增 6 个论坛端点后**再生成**：6 → **12** 端点）· [CR-028](../../变更日志/变更台账.md#cr-028)（**N-4 闭环后**再生成：`bearerAuth` 描述据实改写，**端点 / schema 数一字未变**）· [CR-031](../../变更日志/变更台账.md#cr-031)（**路径级鉴权落地后再生成**：`bearerAuth` 描述随框架拦截据实改写，**端点 / schema / `security` 声明仍未变**）· [CR-043](../../变更日志/变更台账.md)（**采纳最佳答案落地后再生成**：新增 `POST /posts/{id}/accept` 与 `AcceptReplyCommand` schema，12 → **13** 端点） |
 | 关联记录 | [技术方案](../技术方案.md) §5 接口契约 · [PRD](../../需求/产品需求文档.md) F-ACC-004 · [Sprint 1 计划](../../开发/Sprint1计划.md) · [Sprint 2 计划](../../开发/Sprint2计划.md) · [Sprint 2 增量设计](../../开发/Sprint2增量设计.md) |
 
 ## 1. 这份文件是什么、不是什么
 
 - **是**：`openapi.json` —— 由 springdoc 从**运行中的后端**导出的一次**冻结快照**，用于设计门归档与"文档 vs 实现"的差异比对；
 - **不是**手写的接口规范：契约的权威来源永远是运行中的服务（`GET /api/docs`，Swagger UI 在 `/api/docs/swagger-ui.html`）。本文与快照一旦落后于代码，以代码为准并**立即再生成**；
-- **覆盖范围是**已实现的 **12 个端点**（账号 6 + 论坛 6），不得读成"全部接口契约已归档"——[技术方案](../技术方案.md) §5 接口表中仍有多行属后续 Sprint 计划项（逐条差异见 §5）。因此技术方案文末检查清单第 3 项"接口契约**完整**"**仍不勾选**；
-- **自 [CR-021](../../变更日志/变更台账.md#cr-021) 起，快照也表达错误响应与鉴权**：每个操作都声明了 4xx / 5xx 及错误体 schema `ApiError`，`components.securitySchemes.bearerAuth` 已定义，**4 个**受保护操作带 `security`（`users/me`、`admin/roster/import`、`POST /posts`、`POST /posts/{postId}/replies`）。**N-4 的"漏写鉴权静默变公开"缺口已由 [CR-028](../../变更日志/变更台账.md#cr-028) 闭环**（统一入口 `CurrentUser` + `ArchitectureGuardTest` 机器校验）；**路径级拦截已由 [CR-031](../../变更日志/变更台账.md#cr-031) 落地**（`SecurityConfig` 去 `permitAll()`，按端点注解裁决，见 §6.2），另有 4 类事实快照表达不了（§6）——读快照前必须先看 §6；
+- **覆盖范围是**已实现的 **13 个端点**（账号 6 + 论坛 7），不得读成"全部接口契约已归档"——[技术方案](../技术方案.md) §5 接口表中仍有多行属后续 Sprint 计划项（逐条差异见 §5）。因此技术方案文末检查清单第 3 项"接口契约**完整**"**仍不勾选**；
+- **自 [CR-021](../../变更日志/变更台账.md#cr-021) 起，快照也表达错误响应与鉴权**：每个操作都声明了 4xx / 5xx 及错误体 schema `ApiError`，`components.securitySchemes.bearerAuth` 已定义，**5 个**受保护操作带 `security`（`users/me`、`admin/roster/import`、`POST /posts`、`POST /posts/{postId}/replies`、`POST /posts/{id}/accept`）。**N-4 的"漏写鉴权静默变公开"缺口已由 [CR-028](../../变更日志/变更台账.md#cr-028) 闭环**（统一入口 `CurrentUser` + `ArchitectureGuardTest` 机器校验）；**路径级拦截已由 [CR-031](../../变更日志/变更台账.md#cr-031) 落地**（`SecurityConfig` 去 `permitAll()`，按端点注解裁决，见 §6.2），另有 4 类事实快照表达不了（§6）——读快照前必须先看 §6；
 - **不留多份历史副本**：本目录只有一个当前快照，历史版本由 git 承担（[CR-008](../../变更日志/变更台账.md#cr-008) 的教训——不该用 zip / 副本替代 git 历史）。
 
 ## 2. 快照来源与再生成
@@ -23,15 +23,15 @@
 | 项 | 值 |
 |---|---|
 | 首次归档 | 2026-09-11（[CR-019](../../变更日志/变更台账.md#cr-019)，源提交 `68d40ae`，6 端点 / 13 schema） |
-| **本次生成时间** | **2026-09-12 22:29**（[CR-031](../../变更日志/变更台账.md#cr-031) 路径级鉴权落地后**再生成**：`bearerAuth` 描述随框架拦截据实改写） |
-| **代码来源** | ⚠️ **未提交的工作区**（`HEAD` = `c806153` + CR-031 尚未提交的后端改动）——**本次代码尚未提交，无法声称对应任何提交**（与 v1.3 / v1.4 情形相同）。已做的核验是**时刻核验**：快照落盘（22:29:12）晚于 `backend/src/main` 全部文件的最后修改时刻（22:26:32，`PublicEndpoint.java`），故快照确由当前源码生成、与工作区一致；**待提交后按 v1.1 同一方法补做"无改动"核对**。**→ 2026-09-13 补记（见 §7 v1.5.1）：CR-031 已提交为 `7720adc`，提交后核对已完成**——自运行中后端重抓 `/api/docs` 并按同一方法格式化，与仓库快照**逐字节一致**，本快照自此可声称对应提交 `7720adc` |
+| **本次生成时间** | **2026-09-13 21:55**（[CR-043](../../变更日志/变更台账.md) 采纳最佳答案落地后**再生成**：新增 `POST /posts/{id}/accept` 与 `AcceptReplyCommand` schema，12 → 13 端点 / 30 → 31 schema） |
+| **代码来源** | ⚠️ **未提交的工作区**（v1.5 历史核验补记：CR-031 已提交为 `7720adc`，提交后核对逐字节一致，见 §7 v1.5.1）。**v1.6 情形与 v1.5 当时相同**：CR-043 后端改动尚未提交，快照由当前工作区源码生成；**提交后须按同一方法补做"无改动"核对**。方法学备注：本次快照自本机 8093 端口实例抓取（8088 被旧版进程占用），`servers` 字段按 v1.4 既定值回写为 `http://localhost:8088`，除此之外零改动 |
 | 后端地址 | `http://localhost:8088`（开发端口，[CR-012](../../变更日志/变更台账.md#cr-012)）——快照 `servers` 字段即此值，**部署形态（ADR-011）确定后须重生成** |
 | 生成方 | springdoc-openapi 3.1.0（`springdoc-openapi-starter-webmvc-ui`） |
 | 规范版本 | OpenAPI **3.1.0**；`info.title` = `Campus-Link API`，`info.version` = `0.1.0`（未随 Sprint 递增，见 §7 遗留） |
-| 规模 | **6 个 tag** / **12 个端点** / **30 个 schema**（v1.1 为 3 tag / 6 端点 / 14 schema）。新增 16 个 schema：`BoardVo`、`PageVoPostSummaryVo`、`PostSummaryVo`、`PostDetailVo`、`PageVoReplyVo`、`ReplyVo`、`PublishedPost`、`PublishedReply`、`PublishPostCommand`、`PublishReplyCommand` 共 10 个业务类型 + 6 个 `ApiResponse*` 外壳 |
-| 落盘处理 | 原始响应 **18481** 字节单行压缩 → 按 2 空格缩进格式化（**36529** 字节，v1.4 为 18290 → 36338）。**键序保持 springdoc 原序，未排序、未删改任何字段** |
-| 可复现性 | **已重新实测**：连续两次 `curl` 的响应字节完全一致（均 **18481** 字节）；格式化后与仓库内文件**逐字节相同**（`cmp` 比对一致），故 `git diff` 仍可作为契约变更的可靠信号 |
-| 本次 diff 性质 | **单行文案改动**：`git diff --numstat` = **1 行新增 / 1 行删除**，改动**仅** `components.securitySchemes.bearerAuth.description` 一行（[CR-031](../../变更日志/变更台账.md#cr-031) 路径级鉴权落地后据实改写，见 §1）；`paths` / `components.schemas` / `info` / `servers` / `tags` / `security` 声明**一字未变**（10 路径 / 12 操作 / 30 schema / 6 tag 均与 v1.4 相同） |
+| 规模 | **6 个 tag** / **13 个端点** / **31 个 schema**（v1.5 为 6 tag / 12 端点 / 30 schema）。v1.6 新增 1 个 schema：`AcceptReplyCommand` |
+| 落盘处理 | 原始响应单行压缩 → 按 2 空格缩进格式化。**键序保持 springdoc 原序，未排序、未删改任何字段**（`servers` 回写见上） |
+| 可复现性 | 格式化方法与历次一致（`json.dumps(ensure_ascii=False, indent=2)` + 尾部换行），`git diff` 仍可作为契约变更的可靠信号 |
+| 本次 diff 性质 | **纯新增**：`git diff` 净增约 130 行——① 新增 `paths./api/v1/posts/{id}/accept`（1 个操作）与 `components.schemas.AcceptReplyCommand`；② 三个既有 VO 新增字段（真实契约扩展，[CR-043](../../变更日志/变更台账.md)）：`PostSummaryVo` +`accepted`、`PostDetailVo` +`boardType` +`authorId`、`ReplyVo` +`authorId` +`accepted`；无任何既有字段 / 类型被删改 |
 
 **再生成命令**（在仓库根目录执行；先按 `AGENTS.md`"常用命令"起栈：本机 MySQL / Redis + `mvn spring-boot:run`）：
 
@@ -56,7 +56,7 @@ git diff --stat openapi.json   # 非空即契约有变更，须同步技术方�
 | GET | `/api/v1/users/me` | user | 我的主页（F-ACC-002 最小版） | — | `UserVo` | **`security: bearerAuth`** | **框架层（[CR-031](../../变更日志/变更台账.md#cr-031)）按 `@SecurityRequirement` 前置拦截 → 匿名 `401 / 4001`（进入业务代码前）**；业务层 `CurrentUser.requireId(authentication)` 同码兜底 |
 | POST | `/api/v1/admin/roster/import?batch=` | admin-roster | 学籍名册 CSV 导入，body 为 CSV 文本 | `string`（CSV） | `RosterImportResult` | **`security: bearerAuth`** | 框架层前置拦截匿名 → `401 / 4001`；业务层 `CurrentUser.requireRole(authentication, ROLE_SUPERADMIN)` → 角色不足 `403 / 4002`（**403 支由单测 `AdminRosterControllerAuthTest` 覆盖，未在真机复现**，见 §6.2） |
 
-### 3.2 论坛上下文（`module/forum`，6 个，Sprint 2 MVP 新增）
+### 3.2 论坛上下文（`module/forum`，7 个：Sprint 2 MVP 6 个 + [CR-043](../../变更日志/变更台账.md) 采纳 1 个）
 
 | 方法 | 路径 | tag | 摘要 | 请求体 | `data` 类型 | **快照声明的鉴权** | **运行时实际强制方式**（见 N-4） |
 |------|------|-----|------|--------|------------|------------------|--------------------------------|
@@ -64,8 +64,9 @@ git diff --stat openapi.json   # 非空即契约有变更，须同步技术方�
 | GET | `/api/v1/posts?boardCode=&page=&size=` | post | 帖子列表：按 `created_at DESC`；带 `boardCode` 则版块内，不带则全站最新 | — | `PageVo<PostSummaryVo>` | 无（公开） | 公开 |
 | POST | `/api/v1/posts` | post | 发帖（MVP 范围：`boardCode` + `title` + `contentMd`，不含标签） | `PublishPostCommand` | `PublishedPost` | **`security: bearerAuth`** | **框架层（[CR-031](../../变更日志/变更台账.md#cr-031)）前置拦截 → 匿名 `401 / 4001`（§4.5 ⑫ 实测）**；业务层 `CurrentUser.requireId(authentication)` 同码兜底 |
 | GET | `/api/v1/posts/{id}` | post | 帖子详情，返回服务端渲染好的 `contentHtml` | — | `PostDetailVo` | 无（公开） | 公开 |
-| GET | `/api/v1/posts/{postId}/replies?page=&size=` | reply | 楼层列表，按 `floor_no ASC` | — | `PageVo<ReplyVo>` | 无（公开） | 公开 |
+| GET | `/api/v1/posts/{postId}/replies?page=&size=` | reply | 楼层列表，**最佳答案置顶**（`is_accepted DESC, floor_no ASC`，[CR-043](../../变更日志/变更台账.md) 调整） | — | `PageVo<ReplyVo>` | 无（公开） | 公开 |
 | POST | `/api/v1/posts/{postId}/replies` | reply | 回帖（MVP 范围：平铺楼层，不含引用回复） | `PublishReplyCommand` | `PublishedReply` | **`security: bearerAuth`** | **框架层（[CR-031](../../变更日志/变更台账.md#cr-031)）前置拦截 → 匿名 `401 / 4001`（§4.5 ⑫ 实测）**；业务层 `CurrentUser.requireId(authentication)` 同码兜底 |
+| POST | `/api/v1/posts/{id}/accept` | post | 采纳最佳答案（仅提问者 + 问答帖 + 非自答；可更换，后写覆盖前写） | `AcceptReplyCommand` | 无（`data` 省略） | **`security: bearerAuth`** | **框架层（[CR-031](../../变更日志/变更台账.md#cr-031)）前置拦截 → 匿名 `401 / 4001`**；业务层 `CurrentUser.requireId(authentication)`；**提问者 / 问答帖 / 非自答校验在业务层**（403 `4002` / 400 `3002` / 400 `3003` / 404 `3001` 防探测，[CR-043](../../变更日志/变更台账.md) 真机实测） |
 
 > ⚠️ **路径参数名不一致（真实存在）**：详情是 `/posts/{id}`（`PostController`），回复列表与回帖是 `/posts/{postId}/replies`（`ReplyController` 类级 `@RequestMapping`）。两者指同一个帖子 id，仅是**两个 Controller 各自的参数命名不同**，快照如实呈现。前端调用不受影响（URL 模板里只是占位符），但**读快照时不要以为是两个不同的资源**。属文档-代码细节差异，登记在 [增量设计](../../开发/Sprint2增量设计.md) §8（P-2）。
 >
@@ -87,6 +88,7 @@ git diff --stat openapi.json   # 非空即契约有变更，须同步技术方�
 | `GET /posts/{id}` | 400 / 404 / 500 | 400：`1001`；404：`3001` |
 | `GET /posts/{postId}/replies` | 400 / 404 / 500 | 400：`1001`；404：`3001`（帖子不存在） |
 | `POST /posts/{postId}/replies` | 400 / 401 / 404 / 500 | 400：`1001`；401：`4001`；404：`3001`（帖子不存在） |
+| `POST /posts/{id}/accept` | 400 / 401 / 403 / 404 / 500 | 400：`1001` + `3002`（非问答帖）+ `3003`（采纳自己的回复）；401：`4001`；403：`4002`（非提问者）；404：`3001`（帖子或回复不存在，防探测统一提示） |
 
 > ✅ **N-4 的"漏写鉴权静默变公开"缺口已由 [CR-028](../../变更日志/变更台账.md#cr-028) 闭环，路径级拦截已由 [CR-031](../../变更日志/变更台账.md#cr-031) 补齐**。机制是**三层**：① **统一入口** `common/web/CurrentUser`（`requireId` / `requireRole`，未登录 `401 / 4001`、权限不足 `403 / 4002`）——上表第 8 列的强制逻辑全部收敛到它；② **显式声明锚点** `common/web/PublicEndpoint`（公开）与 `@SecurityRequirement`（受保护）二选一，由 `ArchitectureGuardTest` **机器校验**两条纪律：**每个** HTTP 映射方法必须且只能声明其一（漏写即测试失败）· **凡**声明 `@SecurityRequirement` 的方法必须真的调用 `CurrentUser`（只声明不调用同样失败）——因此"新增端点忘了加鉴权"不再是静默的；③ **框架层（[CR-031](../../变更日志/变更台账.md#cr-031) 起）**：`config/SecurityConfig` 已去掉 `anyRequest().permitAll()`，改由 `security/EndpointAuthorizationManager` **按同一批注解裁决**（`@PublicEndpoint` 放行、`@SecurityRequirement` 要求已登录、`com.campuslink.module.*` 端点两者都没标即 fail-closed），匿名请求在**进入业务代码前**即被过滤器链内的 `security/ApiErrorSecurityHandler` 拒为 `401 / 4001`。
 >
@@ -359,6 +361,7 @@ git diff --stat openapi.json   # 非空即契约有变更，须同步技术方�
 
 ## 7. 变更记录
 
+- **v1.6（2026-09-13）——[CR-043](../../变更日志/变更台账.md) 采纳最佳答案落地后再生成，契约纯新增**：新增 `POST /api/v1/posts/{id}/accept`（受保护，`AcceptReplyCommand` 请求体）与 schema `AcceptReplyCommand`，12 → **13** 端点 / 30 → **31** schema；三个既有 VO 扩展字段：`PostSummaryVo` +`accepted`、`PostDetailVo` +`boardType` +`authorId`、`ReplyVo` +`authorId` +`accepted`；楼层列表排序改为最佳答案置顶。快照由 8093 端口实例抓取（8088 被旧版进程占用），`servers` 回写既定值，见 §2 方法学备注。§3.2 / 非 200 表已同步，§5 中 `PUT /{id}/accepted-reply` 计划项由本实现取代。
 - **v1.5.1（2026-09-13）——补记提交凭证与"提交后核对"结果，快照文件零改动**：CR-031 已提交为 `7720adc`；自**运行中后端**（`http://localhost:8088/api/docs`）重抓并按 §2 命令格式化，与仓库快照**逐字节一致**（`git diff --no-index` 零差异）——v1.5 遗留的"提交后核对"就此完成，快照来源由"未提交的工作区"更正为**提交 `7720adc`**（`info.version` 仍为 `0.1.0`）。一处方法学备注：核对须抓**配置的契约入口 `/api/docs`**——springdoc 默认的 `/v3/api-docs` 在本项目返回的是另一份更小的文档，不是快照的事实来源。
 - **v1.5（2026-09-12）**——配合 [CR-031](../../变更日志/变更台账.md#cr-031)（**路径级鉴权落地**：`SecurityConfig` 去 `permitAll()`，`EndpointAuthorizationManager` 按端点注解在过滤器链内裁决）**再生成快照**：**端点 / schema / tag / `security` 声明全部未变**（仍 12 端点 / 30 schema / 6 tag / 4 个受保护操作），`git diff` **仅 1 行**——`components.securitySchemes.bearerAuth.description` 据实改写（改为"框架按端点注解裁决、`module` 未声明 fail-closed、未登录由过滤器链产出 401 / 4001"，并注明角色与资源级授权仍归 `CurrentUser`）。并同步本文：**§1** 改述为"**路径级拦截已由 CR-031 落地**"；**§2** 换成本次来源（**仍是未提交的工作区**，`HEAD` = `c806153`，时刻核验：落盘 22:29:12 晚于 `backend/src/main` 最后的 mtime 22:26:32）与规模（18481 → 36529 字节），触发点⑥改为**已完成**、新增 ⑩（改 `EndpointAuthorizationManager` 裁决口径后须重抓）；**§3** 两张表第 8 列对 4 个受保护端点补"**框架层前置拦截 + 业务层同码兜底**"两层描述、`admin/roster/import` 行如实标注 403 支**未在真机复现**（单测覆盖），N-4 说明段重写为"**三层机制 + 两条边界**"；**§4.5** 新增 **⑫ CR-031 复测段**（匿名非法 body / 匿名合法 body / 伪造 token 三条真实 `traceId`；405 / 404 / 公开端点对照）并把原 🔍 注记改写为**行为变化说明**（受保护端点"匿名 + 非法 body"由 `400 / 1001` 前置为 `401 / 4001`，公开端点不受影响）；**§6.2** N-4 行补"路径级强制已由 CR-031 闭环"，尾注与 §6.3 当前状态改为"声明 / 机器校验 / 运行时拦截三层齐备"。**遗留**：快照的"提交后核对"须在 CR-031 代码提交后按 §2 方法补做（与 v1.3 / v1.4 同）；`info.version` 仍为 `0.1.0`。【本快照的端点契约与 v1.4 **完全一致**，若前端只关心接口形状，v1.4 → v1.5 **无破坏性变更**】
 - **v1.4（2026-09-12）**——配合 [CR-028](../../变更日志/变更台账.md#cr-028)（B4 / B5：A3-9 架构守护测试 + A3-10 文档-代码一致性）**再生成快照**：**端点 / schema / tag / `security` 声明全部未变**（仍 12 端点 / 30 schema / 6 tag / 4 个受保护操作），`git diff` **仅 1 行**——`components.securitySchemes.bearerAuth.description` 据实改写（原描述说"实际强制点是 Controller 内校验"，现改为指向 `CurrentUser` 统一入口 + `ArchitectureGuardTest` 机器校验，并写明 `SecurityConfig` 仍为 permitAll）。并同步本文：**§1** N-4 改述为"**漏写缺口已闭环**、路径级拦截仍未做"；**§2** 换成本次来源（**仍是未提交的工作区**，`HEAD` = `e11a2a2`）与规模（18290 → 36338 字节），diff 性质改为"单行文案改动"，触发点⑥改为"迄今未发生"、新增 ⑧（增删端点声明 / 改 `CurrentUser` 语义）与 ⑨（本次已完成）；**§3** 两张表的第 8 列由"Controller 内手工判空 / `AdminRosterController.requireSuperadmin`"改为 **`CurrentUser.requireId` / `requireRole`** 统一入口，N-4 说明段重写为"已闭环 + 两条残留事实 + 历史沿革"；**§4.5** 🔍 行为顺序注补"位置不变、仍为方法体内"，并补 `GET /users/me` 无此先后问题的说明；**§6.2** 由"仍开放"改写为"**已处置**"（N-4 / N-5 / N-6 逐条给处置与复测结论，N-4 记录**负向对照实验**证据：注入 3 个违规探针 → 守护测试 7 例失败、删除后全绿）；**§6.3** 尾注由"N-4 未闭环更危险"改写为"六项全部处置，N-4 闭环的是漏写而非框架拦截"。**遗留**：快照的"提交后核对"须在 CR-028 代码提交后按 §2 方法补做（与 v1.3 同）；`SecurityConfig` 的路径级拦截仍未做（**不属 N-4 范围**，[CR-028](../../变更日志/变更台账.md#cr-028) 未承诺）；`info.version` 仍为 `0.1.0`。【本快照的端点契约与 v1.3 **完全一致**，若前端只关心接口形状，v1.3 → v1.4 **无破坏性变更**】

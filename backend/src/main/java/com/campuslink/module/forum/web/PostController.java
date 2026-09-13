@@ -8,6 +8,7 @@ import com.campuslink.common.web.CurrentUser;
 import com.campuslink.common.web.PublicEndpoint;
 import com.campuslink.module.forum.application.ForumQueryApplicationService;
 import com.campuslink.module.forum.application.PostApplicationService;
+import com.campuslink.module.forum.application.cmd.AcceptReplyCommand;
 import com.campuslink.module.forum.application.cmd.ForumResults.PostDetail;
 import com.campuslink.module.forum.application.cmd.ForumResults.PostSummary;
 import com.campuslink.module.forum.application.cmd.ForumResults.PublishedPost;
@@ -74,5 +75,18 @@ public class PostController {
                                               Authentication authentication) {
         long userId = CurrentUser.requireId(authentication);
         return ApiResponse.ok(postApplicationService.publish(userId, command));
+    }
+
+    @Operation(summary = "采纳最佳答案（需登录，仅提问者）：技术问答帖的指定回复标记为最佳，可更换；body 为 {replyId}")
+    @SecurityRequirement(name = ApiDocs.BEARER_AUTH)
+    @ErrorCodes({ResultCode.NOT_LOGGED_IN, ResultCode.FORBIDDEN, ResultCode.NOT_FOUND,
+            ResultCode.NOT_A_QUESTION, ResultCode.CANNOT_ACCEPT_OWN_REPLY})
+    @PostMapping("/{id}/accept")
+    public ApiResponse<Void> accept(@PathVariable("id") Long id,
+                                    @Valid @RequestBody AcceptReplyCommand command,
+                                    Authentication authentication) {
+        long userId = CurrentUser.requireId(authentication);
+        postApplicationService.acceptReply(userId, id, command.replyId());
+        return ApiResponse.ok();
     }
 }

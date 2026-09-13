@@ -17,6 +17,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -73,6 +74,29 @@ class PostControllerAuthTest {
 
         assertThat(response.data().id()).isEqualTo(123L);
         verify(postApplicationService).publish(eq(42L), eq(COMMAND));
+    }
+
+    @Test
+    @DisplayName("匿名采纳 → 4001，且不触达采纳用例")
+    void anonymousAcceptIsUnauthorized() {
+        var command = new com.campuslink.module.forum.application.cmd.AcceptReplyCommand(456L);
+
+        assertThatThrownBy(() -> controller.accept(123L, command, null))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_LOGGED_IN));
+
+        verify(postApplicationService, never()).acceptReply(anyLong(), anyLong(), anyLong());
+    }
+
+    @Test
+    @DisplayName("已登录采纳 → 放行，操作人与目标从参数透传")
+    void acceptPassesPrincipalAndIds() {
+        var command = new com.campuslink.module.forum.application.cmd.AcceptReplyCommand(456L);
+
+        var response = controller.accept(123L, command, user());
+
+        assertThat(response.code()).isEqualTo(0);
+        verify(postApplicationService).acceptReply(eq(42L), eq(123L), eq(456L));
     }
 
     private static Authentication user() {

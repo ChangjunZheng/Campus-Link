@@ -52,10 +52,10 @@ class ForumPublicReadTest {
     @DisplayName("帖子列表与详情：匿名可读")
     void postsAreReadableAnonymously() {
         when(forumQueryService.listPosts(null, 1, 20)).thenReturn(new PageResult<>(
-                List.of(new PostSummary(1L, "qna", "技术问答", "标题", "张三", 0, 0, "摘要", CREATED_AT)),
+                List.of(new PostSummary(1L, "qna", "技术问答", "标题", "张三", 0, 0, "摘要", CREATED_AT, false)),
                 1, 1, 20));
-        when(forumQueryService.postDetail(1L)).thenReturn(new PostDetail(1L, "qna", "技术问答", "标题",
-                "<p>正文</p>", "张三", 0, 0, false, CREATED_AT));
+        when(forumQueryService.postDetail(1L)).thenReturn(new PostDetail(1L, "qna", "技术问答", "QUESTION",
+                "标题", "<p>正文</p>", 42L, "张三", 0, 0, false, CREATED_AT));
 
         var list = postController.list(null, 1, 20);
         var detail = postController.detail(1L);
@@ -69,7 +69,7 @@ class ForumPublicReadTest {
     @DisplayName("楼层列表：匿名可读")
     void repliesAreReadableAnonymously() {
         when(forumQueryService.listReplies(1L, 1, 20)).thenReturn(new PageResult<>(
-                List.of(new ReplyItem(11L, 1, "<p>一</p>", "张三", CREATED_AT)), 1, 1, 20));
+                List.of(new ReplyItem(11L, 1, "<p>一</p>", 42L, "张三", false, CREATED_AT)), 1, 1, 20));
 
         var response = replyController.list(1L, 1, 20);
 

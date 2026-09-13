@@ -29,6 +29,8 @@ public enum ResultCode {
     VERIFY_RATE_LIMITED(2103, 429, "尝试过于频繁，请 1 小时后再试"),
 
     NOT_FOUND(3001, 404, "资源不存在"),
+    NOT_A_QUESTION(3002, 400, "仅技术问答帖可采纳最佳答案"),
+    CANNOT_ACCEPT_OWN_REPLY(3003, 400, "不能采纳自己的回复"),
     NOT_LOGGED_IN(4001, 401, "未登录"),
     FORBIDDEN(4002, 403, "无权限"),
 

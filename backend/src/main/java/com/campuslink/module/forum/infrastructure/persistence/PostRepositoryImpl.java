@@ -59,4 +59,13 @@ public class PostRepositoryImpl implements PostRepository {
                 .eq(PostDO::getId, postId));
         return postMapper.selectById(postId).getReplyCount();
     }
+
+    @Override
+    public void updateAcceptedReply(Long postId, Long replyId) {
+        // 行锁先行的 UPDATE：并发采纳在此串行化，后写覆盖前写即"可更换"语义（F-QA-001）
+        postMapper.update(null, new LambdaUpdateWrapper<PostDO>()
+                .set(PostDO::getIsAccepted, true)
+                .set(PostDO::getAcceptedReplyId, replyId)
+                .eq(PostDO::getId, postId));
+    }
 }
