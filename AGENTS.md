@@ -193,6 +193,6 @@ npm run build
 
 ## 红线（与用户全局规则一致）
 
-- **不自动 git commit / push**；提交前先展示变更摘要；commit message 用简洁英文；monorepo 统一根目录操作；
+- **不自动 git commit / push**；提交前先展示变更摘要；**commit message 用中文**（保留 `feat` / `docs` / `fix` 等类型前缀，作用域与描述用中文；标题末尾写 CR 号；正文写清**「做了什么、解决了什么」**，让人不点开代码就能看懂）；monorepo 统一根目录操作；
 - 删除文件 / 目录、修改 `.env` / 密钥 / 证书、`git push` / `rebase` / `reset --hard`、公开发布：**必须先征得用户同意**；
 - **生产环境红线**：`app.roster.bypass=false`、`campuslink.captcha.fixed-code` 必须留空（固定验证码等同取消验证码防线）、JWT 与加密密钥全部覆盖默认值、名册导入与内容处置必须写审计日志、机审降级开关（fail-closed）不得改为跳过审核。
