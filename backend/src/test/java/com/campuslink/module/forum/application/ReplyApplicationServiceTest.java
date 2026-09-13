@@ -58,7 +58,7 @@ class ReplyApplicationServiceTest {
         when(postRepository.findById(POST_ID)).thenReturn(Optional.of(post(PostStatus.PUBLISHED)));
         when(postRepository.incrementReplyCountAndGet(POST_ID)).thenReturn(1);
         when(replyRepository.save(any())).thenReturn(
-                Reply.rehydrate(456L, POST_ID, AUTHOR_ID, 1, "hi", "<p>hi</p>", false, Instant.now()));
+                Reply.rehydrate(456L, POST_ID, AUTHOR_ID, 1, "hi", "<p>hi</p>", false, 0, Instant.now()));
 
         PublishedReply result = service.reply(POST_ID, AUTHOR_ID, new PublishReplyCommand("**hi**"));
 

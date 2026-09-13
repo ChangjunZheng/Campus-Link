@@ -1,6 +1,7 @@
 package com.campuslink.module.forum.web;
 
 import com.campuslink.module.forum.application.ForumQueryApplicationService;
+import com.campuslink.module.forum.application.InteractionApplicationService;
 import com.campuslink.module.forum.application.PostApplicationService;
 import com.campuslink.module.forum.application.ReplyApplicationService;
 import com.campuslink.module.forum.application.cmd.ForumResults.PostDetail;
@@ -22,8 +23,9 @@ import static org.mockito.Mockito.when;
 /**
  * 四个公开端点必须**无需登录即可读**（sprint-2.md A3：未登录可看列表与详情）。
  *
- * <p>本类的断言价值主要在编译期：读端点的方法签名里**不允许**出现 {@code Authentication} 参数。
- * 若有人给读端点补上登录校验，这里会先改签名、再改调用，改动无法悄悄发生。
+ * <p>本类的断言价值主要在编译期：读端点保持 {@code @PublicEndpoint}、匿名调用（authentication 为 null）可读。
+ * CR-048 起详情 / 楼层列表的签名带 {@code Authentication}（登录请求附带 likedByMe 等回显），但匿名时
+ * 只作登录态回显、不做任何校验——若有人给读端点补登录拦截，这里会先失败。
  */
 class ForumPublicReadTest {
 
@@ -32,10 +34,13 @@ class ForumPublicReadTest {
     private final ForumQueryApplicationService forumQueryService = mock(ForumQueryApplicationService.class);
     private final PostApplicationService postApplicationService = mock(PostApplicationService.class);
     private final ReplyApplicationService replyApplicationService = mock(ReplyApplicationService.class);
+    private final InteractionApplicationService interactionApplicationService = mock(InteractionApplicationService.class);
 
     private final BoardController boardController = new BoardController(forumQueryService);
-    private final PostController postController = new PostController(forumQueryService, postApplicationService);
-    private final ReplyController replyController = new ReplyController(forumQueryService, replyApplicationService);
+    private final PostController postController = new PostController(forumQueryService, postApplicationService,
+            interactionApplicationService);
+    private final ReplyController replyController = new ReplyController(forumQueryService, replyApplicationService,
+            interactionApplicationService);
 
     @Test
     @DisplayName("版块列表：匿名可读")
@@ -54,25 +59,28 @@ class ForumPublicReadTest {
         when(forumQueryService.listPosts(null, 1, 20)).thenReturn(new PageResult<>(
                 List.of(new PostSummary(1L, "qna", "技术问答", "标题", "张三", 0, 0, "摘要", CREATED_AT, false)),
                 1, 1, 20));
-        when(forumQueryService.postDetail(1L)).thenReturn(new PostDetail(1L, "qna", "技术问答", "QUESTION",
-                "标题", "<p>正文</p>", 42L, "张三", 0, 0, false, CREATED_AT));
+        when(forumQueryService.postDetail(1L, null)).thenReturn(new PostDetail(1L, "qna", "技术问答", "QUESTION",
+                "标题", "<p>正文</p>", 42L, "张三", 0, 0, false, false, false, CREATED_AT));
 
         var list = postController.list(null, 1, 20);
-        var detail = postController.detail(1L);
+        var detail = postController.detail(1L, null);
 
         assertThat(list.data().list()).hasSize(1);
         assertThat(list.data().total()).isEqualTo(1);
         assertThat(detail.data().contentHtml()).isEqualTo("<p>正文</p>");
+        assertThat(detail.data().likedByMe()).isFalse();
+        assertThat(detail.data().favoritedByMe()).isFalse();
     }
 
     @Test
     @DisplayName("楼层列表：匿名可读")
     void repliesAreReadableAnonymously() {
-        when(forumQueryService.listReplies(1L, 1, 20)).thenReturn(new PageResult<>(
-                List.of(new ReplyItem(11L, 1, "<p>一</p>", 42L, "张三", false, CREATED_AT)), 1, 1, 20));
+        when(forumQueryService.listReplies(1L, 1, 20, null)).thenReturn(new PageResult<>(
+                List.of(new ReplyItem(11L, 1, "<p>一</p>", 42L, "张三", false, 0, false, CREATED_AT)), 1, 1, 20));
 
-        var response = replyController.list(1L, 1, 20);
+        var response = replyController.list(1L, 1, 20, null);
 
         assertThat(response.data().list()).extracting("floorNo").containsExactly(1);
+        assertThat(response.data().list()).extracting("likedByMe").containsExactly(false);
     }
 }

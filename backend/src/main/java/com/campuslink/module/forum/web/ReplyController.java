@@ -7,7 +7,9 @@ import com.campuslink.common.web.ApiDocs;
 import com.campuslink.common.web.CurrentUser;
 import com.campuslink.common.web.PublicEndpoint;
 import com.campuslink.module.forum.application.ForumQueryApplicationService;
+import com.campuslink.module.forum.application.InteractionApplicationService;
 import com.campuslink.module.forum.application.ReplyApplicationService;
+import com.campuslink.module.forum.application.cmd.ForumResults.InteractionResult;
 import com.campuslink.module.forum.application.cmd.ForumResults.PublishedReply;
 import com.campuslink.module.forum.application.cmd.ForumResults.ReplyItem;
 import com.campuslink.module.forum.application.cmd.PublishReplyCommand;
@@ -42,15 +44,17 @@ public class ReplyController {
 
     private final ForumQueryApplicationService forumQueryService;
     private final ReplyApplicationService replyApplicationService;
+    private final InteractionApplicationService interactionApplicationService;
 
-    @Operation(summary = "楼层列表（公开）：按 floor_no 升序；楼层 = 回复序号，帖子本体不占楼层号")
+    @Operation(summary = "楼层列表（公开）：按 floor_no 升序；楼层 = 回复序号，帖子本体不占楼层号；登录请求附带各楼层 likedByMe，匿名时恒 false")
     @ErrorCodes({ResultCode.NOT_FOUND})
     @PublicEndpoint
     @GetMapping
     public ApiResponse<PageVo<ReplyVo>> list(@PathVariable("postId") Long postId,
                                              @RequestParam(defaultValue = "1") int page,
-                                             @RequestParam(defaultValue = "20") int size) {
-        PageResult<ReplyItem> result = forumQueryService.listReplies(postId, page, size);
+                                             @RequestParam(defaultValue = "20") int size,
+                                             Authentication authentication) {
+        PageResult<ReplyItem> result = forumQueryService.listReplies(postId, page, size, viewerIdOf(authentication));
         return ApiResponse.ok(new PageVo<>(result.items().stream().map(ReplyVo::from).toList(),
                 result.total(), result.page(), result.size()));
     }
@@ -64,5 +68,21 @@ public class ReplyController {
                                              Authentication authentication) {
         long userId = CurrentUser.requireId(authentication);
         return ApiResponse.ok(replyApplicationService.reply(postId, userId, command));
+    }
+
+    @Operation(summary = "点赞 / 取消点赞楼层（需登录，toggle）：active 为操作后状态，count 为最新点赞数")
+    @SecurityRequirement(name = ApiDocs.BEARER_AUTH)
+    @ErrorCodes({ResultCode.NOT_LOGGED_IN, ResultCode.NOT_FOUND})
+    @PostMapping("/{replyId}/like")
+    public ApiResponse<InteractionResult> like(@PathVariable("postId") Long postId,
+                                               @PathVariable("replyId") Long replyId,
+                                               Authentication authentication) {
+        long userId = CurrentUser.requireId(authentication);
+        return ApiResponse.ok(interactionApplicationService.toggleReplyLike(userId, replyId));
+    }
+
+    /** 楼层列表端点保持公开；已登录时附带登录态回显（匿名 / principal 非 id 一律视为匿名，不抛 401） */
+    private static Long viewerIdOf(Authentication authentication) {
+        return authentication != null && authentication.getPrincipal() instanceof Long userId ? userId : null;
     }
 }

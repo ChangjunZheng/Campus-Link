@@ -68,4 +68,20 @@ public class PostRepositoryImpl implements PostRepository {
                 .set(PostDO::getAcceptedReplyId, replyId)
                 .eq(PostDO::getId, postId));
     }
+
+    @Override
+    public int adjustLikeCount(Long postId, int delta) {
+        postMapper.update(null, new LambdaUpdateWrapper<PostDO>()
+                .setSql("like_count = like_count + " + delta)
+                .eq(PostDO::getId, postId));
+        return postMapper.selectById(postId).getLikeCount();
+    }
+
+    @Override
+    public int adjustFavoriteCount(Long postId, int delta) {
+        postMapper.update(null, new LambdaUpdateWrapper<PostDO>()
+                .setSql("favorite_count = favorite_count + " + delta)
+                .eq(PostDO::getId, postId));
+        return postMapper.selectById(postId).getFavoriteCount();
+    }
 }

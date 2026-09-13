@@ -1,12 +1,12 @@
 # Campus-Link Backend
 
-Campus-Link（重庆工程学院计算机专业学生交流论坛）服务端。技术栈见[技术方案](../docs/design/tech-design.md)（版本号登记于 [docs/README.md](../docs/README.md) 第 2 节）：
+Campus-Link（重庆工程学院计算机专业学生交流论坛）服务端。技术栈见[技术方案](../docs/设计/技术方案.md)（版本号登记于 [docs/README.md](../docs/README.md) 第 2 节）：
 Spring Boot 4.1 + Java 21 + MyBatis-Plus 3.5.17（Boot4 starter）+ MySQL 8 + Redis 7。
 
 ## 本地启动
 
 前置：**JDK 21**（构建前 `set "JAVA_HOME=D:\develop\Java\jdk-21"`）、本机已运行的 **MySQL 8** 与 **Redis**。
-> 开发期不使用 Docker（[CR-011](../docs/change-log.md)）；`docker-compose.dev.yml` 保留，供发布阶段（阶段六）启用。
+> 开发期不使用 Docker（[CR-011](../docs/变更日志/变更台账.md#cr-011)）；`docker-compose.dev.yml` 保留，供发布阶段（阶段六）启用。
 
 ```bash
 # 1. 准备依赖服务（本机原生，非 Docker）
@@ -33,7 +33,7 @@ mvn spring-boot:run
 
 ## 数据库变更
 
-结构变更与数据变更走两条轨（[CR-014](../docs/change-log.md)）：
+结构变更与数据变更走两条轨（[CR-014](../docs/变更日志/变更台账.md#cr-014)）：
 
 | 变更类型 | 放哪 | 怎么执行 |
 |---------|------|---------|

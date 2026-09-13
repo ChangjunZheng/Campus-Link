@@ -17,6 +17,10 @@
       "description": "版块"
     },
     {
+      "name": "favorite",
+      "description": "收藏"
+    },
+    {
       "name": "admin-roster",
       "description": "学籍名册导入（仅 SUPERADMIN）"
     },
@@ -198,7 +202,7 @@
         "tags": [
           "reply"
         ],
-        "summary": "楼层列表（公开）：按 floor_no 升序；楼层 = 回复序号，帖子本体不占楼层号",
+        "summary": "楼层列表（公开）：按 floor_no 升序；楼层 = 回复序号，帖子本体不占楼层号；登录请求附带各楼层 likedByMe，匿名时恒 false",
         "operationId": "list_1",
         "parameters": [
           {
@@ -308,6 +312,246 @@
               "*/*": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiResponsePublishedReply"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数错误（1001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未登录（4001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "资源不存在（3001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "系统繁忙，请稍后再试（9999）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/posts/{postId}/replies/{replyId}/like": {
+      "post": {
+        "tags": [
+          "reply"
+        ],
+        "summary": "点赞 / 取消点赞楼层（需登录，toggle）：active 为操作后状态，count 为最新点赞数",
+        "operationId": "like",
+        "parameters": [
+          {
+            "name": "postId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "replyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseInteractionResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数错误（1001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未登录（4001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "资源不存在（3001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "系统繁忙，请稍后再试（9999）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/posts/{id}/like": {
+      "post": {
+        "tags": [
+          "post"
+        ],
+        "summary": "点赞 / 取消点赞帖子（需登录，toggle）：active 为操作后状态，count 为最新点赞数",
+        "operationId": "like_1",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseInteractionResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数错误（1001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未登录（4001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "资源不存在（3001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "系统繁忙，请稍后再试（9999）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/posts/{id}/favorite": {
+      "post": {
+        "tags": [
+          "post"
+        ],
+        "summary": "收藏 / 取消收藏帖子（需登录，toggle）：active 为操作后状态，count 为最新收藏数",
+        "operationId": "favorite",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseInteractionResult"
                 }
               }
             }
@@ -849,7 +1093,7 @@
         "tags": [
           "post"
         ],
-        "summary": "帖子详情（公开）：返回服务端渲染好的 contentHtml",
+        "summary": "帖子详情（公开）：返回服务端渲染好的 contentHtml；登录请求附带 likedByMe / favoritedByMe，匿名时恒 false",
         "operationId": "detail",
         "parameters": [
           {
@@ -904,6 +1148,84 @@
             }
           }
         }
+      }
+    },
+    "/api/v1/favorites/mine": {
+      "get": {
+        "tags": [
+          "favorite"
+        ],
+        "summary": "我的收藏（需登录）：本人收藏的帖子，按收藏时间倒序，分页 page/size",
+        "operationId": "mine",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponsePageVoPostSummaryVo"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数错误（1001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未登录（4001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "系统繁忙，请稍后再试（9999）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     },
     "/api/v1/boards": {
@@ -1030,6 +1352,36 @@
             "format": "int64"
           },
           "floorNo": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "ApiResponseInteractionResult": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/InteractionResult"
+          },
+          "traceId": {
+            "type": "string"
+          }
+        }
+      },
+      "InteractionResult": {
+        "type": "object",
+        "properties": {
+          "active": {
+            "type": "boolean"
+          },
+          "count": {
             "type": "integer",
             "format": "int32"
           }
@@ -1438,6 +1790,13 @@
           "accepted": {
             "type": "boolean"
           },
+          "likeCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "likedByMe": {
+            "type": "boolean"
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -1500,6 +1859,12 @@
             "format": "int32"
           },
           "accepted": {
+            "type": "boolean"
+          },
+          "likedByMe": {
+            "type": "boolean"
+          },
+          "favoritedByMe": {
             "type": "boolean"
           },
           "createdAt": {

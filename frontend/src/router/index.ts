@@ -12,6 +12,7 @@ const router = createRouter({
     { path: '/search', name: 'search', component: () => import('../components/Placeholder.vue'), props: { title: '搜索' }, meta: { title: '搜索' } },
     { path: '/u/:id', name: 'profile', component: () => import('../components/Placeholder.vue'), props: { title: '个人主页' }, meta: { title: '个人主页' } },
     { path: '/notifications', name: 'notifications', component: () => import('../components/Placeholder.vue'), props: { title: '通知中心' }, meta: { title: '通知', requiresAuth: true } },
+    { path: '/favorites', name: 'favorites', component: () => import('../views/MyFavoritesView.vue'), meta: { title: '我的收藏', requiresAuth: true } },
     { path: '/admin', name: 'admin', component: () => import('../components/Placeholder.vue'), props: { title: '管理后台' }, meta: { title: '后台' } },
   ],
 })

@@ -2,20 +2,20 @@
 
 | 文档信息 | 内容 |
 |---------|------|
-| 版本 | v1.6 |
+| 版本 | v1.7 |
 | 状态 | 已归档（**快照**，接口契约变更后须再生成，见 §2） |
 | 维护人 | 技术负责人（发起人兼任） |
 | 最后更新 | 2026-09-13 |
 | 对应行动项 | [设计门纪要](../../评审/设计门纪要.md) **A3-4**：补归档 OpenAPI 快照，或补 2~3 个主链路接口请求/响应结构（**两个备选项本文都做**） |
-| 变更登记 | [CR-019](../../变更日志/变更台账.md#cr-019)（首次归档）· [CR-021](../../变更日志/变更台账.md#cr-021)（修复 N-1 / N-2 / N-3 后**再生成**：契约新增错误响应与 bearerAuth 声明）· [CR-022](../../变更日志/变更台账.md#cr-022)（Sprint 2 MVP 新增 6 个论坛端点后**再生成**：6 → **12** 端点）· [CR-028](../../变更日志/变更台账.md#cr-028)（**N-4 闭环后**再生成：`bearerAuth` 描述据实改写，**端点 / schema 数一字未变**）· [CR-031](../../变更日志/变更台账.md#cr-031)（**路径级鉴权落地后再生成**：`bearerAuth` 描述随框架拦截据实改写，**端点 / schema / `security` 声明仍未变**）· [CR-043](../../变更日志/变更台账.md)（**采纳最佳答案落地后再生成**：新增 `POST /posts/{id}/accept` 与 `AcceptReplyCommand` schema，12 → **13** 端点） |
+| 变更登记 | [CR-019](../../变更日志/变更台账.md#cr-019)（首次归档）· [CR-021](../../变更日志/变更台账.md#cr-021)（修复 N-1 / N-2 / N-3 后**再生成**：契约新增错误响应与 bearerAuth 声明）· [CR-022](../../变更日志/变更台账.md#cr-022)（Sprint 2 MVP 新增 6 个论坛端点后**再生成**：6 → **12** 端点）· [CR-028](../../变更日志/变更台账.md#cr-028)（**N-4 闭环后**再生成：`bearerAuth` 描述据实改写，**端点 / schema 数一字未变**）· [CR-031](../../变更日志/变更台账.md#cr-031)（**路径级鉴权落地后再生成**：`bearerAuth` 描述随框架拦截据实改写，**端点 / schema / `security` 声明仍未变**）· [CR-043](../../变更日志/变更台账.md)（**采纳最佳答案落地后再生成**：新增 `POST /posts/{id}/accept` 与 `AcceptReplyCommand` schema，12 → **13** 端点）· [CR-048](../../变更日志/变更台账.md)（**点赞收藏落地后再生成**：新增 4 端点与 `InteractionResult` schema，13 → **17** 端点） |
 | 关联记录 | [技术方案](../技术方案.md) §5 接口契约 · [PRD](../../需求/产品需求文档.md) F-ACC-004 · [Sprint 1 计划](../../开发/Sprint1计划.md) · [Sprint 2 计划](../../开发/Sprint2计划.md) · [Sprint 2 增量设计](../../开发/Sprint2增量设计.md) |
 
 ## 1. 这份文件是什么、不是什么
 
 - **是**：`openapi.json` —— 由 springdoc 从**运行中的后端**导出的一次**冻结快照**，用于设计门归档与"文档 vs 实现"的差异比对；
 - **不是**手写的接口规范：契约的权威来源永远是运行中的服务（`GET /api/docs`，Swagger UI 在 `/api/docs/swagger-ui.html`）。本文与快照一旦落后于代码，以代码为准并**立即再生成**；
-- **覆盖范围是**已实现的 **13 个端点**（账号 6 + 论坛 7），不得读成"全部接口契约已归档"——[技术方案](../技术方案.md) §5 接口表中仍有多行属后续 Sprint 计划项（逐条差异见 §5）。因此技术方案文末检查清单第 3 项"接口契约**完整**"**仍不勾选**；
-- **自 [CR-021](../../变更日志/变更台账.md#cr-021) 起，快照也表达错误响应与鉴权**：每个操作都声明了 4xx / 5xx 及错误体 schema `ApiError`，`components.securitySchemes.bearerAuth` 已定义，**5 个**受保护操作带 `security`（`users/me`、`admin/roster/import`、`POST /posts`、`POST /posts/{postId}/replies`、`POST /posts/{id}/accept`）。**N-4 的"漏写鉴权静默变公开"缺口已由 [CR-028](../../变更日志/变更台账.md#cr-028) 闭环**（统一入口 `CurrentUser` + `ArchitectureGuardTest` 机器校验）；**路径级拦截已由 [CR-031](../../变更日志/变更台账.md#cr-031) 落地**（`SecurityConfig` 去 `permitAll()`，按端点注解裁决，见 §6.2），另有 4 类事实快照表达不了（§6）——读快照前必须先看 §6；
+- **覆盖范围是**已实现的 **17 个端点**（账号 6 + 论坛 11），不得读成"全部接口契约已归档"——[技术方案](../技术方案.md) §5 接口表中仍有多行属后续 Sprint 计划项（逐条差异见 §5）。因此技术方案文末检查清单第 3 项"接口契约**完整**"**仍不勾选**；
+- **自 [CR-021](../../变更日志/变更台账.md#cr-021) 起，快照也表达错误响应与鉴权**：每个操作都声明了 4xx / 5xx 及错误体 schema `ApiError`，`components.securitySchemes.bearerAuth` 已定义，**9 个**受保护操作带 `security`（`users/me`、`admin/roster/import`、`POST /posts`、`POST /posts/{postId}/replies`、`POST /posts/{id}/accept`、点赞 ×2、收藏、`favorites/mine`）。**N-4 的"漏写鉴权静默变公开"缺口已由 [CR-028](../../变更日志/变更台账.md#cr-028) 闭环**（统一入口 `CurrentUser` + `ArchitectureGuardTest` 机器校验）；**路径级拦截已由 [CR-031](../../变更日志/变更台账.md#cr-031) 落地**（`SecurityConfig` 去 `permitAll()`，按端点注解裁决，见 §6.2），另有 4 类事实快照表达不了（§6）——读快照前必须先看 §6；
 - **不留多份历史副本**：本目录只有一个当前快照，历史版本由 git 承担（[CR-008](../../变更日志/变更台账.md#cr-008) 的教训——不该用 zip / 副本替代 git 历史）。
 
 ## 2. 快照来源与再生成
@@ -23,15 +23,15 @@
 | 项 | 值 |
 |---|---|
 | 首次归档 | 2026-09-11（[CR-019](../../变更日志/变更台账.md#cr-019)，源提交 `68d40ae`，6 端点 / 13 schema） |
-| **本次生成时间** | **2026-09-13 21:55**（[CR-043](../../变更日志/变更台账.md) 采纳最佳答案落地后**再生成**：新增 `POST /posts/{id}/accept` 与 `AcceptReplyCommand` schema，12 → 13 端点 / 30 → 31 schema） |
-| **代码来源** | ⚠️ **未提交的工作区**（v1.5 历史核验补记：CR-031 已提交为 `7720adc`，提交后核对逐字节一致，见 §7 v1.5.1）。**v1.6 情形与 v1.5 当时相同**：CR-043 后端改动尚未提交，快照由当前工作区源码生成；**提交后须按同一方法补做"无改动"核对**。方法学备注：本次快照自本机 8093 端口实例抓取（8088 被旧版进程占用），`servers` 字段按 v1.4 既定值回写为 `http://localhost:8088`，除此之外零改动 |
+| **本次生成时间** | **2026-09-13 17:00**（[CR-048](../../变更日志/变更台账.md) 点赞收藏落地后**再生成**：新增 4 端点 / `InteractionResult` + `ApiResponseInteractionResult` schema，13 → 17 端点 / 31 → 33 schema） |
+| **代码来源** | ⚠️ **未提交的工作区**（CR-048 后端改动尚未提交）。方法学备注：本次快照自本机 **8094** 端口实例抓取（8088 被用户旧栈占用），`servers` 字段按既定值回写为 `http://localhost:8088`，除此之外零改动；与旧快照比对脚本核对，差异**恰为**新增 4 端点 + 2 个既有端点出参扩展 + 2 个新 schema，无意外漂移。**提交后须按 v1.5.1 / v1.6.1 同一方法补做"无改动"核对** |
 | 后端地址 | `http://localhost:8088`（开发端口，[CR-012](../../变更日志/变更台账.md#cr-012)）——快照 `servers` 字段即此值，**部署形态（ADR-011）确定后须重生成** |
 | 生成方 | springdoc-openapi 3.1.0（`springdoc-openapi-starter-webmvc-ui`） |
 | 规范版本 | OpenAPI **3.1.0**；`info.title` = `Campus-Link API`，`info.version` = `0.1.0`（未随 Sprint 递增，见 §7 遗留） |
-| 规模 | **6 个 tag** / **13 个端点** / **31 个 schema**（v1.5 为 6 tag / 12 端点 / 30 schema）。v1.6 新增 1 个 schema：`AcceptReplyCommand` |
+| 规模 | **6 个 tag** / **17 个端点** / **33 个 schema**（v1.6 为 6 tag / 13 端点 / 31 schema）。v1.7 新增 2 个 schema：`InteractionResult`、`ApiResponseInteractionResult` |
 | 落盘处理 | 原始响应单行压缩 → 按 2 空格缩进格式化。**键序保持 springdoc 原序，未排序、未删改任何字段**（`servers` 回写见上） |
 | 可复现性 | 格式化方法与历次一致（`json.dumps(ensure_ascii=False, indent=2)` + 尾部换行），`git diff` 仍可作为契约变更的可靠信号 |
-| 本次 diff 性质 | **纯新增**：`git diff` 净增约 130 行——① 新增 `paths./api/v1/posts/{id}/accept`（1 个操作）与 `components.schemas.AcceptReplyCommand`；② 三个既有 VO 新增字段（真实契约扩展，[CR-043](../../变更日志/变更台账.md)）：`PostSummaryVo` +`accepted`、`PostDetailVo` +`boardType` +`authorId`、`ReplyVo` +`authorId` +`accepted`；无任何既有字段 / 类型被删改 |
+| 本次 diff 性质 | **纯新增 + 出参扩展**：`git diff` 净增约 370 行——① 新增 4 个 path（3 个 toggle 写操作 + `GET /favorites/mine`，均带 `security`）与 2 个新 schema；② 两个既有 VO 新增字段（真实契约扩展，[CR-048](../../变更日志/变更台账.md)）：`PostDetailVo` +`likedByMe` +`favoritedByMe`、`ReplyVo` +`likeCount` +`likedByMe`；无任何既有字段 / 类型被删改 |
 
 **再生成命令**（在仓库根目录执行；先按 `AGENTS.md`"常用命令"起栈：本机 MySQL / Redis + `mvn spring-boot:run`）：
 
@@ -43,7 +43,7 @@ git diff --stat openapi.json   # 非空即契约有变更，须同步技术方�
 
 **再生成触发点**（已写入 `AGENTS.md`）：① 新增 / 修改端点或请求响应模型后；② 每个 Sprint 收尾；③ 部署形态确定后（`servers` 会变）；④ ~~N-1 / N-2 修复后~~ **已完成**（[CR-021](../../变更日志/变更台账.md#cr-021)）；⑤ 改了 `common/result/ResultCode` 的错误码、提示语或 `getHttpStatus()` 映射后——契约里的状态码与 description 全部由它派生，改它即改契约；⑥ ~~`SecurityConfig` 从 `permitAll()` 改为真正按路径授权后~~ **已完成**（[CR-031](../../变更日志/变更台账.md#cr-031)，2026-09-12 再生成：`security` 声明未变，`bearerAuth` 描述已写明"框架按端点注解裁决、未登录由过滤器链产出 401 / 4001"）；⑦ ~~Sprint 2 MVP 的 6 个论坛端点合入前~~ **已完成**（[CR-022](../../变更日志/变更台账.md#cr-022)，2026-09-12 再生成）；⑧ 增删端点的 `@PublicEndpoint` / `@SecurityRequirement` 声明、或改动 `common/web/CurrentUser` 鉴权入口语义后（[CR-028](../../变更日志/变更台账.md#cr-028) 起该纪律由 `ArchitectureGuardTest` 机器校验，但**快照的 `security` 声明不会自动跟随**，仍须重抓）；⑨ ~~N-4 闭环后复核 `bearerAuth` 描述~~ **已完成**（[CR-028](../../变更日志/变更台账.md#cr-028)，2026-09-12 再生成，diff 仅 1 行文案）。**新增**：⑩ 改动 `security/EndpointAuthorizationManager` 的裁决口径（如 fail-closed 范围、非 module 处理器放行规则）后——**运行时行为变了而契约描述可能落后**，须重抓并核对 `bearerAuth` 描述。**其中 ① 是高频触发点**：Sprint 2 起每次加端点都要重抓一次，`git diff` 非空即须同步本文 §3 / §4 与技术方案 §5。
 
-## 3. 端点清单（快照实际覆盖的 12 个）
+## 3. 端点清单（快照实际覆盖的 17 个）
 
 ### 3.1 账号上下文（`module/account`，6 个，Sprint 1）
 
@@ -56,7 +56,7 @@ git diff --stat openapi.json   # 非空即契约有变更，须同步技术方�
 | GET | `/api/v1/users/me` | user | 我的主页（F-ACC-002 最小版） | — | `UserVo` | **`security: bearerAuth`** | **框架层（[CR-031](../../变更日志/变更台账.md#cr-031)）按 `@SecurityRequirement` 前置拦截 → 匿名 `401 / 4001`（进入业务代码前）**；业务层 `CurrentUser.requireId(authentication)` 同码兜底 |
 | POST | `/api/v1/admin/roster/import?batch=` | admin-roster | 学籍名册 CSV 导入，body 为 CSV 文本 | `string`（CSV） | `RosterImportResult` | **`security: bearerAuth`** | 框架层前置拦截匿名 → `401 / 4001`；业务层 `CurrentUser.requireRole(authentication, ROLE_SUPERADMIN)` → 角色不足 `403 / 4002`（**403 支由单测 `AdminRosterControllerAuthTest` 覆盖，未在真机复现**，见 §6.2） |
 
-### 3.2 论坛上下文（`module/forum`，7 个：Sprint 2 MVP 6 个 + [CR-043](../../变更日志/变更台账.md) 采纳 1 个）
+### 3.2 论坛上下文（`module/forum`，11 个：Sprint 2 MVP 6 个 + [CR-043](../../变更日志/变更台账.md) 采纳 1 个 + [CR-048](../../变更日志/变更台账.md) 点赞收藏 4 个）
 
 | 方法 | 路径 | tag | 摘要 | 请求体 | `data` 类型 | **快照声明的鉴权** | **运行时实际强制方式**（见 N-4） |
 |------|------|-----|------|--------|------------|------------------|--------------------------------|
@@ -67,6 +67,10 @@ git diff --stat openapi.json   # 非空即契约有变更，须同步技术方�
 | GET | `/api/v1/posts/{postId}/replies?page=&size=` | reply | 楼层列表，**最佳答案置顶**（`is_accepted DESC, floor_no ASC`，[CR-043](../../变更日志/变更台账.md) 调整） | — | `PageVo<ReplyVo>` | 无（公开） | 公开 |
 | POST | `/api/v1/posts/{postId}/replies` | reply | 回帖（MVP 范围：平铺楼层，不含引用回复） | `PublishReplyCommand` | `PublishedReply` | **`security: bearerAuth`** | **框架层（[CR-031](../../变更日志/变更台账.md#cr-031)）前置拦截 → 匿名 `401 / 4001`（§4.5 ⑫ 实测）**；业务层 `CurrentUser.requireId(authentication)` 同码兜底 |
 | POST | `/api/v1/posts/{id}/accept` | post | 采纳最佳答案（仅提问者 + 问答帖 + 非自答；可更换，后写覆盖前写） | `AcceptReplyCommand` | 无（`data` 省略） | **`security: bearerAuth`** | **框架层（[CR-031](../../变更日志/变更台账.md#cr-031)）前置拦截 → 匿名 `401 / 4001`**；业务层 `CurrentUser.requireId(authentication)`；**提问者 / 问答帖 / 非自答校验在业务层**（403 `4002` / 400 `3002` / 400 `3003` / 404 `3001` 防探测，[CR-043](../../变更日志/变更台账.md) 真机实测） |
+| POST | `/api/v1/posts/{id}/like` | post | 点赞 / 取消点赞帖子（toggle，再次 POST 即取消） | — | `InteractionResult`（`{active, count}`） | **`security: bearerAuth`** | **框架层前置拦截 → 匿名 `401 / 4001`**（[CR-048](../../变更日志/变更台账.md) 真机实测）；业务层 `CurrentUser.requireId(authentication)`；目标不存在 `404 / 3001` |
+| POST | `/api/v1/posts/{id}/favorite` | post | 收藏 / 取消收藏帖子（toggle，同上） | — | `InteractionResult` | **`security: bearerAuth`** | 同上（[CR-048](../../变更日志/变更台账.md)） |
+| POST | `/api/v1/posts/{postId}/replies/{replyId}/like` | reply | 点赞 / 取消点赞楼层（toggle，同上） | — | `InteractionResult` | **`security: bearerAuth`** | 同上（[CR-048](../../变更日志/变更台账.md)；楼层不存在同 `404 / 3001` 防探测） |
+| GET | `/api/v1/favorites/mine?page=&size=` | favorite | 我的收藏（按收藏时间倒序分页，出参同帖子摘要） | — | `PageVo<PostSummaryVo>` | **`security: bearerAuth`** | **框架层前置拦截 → 匿名 `401 / 4001`**；业务层 `CurrentUser.requireId(authentication)`（[CR-048](../../变更日志/变更台账.md)） |
 
 > ⚠️ **路径参数名不一致（真实存在）**：详情是 `/posts/{id}`（`PostController`），回复列表与回帖是 `/posts/{postId}/replies`（`ReplyController` 类级 `@RequestMapping`）。两者指同一个帖子 id，仅是**两个 Controller 各自的参数命名不同**，快照如实呈现。前端调用不受影响（URL 模板里只是占位符），但**读快照时不要以为是两个不同的资源**。属文档-代码细节差异，登记在 [增量设计](../../开发/Sprint2增量设计.md) §8（P-2）。
 >
@@ -89,6 +93,10 @@ git diff --stat openapi.json   # 非空即契约有变更，须同步技术方�
 | `GET /posts/{postId}/replies` | 400 / 404 / 500 | 400：`1001`；404：`3001`（帖子不存在） |
 | `POST /posts/{postId}/replies` | 400 / 401 / 404 / 500 | 400：`1001`；401：`4001`；404：`3001`（帖子不存在） |
 | `POST /posts/{id}/accept` | 400 / 401 / 403 / 404 / 500 | 400：`1001` + `3002`（非问答帖）+ `3003`（采纳自己的回复）；401：`4001`；403：`4002`（非提问者）；404：`3001`（帖子或回复不存在，防探测统一提示） |
+| `POST /posts/{id}/like` | 400 / 401 / 404 / 500 | 400：`1001`；401：`4001`；404：`3001`（帖子不存在） |
+| `POST /posts/{id}/favorite` | 400 / 401 / 404 / 500 | 400：`1001`；401：`4001`；404：`3001` |
+| `POST /posts/{postId}/replies/{replyId}/like` | 400 / 401 / 404 / 500 | 400：`1001`；401：`4001`；404：`3001`（帖子或楼层不存在，防探测统一提示） |
+| `GET /favorites/mine` | 400 / 401 / 500 | 400：`1001`；401：`4001` |
 
 > ✅ **N-4 的"漏写鉴权静默变公开"缺口已由 [CR-028](../../变更日志/变更台账.md#cr-028) 闭环，路径级拦截已由 [CR-031](../../变更日志/变更台账.md#cr-031) 补齐**。机制是**三层**：① **统一入口** `common/web/CurrentUser`（`requireId` / `requireRole`，未登录 `401 / 4001`、权限不足 `403 / 4002`）——上表第 8 列的强制逻辑全部收敛到它；② **显式声明锚点** `common/web/PublicEndpoint`（公开）与 `@SecurityRequirement`（受保护）二选一，由 `ArchitectureGuardTest` **机器校验**两条纪律：**每个** HTTP 映射方法必须且只能声明其一（漏写即测试失败）· **凡**声明 `@SecurityRequirement` 的方法必须真的调用 `CurrentUser`（只声明不调用同样失败）——因此"新增端点忘了加鉴权"不再是静默的；③ **框架层（[CR-031](../../变更日志/变更台账.md#cr-031) 起）**：`config/SecurityConfig` 已去掉 `anyRequest().permitAll()`，改由 `security/EndpointAuthorizationManager` **按同一批注解裁决**（`@PublicEndpoint` 放行、`@SecurityRequirement` 要求已登录、`com.campuslink.module.*` 端点两者都没标即 fail-closed），匿名请求在**进入业务代码前**即被过滤器链内的 `security/ApiErrorSecurityHandler` 拒为 `401 / 4001`。
 >
@@ -325,7 +333,7 @@ git diff --stat openapi.json   # 非空即契约有变更，须同步技术方�
 | **§5 已列且已实现（账号 5 行）** | `POST /auth/verify-student`、`POST /auth/captcha`、`POST /auth/register`、`POST /auth/login`、`POST /admin/roster/import` | 无需动作 |
 | **§5 未列、已补入并实现** | `GET /api/v1/users/me`（[CR-019](../../变更日志/变更台账.md#cr-019) 补入）、`GET /api/v1/boards`、`GET /api/v1/posts/{postId}/replies`（[CR-022](../../变更日志/变更台账.md#cr-022) 的 MVP 范围新增，**§5 原表没有这两行**） | ✅ 技术方案 §5 已同步补入这两行 |
 | **本次由"计划项"转为"已实现"（MVP 子集）** | `GET /posts`（**仅全站最新 / 版块内时间序，无 `sort=hot`**）、`POST /posts`（**无标签**）、`GET /posts/{id}`（**无 DELETE**）、`POST /posts/{id}/replies`（**无 `quotedReplyId`**） | 技术方案 §5 已标注"已实现（MVP 子集）"与未实现部分 |
-| **§5 已列但仍未实现**（后续 Sprint） | `GET /boards/{code}/posts`（**已由 `GET /posts?boardCode=` 替代**，不是缺口）、`sort=hot` 与 `hot_score`（ADR-006 定时任务）、`DELETE /posts/{id}`、`PUT /posts/{id}/accepted-reply`、`POST\|DELETE /posts/{id}/like`·`/favorite`、`GET\|PUT /notifications`、`GET /search`、`POST /reports`、`/admin/...` 处置台与工单 | 契约尚未设计；各 Sprint 开工前补 §5 并在实现后重生成快照（对应 [sprint-2.md](../../开发/Sprint2计划.md) §1 的 OUT 清单） |
+| **§5 已列但仍未实现**（后续 Sprint） | `GET /boards/{code}/posts`（**已由 `GET /posts?boardCode=` 替代**，不是缺口）、`sort=hot` 与 `hot_score`（ADR-006 定时任务）、`DELETE /posts/{id}`、`PUT /posts/{id}/accepted-reply`、**toggle 版点赞 / 收藏已由 [CR-048](../../变更日志/变更台账.md) 实现并取代**（原列的 `POST\|DELETE` 双方法语义收敛为单一 POST toggle）、`GET\|PUT /notifications`、`GET /search`、`POST /reports`、`/admin/...` 处置台与工单 | 契约尚未设计；各 Sprint 开工前补 §5 并在实现后重生成快照（对应 [sprint-2.md](../../开发/Sprint2计划.md) §1 的 OUT 清单） |
 | **§5 有约定但快照无对应表达** | 时间 ISO 8601 UTC、错误码**分段规则**（分页口径已随本次同步为 `page/size`，不再是差异） | **错误码自 [CR-021](../../变更日志/变更台账.md#cr-021) 起部分可见**：具体码与提示语出现在各响应的 description 里（§3 的非 200 表），但"1xxx 通用 / 2xxx 账号 / 21xx 学籍 …"这一**分段规则**OpenAPI 表达不了，仍须读技术方案 §5 |
 
 ## 6. 快照的已知缺口与表达极限（读快照前必须知道）
@@ -361,6 +369,8 @@ git diff --stat openapi.json   # 非空即契约有变更，须同步技术方�
 
 ## 7. 变更记录
 
+- **v1.7（2026-09-13）——[CR-048](../../变更日志/变更台账.md) 点赞收藏落地后再生成，契约纯新增 + 出参扩展**：新增 4 个受保护端点——`POST /posts/{id}/like`、`POST /posts/{id}/favorite`、`POST /posts/{postId}/replies/{replyId}/like`（三者均为 **toggle**，响应 `InteractionResult{active, count}`）与 `GET /favorites/mine`（`PageVo<PostSummaryVo>`），13 → **17** 端点 / 31 → **33** schema（新增 `InteractionResult`、`ApiResponseInteractionResult`）；两个既有 VO 扩展字段：`PostDetailVo` +`likedByMe` +`favoritedByMe`、`ReplyVo` +`likeCount` +`likedByMe`（匿名访问详情 / 楼层列表仍 200，登录态回显字段恒 false）。快照自 8094 临时端口实例抓取（8088 被旧栈占用），`servers` 回写既定值；与 v1.6 比对核对差异恰为上述内容，无意外漂移。§1 / §2 / §3.2 / 非 200 表 / §5 已同步。**遗留**：提交后核对待 CR-048 提交后补做；`info.version` 仍为 `0.1.0`。
+- **v1.6.1（2026-09-13）——补记提交凭证与"提交后核对"结果，快照文件零改动**：CR-043 已提交为 `493ef87`；自**运行中后端**（8094 临时端口实例，8088 仍被旧版进程占用）重抓 `/api/docs` 并按 §2 命令格式化、`servers` 归一回 `http://localhost:8088`，与仓库快照**逐字节一致**（唯一原始差异即 `servers` 抓取端口，归一后零差异）——v1.6 遗留的"提交后核对"就此完成，快照来源由"未提交的工作区"更正为**提交 `493ef87`**。
 - **v1.6（2026-09-13）——[CR-043](../../变更日志/变更台账.md) 采纳最佳答案落地后再生成，契约纯新增**：新增 `POST /api/v1/posts/{id}/accept`（受保护，`AcceptReplyCommand` 请求体）与 schema `AcceptReplyCommand`，12 → **13** 端点 / 30 → **31** schema；三个既有 VO 扩展字段：`PostSummaryVo` +`accepted`、`PostDetailVo` +`boardType` +`authorId`、`ReplyVo` +`authorId` +`accepted`；楼层列表排序改为最佳答案置顶。快照由 8093 端口实例抓取（8088 被旧版进程占用），`servers` 回写既定值，见 §2 方法学备注。§3.2 / 非 200 表已同步，§5 中 `PUT /{id}/accepted-reply` 计划项由本实现取代。
 - **v1.5.1（2026-09-13）——补记提交凭证与"提交后核对"结果，快照文件零改动**：CR-031 已提交为 `7720adc`；自**运行中后端**（`http://localhost:8088/api/docs`）重抓并按 §2 命令格式化，与仓库快照**逐字节一致**（`git diff --no-index` 零差异）——v1.5 遗留的"提交后核对"就此完成，快照来源由"未提交的工作区"更正为**提交 `7720adc`**（`info.version` 仍为 `0.1.0`）。一处方法学备注：核对须抓**配置的契约入口 `/api/docs`**——springdoc 默认的 `/v3/api-docs` 在本项目返回的是另一份更小的文档，不是快照的事实来源。
 - **v1.5（2026-09-12）**——配合 [CR-031](../../变更日志/变更台账.md#cr-031)（**路径级鉴权落地**：`SecurityConfig` 去 `permitAll()`，`EndpointAuthorizationManager` 按端点注解在过滤器链内裁决）**再生成快照**：**端点 / schema / tag / `security` 声明全部未变**（仍 12 端点 / 30 schema / 6 tag / 4 个受保护操作），`git diff` **仅 1 行**——`components.securitySchemes.bearerAuth.description` 据实改写（改为"框架按端点注解裁决、`module` 未声明 fail-closed、未登录由过滤器链产出 401 / 4001"，并注明角色与资源级授权仍归 `CurrentUser`）。并同步本文：**§1** 改述为"**路径级拦截已由 CR-031 落地**"；**§2** 换成本次来源（**仍是未提交的工作区**，`HEAD` = `c806153`，时刻核验：落盘 22:29:12 晚于 `backend/src/main` 最后的 mtime 22:26:32）与规模（18481 → 36529 字节），触发点⑥改为**已完成**、新增 ⑩（改 `EndpointAuthorizationManager` 裁决口径后须重抓）；**§3** 两张表第 8 列对 4 个受保护端点补"**框架层前置拦截 + 业务层同码兜底**"两层描述、`admin/roster/import` 行如实标注 403 支**未在真机复现**（单测覆盖），N-4 说明段重写为"**三层机制 + 两条边界**"；**§4.5** 新增 **⑫ CR-031 复测段**（匿名非法 body / 匿名合法 body / 伪造 token 三条真实 `traceId`；405 / 404 / 公开端点对照）并把原 🔍 注记改写为**行为变化说明**（受保护端点"匿名 + 非法 body"由 `400 / 1001` 前置为 `401 / 4001`，公开端点不受影响）；**§6.2** N-4 行补"路径级强制已由 CR-031 闭环"，尾注与 §6.3 当前状态改为"声明 / 机器校验 / 运行时拦截三层齐备"。**遗留**：快照的"提交后核对"须在 CR-031 代码提交后按 §2 方法补做（与 v1.3 / v1.4 同）；`info.version` 仍为 `0.1.0`。【本快照的端点契约与 v1.4 **完全一致**，若前端只关心接口形状，v1.4 → v1.5 **无破坏性变更**】

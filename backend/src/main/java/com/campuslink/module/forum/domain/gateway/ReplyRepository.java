@@ -21,4 +21,7 @@ public interface ReplyRepository {
 
     /** 新增回复（INSERT）；返回带数据库生成 id 与时间戳的聚合 */
     Reply save(Reply reply);
+
+    /** 楼层点赞计数增减（F-FORUM-005，delta 为 ±1）；返回增减后的 like_count，供响应回显 */
+    int adjustLikeCount(Long replyId, int delta);
 }

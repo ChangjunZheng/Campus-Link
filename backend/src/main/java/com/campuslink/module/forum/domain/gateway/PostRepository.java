@@ -40,4 +40,10 @@ public interface PostRepository {
      * 且 UPDATE posts 行锁先行使同一帖子的并发采纳在数据库层串行化（后写覆盖前写，即"可更换"语义）。
      */
     void updateAcceptedReply(Long postId, Long replyId);
+
+    /** 点赞计数增减（F-FORUM-005，delta 为 ±1）；返回增减后的 like_count，供响应回显 */
+    int adjustLikeCount(Long postId, int delta);
+
+    /** 收藏计数增减（F-FORUM-005，delta 为 ±1）；返回增减后的 favorite_count */
+    int adjustFavoriteCount(Long postId, int delta);
 }

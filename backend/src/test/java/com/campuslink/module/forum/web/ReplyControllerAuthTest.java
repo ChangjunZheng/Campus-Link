@@ -33,7 +33,9 @@ class ReplyControllerAuthTest {
 
     private final ForumQueryApplicationService forumQueryService = mock(ForumQueryApplicationService.class);
     private final ReplyApplicationService replyApplicationService = mock(ReplyApplicationService.class);
-    private final ReplyController controller = new ReplyController(forumQueryService, replyApplicationService);
+    private final com.campuslink.module.forum.application.InteractionApplicationService interactionApplicationService =
+            mock(com.campuslink.module.forum.application.InteractionApplicationService.class);
+    private final ReplyController controller = new ReplyController(forumQueryService, replyApplicationService, interactionApplicationService);
 
     @Test
     @DisplayName("匿名回帖 → 4001，且不触达回帖用例")

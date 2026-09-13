@@ -1,0 +1,61 @@
+package com.campuslink.module.forum.application;
+
+import com.campuslink.module.forum.application.cmd.ForumResults.InteractionResult;
+import com.campuslink.module.forum.domain.exception.PostNotFoundException;
+import com.campuslink.module.forum.domain.gateway.FavoriteRepository;
+import com.campuslink.module.forum.domain.gateway.LikeRepository;
+import com.campuslink.module.forum.domain.gateway.PostRepository;
+import com.campuslink.module.forum.domain.gateway.ReplyRepository;
+import com.campuslink.module.forum.domain.model.LikeTargetType;
+import com.campuslink.module.forum.domain.model.Post;
+import com.campuslink.module.forum.domain.model.Reply;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+/**
+ * 论坛互动写用例（F-FORUM-005）：点赞（帖子 / 楼层）与收藏的 toggle。
+ *
+ * <p>目标存在性核验在本层（复用"不可读统一 404、不区分原因"口径）；去重由 likes / favorites
+ * 主键唯一约束兜底——并发双击时后到者撞键走删除分支，不会重复计数；toggle 行与计数增减同事务。
+ */
+@Service
+@RequiredArgsConstructor
+public class InteractionApplicationService {
+
+    private final PostRepository postRepository;
+    private final ReplyRepository replyRepository;
+    private final LikeRepository likeRepository;
+    private final FavoriteRepository favoriteRepository;
+
+    @Transactional
+    public InteractionResult togglePostLike(long userId, long postId) {
+        requireVisiblePost(postId);
+        boolean active = likeRepository.toggle(userId, LikeTargetType.POST, postId);
+        int count = postRepository.adjustLikeCount(postId, active ? 1 : -1);
+        return new InteractionResult(active, count);
+    }
+
+    @Transactional
+    public InteractionResult toggleReplyLike(long userId, long replyId) {
+        // 回复不存在 / 已删与帖子不存在同样 404 不区分（防按 id 探测，口径同 requireVisiblePost）
+        Reply reply = replyRepository.findById(replyId).orElseThrow(PostNotFoundException::new);
+        boolean active = likeRepository.toggle(userId, LikeTargetType.REPLY, reply.getId());
+        int count = replyRepository.adjustLikeCount(reply.getId(), active ? 1 : -1);
+        return new InteractionResult(active, count);
+    }
+
+    @Transactional
+    public InteractionResult togglePostFavorite(long userId, long postId) {
+        requireVisiblePost(postId);
+        boolean active = favoriteRepository.toggle(userId, postId);
+        int count = postRepository.adjustFavoriteCount(postId, active ? 1 : -1);
+        return new InteractionResult(active, count);
+    }
+
+    private Post requireVisiblePost(Long postId) {
+        return postRepository.findById(postId)
+                .filter(Post::isVisible)
+                .orElseThrow(PostNotFoundException::new);
+    }
+}

@@ -61,4 +61,12 @@ public class ReplyRepositoryImpl implements ReplyRepository {
         replyMapper.insert(d);
         return ReplyConverter.toDomain(d);
     }
+
+    @Override
+    public int adjustLikeCount(Long replyId, int delta) {
+        replyMapper.update(null, new LambdaUpdateWrapper<ReplyDO>()
+                .setSql("like_count = like_count + " + delta)
+                .eq(ReplyDO::getId, replyId));
+        return replyMapper.selectById(replyId).getLikeCount();
+    }
 }

@@ -6,133 +6,373 @@
 <title>Campus-Link · 项目进度驾驶舱</title>
 <style>
   :root{
-    --primary:#409eff; --primary-rgb:64,158,255; --link:#1a6fc4;
-    --text:#303133; --text-2:#606266; --text-3:#909399;
-    --border:rgba(0,0,0,.10); --bg:#f5f7fa; --card:#fff;
-    --ok:#67c23a; --warn:#e6a23c; --danger:#f56c6c; --info:#909399;
+    --primary:#409eff; --primary-deep:#337ecc; --link:#1a6fc4;
+    --ink:#303133; --ink-2:#606266; --ink-3:#909399; --ink-4:#a8abb2;
+    --line:#e4e7ed; --hairline:#f0f2f5;
+    --bg:#f5f6f8; --card:#ffffff;
+    --ok:#67c23a; --ok-bg:#f0f9eb; --ok-line:#e1f3d8;
+    --warn:#e6a23c; --warn-bg:#fdf6ec; --warn-line:#faecd8;
+    --danger:#f56c6c; --danger-bg:#fef0f0; --danger-line:#fde2e2;
+    --mono:"Sarasa Gothic SC","JetBrains Mono",Consolas,"Courier New",monospace;
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6}
-  .wrap{max-width:1180px;margin:0 auto;padding:24px 20px 60px}
-  header.top{background:linear-gradient(135deg,#409eff,#337ecc);color:#fff;border-radius:12px;padding:22px 26px;margin-bottom:18px}
-  header.top h1{font-size:22px;font-weight:500;letter-spacing:.5px}
-  header.top .sub{opacity:.9;font-size:13px;margin-top:4px}
-  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-top:16px}
-  .stat{background:rgba(255,255,255,.14);border-radius:10px;padding:10px 14px}
-  .stat b{display:block;font-size:22px;font-weight:600}
-  .stat span{font-size:12px;opacity:.9}
-  nav.tabs{display:flex;gap:8px;margin:0 0 18px;flex-wrap:wrap}
-  nav.tabs button{border:1px solid var(--border);background:var(--card);color:var(--text-2);padding:8px 18px;border-radius:8px;cursor:pointer;font-size:14px}
-  nav.tabs button.active{background:var(--primary);border-color:var(--primary);color:#fff}
-  section.tab{display:none}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;
+    background:var(--bg);color:var(--ink);font-size:14px;line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1200px;margin:0 auto;padding:0 20px 64px}
+
+  /* ============ 顶部横幅：蓝图底纹 ============ */
+  header.hero{
+    position:relative;margin:0 -20px 20px;padding:34px 40px 30px;color:#fff;overflow:hidden;
+    background:linear-gradient(128deg,#2b6cb8 0%,#337ecc 42%,#409eff 100%);
+  }
+  header.hero::before{ /* 蓝图网格 */
+    content:"";position:absolute;inset:0;opacity:.10;pointer-events:none;
+    background-image:linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px);
+    background-size:28px 28px;
+  }
+  header.hero::after{ /* 右上角柔光 */
+    content:"";position:absolute;right:-120px;top:-120px;width:340px;height:340px;border-radius:50%;
+    background:radial-gradient(circle,rgba(255,255,255,.28),transparent 70%);pointer-events:none;
+  }
+  .hero-in{position:relative;display:flex;gap:36px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
+  .brand{display:inline-flex;align-items:center;gap:10px;font-size:13px;letter-spacing:.14em;opacity:.92}
+  .brand .mark{
+    width:26px;height:26px;border-radius:7px;background:#fff;color:var(--primary-deep);
+    display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;
+    box-shadow:0 2px 8px rgba(0,0,0,.18);
+  }
+  .hero h1{font-size:30px;font-weight:600;letter-spacing:.02em;margin:10px 0 6px}
+  .hero .sub{font-size:13.5px;opacity:.92;max-width:560px}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+  .chip{
+    font-size:12px;padding:3px 11px;border-radius:20px;
+    background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.28);backdrop-filter:blur(2px);
+  }
+  .chip b{font-weight:500}
+  /* KPI */
+  .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;min-width:430px;flex:0 0 auto}
+  .kpi{
+    background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.24);border-radius:12px;
+    padding:12px 16px 10px;min-width:132px;transition:background .2s ease;
+  }
+  .kpi:hover{background:rgba(255,255,255,.22)}
+  .kpi b{display:block;font-family:var(--mono);font-size:23px;font-weight:600;line-height:1.25;letter-spacing:.01em}
+  .kpi b small{font-size:13px;font-weight:400;opacity:.8}
+  .kpi span{display:block;font-size:11.5px;opacity:.85;margin-top:1px;letter-spacing:.02em}
+  @media(max-width:960px){.kpis{min-width:0;width:100%;grid-template-columns:repeat(3,1fr)}}
+  @media(max-width:640px){.kpis{grid-template-columns:repeat(2,1fr)}.hero{padding:26px 22px}}
+
+  /* ============ 恒定流程区 ============ */
+  .fixed-zone{margin-bottom:16px}
+  .panel{
+    background:var(--card);border:1px solid var(--hairline);border-radius:14px;
+    padding:20px 24px;margin-bottom:14px;box-shadow:0 1px 2px rgba(48,49,51,.04);
+  }
+  .panel-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+  .panel-head h2{font-size:15px;font-weight:600;letter-spacing:.03em}
+  .panel-head .hint{font-size:12px;color:var(--ink-3)}
+  .loc-pill{
+    margin-left:auto;font-size:12px;color:var(--primary-deep);background:#ecf5ff;
+    border:1px solid #d9ecff;border-radius:20px;padding:2px 12px;font-weight:500;
+  }
+
+  /* —— 六阶段管线 —— */
+  ol.pipe{list-style:none;display:flex;position:relative;gap:0}
+  ol.pipe::before{ /* 主干轨道 */
+    content:"";position:absolute;top:19px;left:calc(100%/12);right:calc(100%/12);height:2px;
+    background:linear-gradient(90deg,var(--ok) 0%,var(--ok) 46%,var(--primary) 62%,var(--line) 62%,var(--line) 100%);
+    z-index:0;
+  }
+  .pipe li{flex:1;position:relative;z-index:1;text-align:center;padding:0 6px;min-width:0}
+  .node{
+    width:38px;height:38px;border-radius:50%;margin:0 auto;display:flex;align-items:center;justify-content:center;
+    font-size:15px;font-weight:600;background:#fff;border:2px solid var(--line);color:var(--ink-3);
+    position:relative;transition:transform .25s cubic-bezier(.22,1,.36,1);
+  }
+  .pipe li:hover .node{transform:translateY(-2px)}
+  .pipe li.done .node{background:var(--ok);border-color:var(--ok);color:#fff}
+  .pipe li.cond .node{background:var(--warn);border-color:var(--warn);color:#fff}
+  .pipe li.doing .node{
+    background:#fff;border-color:var(--primary);color:var(--primary);
+    box-shadow:0 0 0 0 rgba(64,158,255,.45);animation:pulse 2.2s infinite;
+  }
+  @keyframes pulse{
+    0%{box-shadow:0 0 0 0 rgba(64,158,255,.40)}
+    70%{box-shadow:0 0 0 9px rgba(64,158,255,0)}
+    100%{box-shadow:0 0 0 0 rgba(64,158,255,0)}
+  }
+  @media(prefers-reduced-motion:reduce){.pipe li.doing .node{animation:none}}
+  .p-name{font-size:13.5px;font-weight:600;margin-top:9px}
+  .pipe li.doing .p-name{color:var(--primary-deep)}
+  .p-gate{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;margin-top:3px;padding:1px 9px;border-radius:10px;line-height:19px}
+  .p-gate::before{content:"◆";font-size:8px;transform:translateY(-.5px)}
+  .g-pass{background:var(--ok-bg);color:var(--ok);border:1px solid var(--ok-line)}
+  .g-cond{background:var(--warn-bg);color:var(--warn);border:1px solid var(--warn-line)}
+  .g-open{background:#f4f4f5;color:var(--ink-3);border:1px solid #e9e9eb}
+  .p-note{font-size:11.5px;color:var(--ink-3);margin-top:6px;line-height:1.55;padding:0 2px}
+  .here-tag{
+    display:inline-block;font-size:10.5px;color:#fff;background:var(--primary);border-radius:3px;
+    padding:0 6px;line-height:17px;margin-top:5px;letter-spacing:.08em;
+  }
+  @media(max-width:860px){
+    ol.pipe{flex-wrap:wrap;gap:18px 0}
+    ol.pipe::before{display:none}
+    .pipe li{flex:1 1 33%}
+  }
+
+  /* —— Sprint 交付列车 —— */
+  .train{display:flex;align-items:stretch;gap:0;position:relative}
+  .train::before{content:"";position:absolute;top:26px;left:4%;right:4%;height:2px;background:var(--line);z-index:0}
+  .car{flex:1;position:relative;z-index:1;padding:0 8px}
+  .car .coupler{
+    width:14px;height:14px;border-radius:50%;margin:19px auto 0;background:#fff;border:2px solid var(--line);
+  }
+  .car.done .coupler{background:var(--ok);border-color:var(--ok)}
+  .car.doing .coupler{background:#fff;border-color:var(--primary);box-shadow:0 0 0 4px #ecf5ff}
+  .car-body{
+    margin-top:12px;background:#fafbfc;border:1px solid var(--hairline);border-radius:10px;padding:12px 14px;
+    transition:border-color .2s ease,box-shadow .2s ease;height:100%;
+  }
+  .car.doing .car-body{border-color:#d9ecff;background:#f7fbff;box-shadow:0 2px 10px rgba(64,158,255,.10)}
+  .car-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .car-top b{font-size:13.5px;font-weight:600}
+  .car-top .tag{font-size:11px;padding:0 8px;border-radius:9px;line-height:18px}
+  .t-done{background:var(--ok-bg);color:var(--ok);border:1px solid var(--ok-line)}
+  .t-doing{background:#ecf5ff;color:var(--primary-deep);border:1px solid #d9ecff}
+  .t-todo{background:#f4f4f5;color:var(--ink-3);border:1px solid #e9e9eb}
+  .car-scope{font-size:12px;color:var(--ink-2);margin-top:5px}
+  .car-note{font-size:11.5px;color:var(--ink-3);margin-top:4px}
+  @media(max-width:860px){.train{flex-wrap:wrap;gap:14px}.train::before{display:none}.car{flex:1 1 46%}}
+
+  /* ============ Tab 导航 ============ */
+  nav.tabs{display:flex;gap:4px;margin:22px 0 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  nav.tabs button{
+    appearance:none;border:none;background:none;cursor:pointer;font-size:14px;color:var(--ink-2);
+    padding:10px 18px;position:relative;font-family:inherit;transition:color .2s ease;
+  }
+  nav.tabs button:hover{color:var(--ink)}
+  nav.tabs button.active{color:var(--primary-deep);font-weight:600}
+  nav.tabs button.active::after{
+    content:"";position:absolute;left:14px;right:14px;bottom:-1px;height:2.5px;border-radius:2px;
+    background:linear-gradient(90deg,var(--primary),var(--primary-deep));
+  }
+  section.tab{display:none;animation:fadein .3s ease}
   section.tab.active{display:block}
-  .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin-bottom:14px}
-  .card h3{font-size:15px;font-weight:500;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+  @keyframes fadein{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+  /* ============ 卡片与通用元素 ============ */
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
-  @media(max-width:860px){.grid2,.grid3{grid-template-columns:1fr}}
-  .badge{display:inline-block;padding:1px 9px;border-radius:10px;font-size:12px;line-height:20px}
-  .b-ok{background:#f0f9eb;color:var(--ok);border:1px solid #e1f3d8}
-  .b-warn{background:#fdf6ec;color:var(--warn);border:1px solid #faecd8}
-  .b-danger{background:#fef0f0;color:var(--danger);border:1px solid #fde2e2}
-  .b-info{background:#f4f4f5;color:var(--info);border:1px solid #e9e9eb}
-  .b-primary{background:#ecf5ff;color:var(--primary);border:1px solid #d9ecff}
-  /* 阶段条 */
-  .phases{display:flex;gap:6px;align-items:stretch;flex-wrap:wrap}
-  .phase{flex:1;min-width:130px;border-radius:8px;padding:10px 12px;border:1px solid var(--border);background:#fafafa;position:relative}
-  .phase.done{background:#f0f9eb;border-color:#e1f3d8}
-  .phase.doing{background:#ecf5ff;border-color:#d9ecff;border-width:2px}
-  .phase .p-title{font-weight:500;font-size:13px}
-  .phase .p-status{font-size:12px;color:var(--text-2);margin-top:2px}
-  .phase .p-note{font-size:12px;color:var(--text-3);margin-top:4px}
-  /* 时间线 */
-  .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
-  .toolbar select,.toolbar input{padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:#fff;font-size:13px;color:var(--text)}
-  .tl-group{margin-bottom:14px}
-  .tl-date{font-weight:600;color:var(--link);font-size:13px;margin:10px 4px 8px}
-  .cr-item{background:var(--card);border:1px solid var(--border);border-left:3px solid var(--primary);border-radius:8px;padding:10px 14px;margin-bottom:8px}
-  .cr-item.s-full{border-left-color:var(--ok)}
-  .cr-item.s-part{border-left-color:var(--warn)}
-  .cr-item.s-none{border-left-color:var(--danger)}
-  .cr-head{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-  .cr-head b{font-size:13px}
-  .cr-title{color:var(--text);font-size:13px;margin-top:3px}
-  .cr-meta{font-size:12px;color:var(--text-3);margin-top:4px}
-  .cr-meta code{background:#f4f4f5;padding:0 5px;border-radius:4px;font-size:11px}
+  .grid2>.panel{margin-bottom:0}
+  .stack>*{margin-bottom:14px}
+  .stack>.panel:last-child{margin-bottom:0}
+  @media(max-width:860px){.grid2{grid-template-columns:1fr}}
+  .badge{display:inline-block;padding:0 9px;border-radius:10px;font-size:11.5px;line-height:20px;white-space:nowrap}
+  .b-ok{background:var(--ok-bg);color:var(--ok);border:1px solid var(--ok-line)}
+  .b-warn{background:var(--warn-bg);color:var(--warn);border:1px solid var(--warn-line)}
+  .b-danger{background:var(--danger-bg);color:var(--danger);border:1px solid var(--danger-line)}
+  .b-info{background:#f4f4f5;color:var(--ink-3);border:1px solid #e9e9eb}
+  .b-primary{background:#ecf5ff;color:var(--primary-deep);border:1px solid #d9ecff}
+  .muted{color:var(--ink-3);font-size:12px}
+  a{color:var(--link);text-decoration:none}
+  a:hover{text-decoration:underline}
+  code{font-family:var(--mono);background:#f4f4f5;padding:0 5px;border-radius:4px;font-size:11.5px}
+
+  /* 状态条目（现状/待办/风险共用） */
+  .risk{display:flex;gap:12px;align-items:flex-start;padding:11px 0;border-bottom:1px dashed var(--hairline)}
+  .risk:last-child{border-bottom:none}
+  .risk .dot{width:9px;height:9px;border-radius:50%;margin-top:7px;flex-shrink:0}
+  .risk .r-title{font-weight:600;font-size:13.5px}
+  .risk .r-desc{font-size:12.5px;color:var(--ink-2);margin-top:3px}
+  .todo-num{
+    display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;
+    background:var(--primary);color:#fff;font-size:12.5px;font-weight:600;flex-shrink:0;font-family:var(--mono);
+  }
+
   /* 表格 */
   table{width:100%;border-collapse:collapse;font-size:13px}
-  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top}
-  th{color:var(--text-2);font-weight:500;background:#fafafa;white-space:nowrap}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--hairline);vertical-align:top}
+  th{color:var(--ink-3);font-weight:500;font-size:12px;background:#fafbfc;white-space:nowrap}
   tr:last-child td{border-bottom:none}
-  .todo-num{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--primary);color:#fff;font-size:12px;font-weight:600;flex-shrink:0}
-  .risk{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px dashed var(--border)}
-  .risk:last-child{border-bottom:none}
-  .risk .dot{width:10px;height:10px;border-radius:50%;margin-top:6px;flex-shrink:0}
-  .risk .r-title{font-weight:500;font-size:13px}
-  .risk .r-desc{font-size:12px;color:var(--text-2);margin-top:2px}
-  .muted{color:var(--text-3);font-size:12px}
-  a{color:var(--link);text-decoration:none}
-  footer{margin-top:26px;text-align:center;color:var(--text-3);font-size:12px}
+  tbody tr{transition:background .15s ease}
+  tbody tr:hover{background:#fafcff}
+
+  /* ============ git-log 风格变更时间线 ============ */
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px;align-items:center}
+  .toolbar select,.toolbar input{
+    padding:7px 12px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:13px;color:var(--ink);
+    outline:none;transition:border-color .2s ease;font-family:inherit;
+  }
+  .toolbar select:focus,.toolbar input:focus{border-color:var(--primary)}
+  .gitlog{position:relative;padding-left:26px}
+  .gitlog::before{content:"";position:absolute;left:7px;top:6px;bottom:6px;width:2px;background:var(--line)}
+  .log-date{position:relative;margin:18px 0 10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .log-date:first-child{margin-top:0}
+  .log-date::before{
+    content:"";position:absolute;left:-26px;width:16px;height:16px;border-radius:50%;
+    background:var(--primary-deep);border:3px solid #d9ecff;z-index:1;
+  }
+  .log-date b{font-family:var(--mono);font-size:13px;color:var(--ink);letter-spacing:.02em}
+  .log-date .cnt{font-size:11.5px;color:var(--ink-3)}
+  .commit{
+    background:var(--card);border:1px solid var(--hairline);border-radius:10px;
+    padding:10px 14px;margin:0 0 8px 10px;border-left-width:3px;
+    transition:box-shadow .2s ease,transform .2s ease;
+  }
+  .commit:hover{box-shadow:0 3px 12px rgba(48,49,51,.08);transform:translateX(2px)}
+  .commit.s-full{border-left-color:var(--ok)}
+  .commit.s-part{border-left-color:var(--warn)}
+  .commit.s-none{border-left-color:var(--danger)}
+  .cm-head{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .cm-head .cid{font-family:var(--mono);font-weight:600;font-size:13px;letter-spacing:.02em}
+  .cm-title{font-size:13px;color:var(--ink);margin-top:4px}
+  .cm-meta{font-size:11.5px;color:var(--ink-3);margin-top:4px}
+  .cm-meta .hash{font-family:var(--mono)}
+
+  /* 页脚 */
+  footer{margin-top:30px;text-align:center;color:var(--ink-3);font-size:12px;line-height:1.9}
+  footer .rule{width:56px;height:2px;background:var(--line);margin:0 auto 12px;border-radius:2px}
 </style>
 </head>
 <body>
 <div class="wrap">
 
-<header class="top">
-  <h1>Campus-Link · 项目进度驾驶舱</h1>
-  <div class="sub">重庆工程学院计算机专业学生交流论坛 · 企业流程（BRD → PRD → 设计 → 开发）· 单人 + AI 协作 · 数据快照 2026-09-13（change-log v1.34 / next-steps v1.11 / waivers v1.9）</div>
-  <div class="stats">
-    <div class="stat"><b>37</b><span>变更记录（CR）</span></div>
-    <div class="stat"><b>2 / 4</b><span>Sprint 已交付（S1 · S2 MVP）</span></div>
-    <div class="stat"><b>125 / 125</b><span>后端单测全绿（CR-043 后）</span></div>
-    <div class="stat"><b>13 / 31</b><span>契约端点 / schema</span></div>
-    <div class="stat"><b>5 + 6</b><span>真实页面 + 占位页</span></div>
-    <div class="stat"><b>0</b><span>经正式变更评审（如实登记）</span></div>
+<!-- ============ 顶部横幅 ============ -->
+<header class="hero">
+  <div class="hero-in">
+    <div>
+      <div class="brand"><span class="mark">C</span>CAMPUS-LINK</div>
+      <h1>项目进度驾驶舱</h1>
+      <p class="sub">重庆工程学院计算机专业学生交流论坛 · 企业七阶段流程（BRD → PRD → 设计 → 开发 → …）· 单人 + AI 协作</p>
+      <div class="chips">
+        <span class="chip">数据快照 <b>2026-09-13</b></span>
+        <span class="chip">change-log <b>v1.34</b></span>
+        <span class="chip">next-steps <b>v1.11</b></span>
+        <span class="chip">waivers <b>v1.9</b></span>
+        <span class="chip">视图产物 · 已登记（docs/README.md §2 / §3）</span>
+      </div>
+    </div>
+    <div class="kpis" id="kpis">
+      <div class="kpi"><b id="k-cr">–</b><span>变更记录（CR）</span></div>
+      <div class="kpi"><b>2<small> / 4</small></b><span>Sprint 已交付（S1 · S2 MVP）</span></div>
+      <div class="kpi"><b>125<small> / 125</small></b><span>后端单测全绿（CR-043 后）</span></div>
+      <div class="kpi"><b>13<small> / 31</small></b><span>契约端点 / schema</span></div>
+      <div class="kpi"><b>5<small> + </small>6</b><span>真实页面 + 占位页</span></div>
+      <div class="kpi"><b>0</b><span>经正式变更评审（如实登记）</span></div>
+    </div>
   </div>
-  <table style="margin-top:14px;background:rgba(255,255,255,.10);border-radius:8px;font-size:12px;color:#fff;width:100%">
-    <tr><td style="border:none;padding:4px 10px;opacity:.85;white-space:nowrap">版本</td><td style="border:none;padding:4px 10px">v1.0（结构性版本，数据以「最后更新」日期为准）</td>
-        <td style="border:none;padding:4px 10px;opacity:.85;white-space:nowrap">状态</td><td style="border:none;padding:4px 10px">视图产物 · 已登记（docs/README.md §2 / §3）</td></tr>
-    <tr><td style="border:none;padding:4px 10px;opacity:.85;white-space:nowrap">维护人</td><td style="border:none;padding:4px 10px">AI 协作会话（按 AGENTS.md「工作收尾约定」更新）</td>
-        <td style="border:none;padding:4px 10px;opacity:.85;white-space:nowrap">最后更新</td><td style="border:none;padding:4px 10px">2026-09-13</td></tr>
-    <tr><td style="border:none;padding:4px 10px;opacity:.85;white-space:nowrap">事实来源</td><td colspan="3" style="border:none;padding:4px 10px">变更台账 / 下一步行动 / 流程偏离记录 / 设计门纪要 / Sprint2计划 —— 驾驶舱不得登记这些文档中没有的新事实</td></tr>
-  </table>
 </header>
 
+<div class="fixed-zone">
+
+<!-- ============ ① 六阶段研发管线（恒定） ============ -->
+<section class="panel">
+  <div class="panel-head">
+    <h2>研发流程管线</h2>
+    <span class="hint">六阶段 · 六评审门 ◆ · 状态取自流程手册与三道门纪要</span>
+    <span class="loc-pill">📍 当前位于 ④ 开发 · Sprint 3</span>
+  </div>
+  <ol class="pipe">
+    <li class="done">
+      <div class="node">✓</div>
+      <div class="p-name">① 立项</div>
+      <div class="p-gate g-pass">立项门 通过</div>
+      <div class="p-note">BRD + 章程<br>单校范围等 4 项决议</div>
+    </li>
+    <li class="done">
+      <div class="node">✓</div>
+      <div class="p-name">② 需求</div>
+      <div class="p-gate g-pass">需求门 通过</div>
+      <div class="p-note">PRD（19 条 P0）<br>W-01 已签署</div>
+    </li>
+    <li class="cond">
+      <div class="node">✓</div>
+      <div class="p-name">③ 设计</div>
+      <div class="p-gate g-cond">设计门 有条件通过</div>
+      <div class="p-note">11 项行动项<br>闭环 9 / 开放 2（A3-6、A3-8）</div>
+    </li>
+    <li class="doing">
+      <div class="node">④</div>
+      <div class="p-name">开发</div>
+      <div class="p-gate g-open">提测门 4 / 7 未满足</div>
+      <div class="p-note">Sprint 3 进行中 · 已落地 2 个功能（CR-043 采纳 · CR-048 点赞收藏）<br>B4/B5 已闭环（CR-028）· 路径级鉴权已补（CR-031）</div>
+      <div class="here-tag">YOU ARE HERE</div>
+    </li>
+    <li>
+      <div class="node">⑤</div>
+      <div class="p-name">测试</div>
+      <div class="p-gate g-open">评审门 未启动</div>
+      <div class="p-note">阶段未启动<br>提测准入门 7 项中 4 项未满足</div>
+    </li>
+    <li>
+      <div class="node">⑥</div>
+      <div class="p-name">上线</div>
+      <div class="p-gate g-open">评审门 未启动</div>
+      <div class="p-note">部署形态挂起<br>若公网须先 ICP 备案</div>
+    </li>
+  </ol>
+</section>
+
+<!-- ============ ② Sprint 交付列车（恒定） ============ -->
+<section class="panel">
+  <div class="panel-head">
+    <h2>Sprint 交付列车</h2>
+    <span class="hint">8 周 / 4 个 Sprint（CR-006）· 中途插入的专项见总览页说明</span>
+  </div>
+  <div class="train">
+    <div class="car done">
+      <div class="coupler"></div>
+      <div class="car-body">
+        <div class="car-top"><b>Sprint 1</b><span class="tag t-done">✅ 已交付</span></div>
+        <div class="car-scope">地基 + 账号链路（T1~T9）</div>
+        <div class="car-note">账号上下文 DDD 四层化（ADR-012）</div>
+      </div>
+    </div>
+    <div class="car done">
+      <div class="coupler"></div>
+      <div class="car-body">
+        <div class="car-top"><b>Sprint 2</b><span class="tag t-done">✅ 已交付</span></div>
+        <div class="car-scope">论坛最小 MVP（发帖 / 列表 / 详情 / 楼层回复，M1~M6）</div>
+        <div class="car-note">A1~A5 真机验收全部通过</div>
+      </div>
+    </div>
+    <div class="car doing">
+      <div class="coupler"></div>
+      <div class="car-body">
+        <div class="car-top"><b>Sprint 3</b><span class="tag t-doing">🟡 进行中</span></div>
+        <div class="car-scope">互动与发现（采纳 / 点赞收藏 / 搜索 / 通知 / 热榜）</div>
+        <div class="car-note">已落地 2 个功能：采纳最佳答案（CR-043）· 点赞收藏（CR-048）</div>
+      </div>
+    </div>
+    <div class="car">
+      <div class="coupler"></div>
+      <div class="car-body">
+        <div class="car-top"><b>Sprint 4</b><span class="tag t-todo">⬜ 未开始</span></div>
+        <div class="car-scope">治理与收尾（机审 / 举报 / 后台 / 注销）</div>
+        <div class="car-note">提测准入门为本列车的最终检票口</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</div><!-- /fixed-zone -->
+
+<!-- ============ 详情 Tab 导航 ============ -->
 <nav class="tabs">
   <button class="active" data-tab="overview">① 总览：项目走到哪了</button>
-  <button data-tab="timeline">② 变更时间线：39 次 CR</button>
+  <button data-tab="timeline">② 变更时间线：42 次 CR</button>
   <button data-tab="issues">③ 问题与欠账台账</button>
   <button data-tab="todo">④ 待办与新需求</button>
 </nav>
 
-<!-- ============ ① 总览 ============ -->
+<!-- ============ Tab ① 总览 ============ -->
 <section class="tab active" id="tab-overview">
-  <div class="card">
-    <h3>📍 六阶段流程位置</h3>
-    <div class="phases">
-      <div class="phase done"><div class="p-title">① 立项 ✅</div><div class="p-status">BRD + 章程</div><div class="p-note">单校范围等 4 项决议</div></div>
-      <div class="phase done"><div class="p-title">② 需求 ✅</div><div class="p-status">PRD（19 条 P0）</div><div class="p-note">需求门通过（W-01 已签）</div></div>
-      <div class="phase doing"><div class="p-title">③ 设计 🟡</div><div class="p-status">有条件通过</div><div class="p-note">11 项行动项闭环 9 / 开放 2（A3-6、A3-8）</div></div>
-      <div class="phase doing"><div class="p-title">④ 开发 ●进行中</div><div class="p-status">Sprint 3 进行中</div><div class="p-note">首个功能已落地（CR-043 采纳最佳答案）· B4/B5 已闭环（CR-028）· 路径级鉴权已补（CR-031）</div></div>
-      <div class="phase"><div class="p-title">⑤ 测试 ⬜</div><div class="p-status">阶段未启动</div><div class="p-note">提测门 7 项中 4 项未满足</div></div>
-      <div class="phase"><div class="p-title">⑥ 上线 ⬜</div><div class="p-status">部署形态挂起</div><div class="p-note">若公网须先 ICP 备案</div></div>
-    </div>
-  </div>
-
   <div class="grid2">
-    <div class="card">
-      <h3>🏃 Sprint 进度（8 周 / 4 个 Sprint，CR-006）</h3>
-      <table>
-        <tr><th>Sprint</th><th>范围</th><th>状态</th></tr>
-        <tr><td>Sprint 1</td><td>地基 + 账号链路（T1~T9）</td><td><span class="badge b-ok">✅ 已交付</span></td></tr>
-        <tr><td>Sprint 2</td><td>论坛最小 MVP（发帖/列表/详情/楼层回复，M1~M6）</td><td><span class="badge b-ok">✅ 已交付 · A1~A5 真机验收通过</span></td></tr>
-        <tr><td>Sprint 3</td><td>互动与发现（采纳/点赞收藏/搜索/通知/热榜）</td><td><span class="badge b-info">🟡 进行中 · 首个功能已落地（CR-043）</span></td></tr>
-        <tr><td>Sprint 4</td><td>治理与收尾（机审/举报/后台/注销）</td><td><span class="badge b-info">未开始</span></td></tr>
-      </table>
-      <p class="muted" style="margin-top:8px">Sprint 1 与 Sprint 2 之间还插入了：契约缺口修复（CR-021）、前端样式体系（CR-023/024）、UI 设计稿还原（CR-025）、A3-11 复评（CR-026）、驾驶舱与 AGENTS.md 重构（CR-027）、流程瘦身（CR-029）、A3-9/A3-10 实施（CR-028，已完成 09-12）、路径级鉴权落地（CR-031，09-12）。</p>
-    </div>
-    <div class="card">
-      <h3>✅ 当前已能跑通的功能（真实栈实测）</h3>
+    <div class="panel">
+      <div class="panel-head"><h2>✅ 当前已能跑通的功能（真实栈实测）</h2></div>
       <table>
         <tr><th>功能</th><th>说明</th></tr>
         <tr><td>注册 / 登录</td><td>学号+姓名核验（bypass 名册 4 条测试数据）+ 邮箱验证码</td></tr>
@@ -144,26 +384,31 @@
       </table>
       <p class="muted" style="margin-top:8px">⚠️ 设计稿还原度未经浏览器目视核验（CR-025 实施会话无法开浏览器），需发起人逐页确认。</p>
     </div>
-  </div>
-
-  <div class="card">
-    <h3>🚨 一句话现状（最需要盯住的事）</h3>
-    <div class="risk"><span class="dot" style="background:var(--ok)"></span><div>
-      <div class="r-title">B4 / B5（= 设计门 A3-9 / A3-10）已完成 —— [CR-028] 已于 2026-09-12 实施并闭环；N-4 最后残留（路径级拦截）已由 [CR-031] 同日补齐</div>
-      <div class="r-desc">ArchUnit 架构守护测试 10 例（负向对照实验 7 例拦截）+ N-4 闭环（CurrentUser / PublicEndpoint 统一鉴权入口，含 R-1 裁决：禁止 web 注入 domain 端口）+ F-1/F-3/F-4/N-5/N-6；单测 87 → 107 全绿、4 个受保护端点真机 401。W-02 / W-07 转「可关闭，待发起人签署」（任何文档不代签）。「SecurityConfig 仍 permitAll()」一项已由 [CR-031] 消除：按端点注解在过滤器链内裁决，匿名进入业务代码前即 401 / 4001；单测 107 → 117 全绿。</div>
-    </div></div>
-    <div class="risk"><span class="dot" style="background:var(--danger)"></span><div>
-      <div class="r-title">B1 / B2（学籍名册）是唯一剩下的外部依赖</div>
-      <div class="r-desc">B4 / B5 清零后，四个阻塞项只剩这一项「无法做」（缺外部输入）。找辅导员/班长要「学号 + 姓名」名册即可。到位前注册链路只能靠 bypass 开关验证（生产红线：bypass 必须 false）。</div>
-    </div></div>
-    <div class="risk"><span class="dot" style="background:var(--info)"></span><div>
-      <div class="r-title">治理模式声明（如实登记，非批评）</div>
-      <div class="r-desc">39 次 CR「经正式变更评审」0 次；手册最低 5 动作：① 需求评审 ❌ ② 技术评审 ❌ ③ 自测+CR 🟡 ④⑤ 阶段未启动。发起人已签署 W-01~W-07 接受此模式，风险转为「已知已接受」。</div>
-    </div></div>
+    <div class="stack">
+      <div class="panel">
+        <div class="panel-head"><h2>🚨 一句话现状（最需要盯住的事）</h2></div>
+        <div class="risk"><span class="dot" style="background:var(--ok)"></span><div>
+          <div class="r-title">B4 / B5（= 设计门 A3-9 / A3-10）已完成 —— CR-028 已于 2026-09-12 实施并闭环；N-4 最后残留（路径级拦截）已由 CR-031 同日补齐</div>
+          <div class="r-desc">ArchUnit 架构守护测试 11 例（含 G8）+ N-4 闭环（CurrentUser / PublicEndpoint 统一鉴权入口，含 R-1 裁决）+ F-1/F-3/F-4/N-5/N-6；单测 87 → 117 全绿、4 个受保护端点真机 401。W-02 / W-07 转「可关闭，待发起人签署」（任何文档不代签）。</div>
+        </div></div>
+        <div class="risk"><span class="dot" style="background:var(--danger)"></span><div>
+          <div class="r-title">B1 / B2（学籍名册）是唯一剩下的外部依赖</div>
+          <div class="r-desc">B4 / B5 清零后，四个阻塞项只剩这一项「无法做」（缺外部输入）。找辅导员/班长要「学号 + 姓名」名册即可。到位前注册链路只能靠 bypass 开关验证（生产红线：bypass 必须 false）。</div>
+        </div></div>
+        <div class="risk"><span class="dot" style="background:var(--ink-3)"></span><div>
+          <div class="r-title">治理模式声明（如实登记，非批评）</div>
+          <div class="r-desc">42 次 CR「经正式变更评审」0 次；手册最低 5 动作：① 需求评审 ❌ ② 技术评审 ❌ ③ 自测+CR 🟡 ④⑤ 阶段未启动。发起人已签署 W-01~W-07 接受此模式，风险转为「已知已接受」。</div>
+        </div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h2>🧩 Sprint 之间插入的专项</h2></div>
+        <p class="muted">Sprint 1 与 Sprint 2 之间还插入了：契约缺口修复（CR-021）· 前端样式体系（CR-023/024）· UI 设计稿还原（CR-025）· A3-11 复评（CR-026）· 驾驶舱与 AGENTS.md 重构（CR-027）· 流程瘦身（CR-029）· A3-9/A3-10 实施（CR-028，09-12）· 路径级鉴权落地（CR-031，09-12）。</p>
+      </div>
+    </div>
   </div>
 </section>
 
-<!-- ============ ② 时间线 ============ -->
+<!-- ============ Tab ② git-log 时间线 ============ -->
 <section class="tab" id="tab-timeline">
   <div class="toolbar">
     <select id="f-date"><option value="">全部日期</option></select>
@@ -176,21 +421,21 @@
     <input id="f-search" type="text" placeholder="搜索关键词，如 名册 / 主色 / MVP …" style="flex:1;min-width:200px">
     <span class="muted" id="cr-count"></span>
   </div>
-  <div id="timeline"></div>
-  <div class="card">
-    <h3>📊 影响评估统计（如实登记口径）</h3>
-    <p>39 次变更：完整 <b>29</b>（CR-004/005/007/009/010/011/015/017/018/019/020/021/023/024/025/026/027/028/029/030/031/032/034/035/040/041/043/044/045）· 部分 <b>8</b> · 未做 <b>2</b>（CR-001/003）。<b>经正式变更评审 0 次</b>——手册 4.2 要求四方同步，单人项目无第二角色可同步。<b>CR-029 起改轻量登记（一行式），状态只维护台账 + 本驾驶舱两处</b>；<b>编号不连续为预期</b>（CR-033 / CR-036~039 / CR-042 已由六份增量 PRD 草案预留，均待发起人评审）。</p>
+  <div class="gitlog" id="timeline"></div>
+  <div class="panel" style="margin-top:16px">
+    <div class="panel-head"><h2>📊 影响评估统计（如实登记口径）</h2></div>
+    <p>42 次变更：完整 <b>32</b>（CR-004/005/007/009/010/011/015/017/018/019/020/021/023/024/025/026/027/028/029/030/031/032/034/035/040/041/043/044/045/046/047/048）· 部分 <b>8</b> · 未做 <b>2</b>（CR-001/003）。<b>经正式变更评审 0 次</b>——手册 4.2 要求四方同步，单人项目无第二角色可同步。<b>CR-029 起改轻量登记（一行式），状态只维护台账 + 本驾驶舱两处</b>；<b>编号不连续为预期</b>（CR-033 / CR-036~039 / CR-042 已由六份增量 PRD 草案预留，均待发起人评审）。</p>
   </div>
 </section>
 
-<!-- ============ ③ 问题与欠账 ============ -->
+<!-- ============ Tab ③ 问题与欠账 ============ -->
 <section class="tab" id="tab-issues">
-  <div class="grid2">
-    <div class="card">
-      <h3>🔴 已到期项：已清零（B4 / B5 于 2026-09-12 由 CR-028 补做完毕）</h3>
+  <div class="grid2" style="margin-bottom:14px">
+    <div class="panel">
+      <div class="panel-head"><h2>🔴 已到期项：已清零（B4 / B5 于 2026-09-12 由 CR-028 补做完毕）</h2></div>
       <div class="risk"><span class="dot" style="background:var(--ok)"></span><div>
         <div class="r-title">B4 = A3-9 架构守护测试（含 N-4）· ✅ 已闭环（CR-028）</div>
-        <div class="r-desc">ArchUnit `ArchitectureGuardTest` 10 例使四层依赖方向首次获得机器强制（负向对照实验 7 例拦截）；N-4 以 CurrentUser + @PublicEndpoint 显式化并由守护测试机器校验，4 个受保护端点真机 401。当时残留「SecurityConfig 仍 permitAll()、路径级拦截未做」（N-4 闭环的是「漏写静默变公开」，非框架拦截）——该残留已于同日由 [CR-031] 补齐（Guard 增至 11 例，含 G8）。</div>
+        <div class="r-desc">ArchUnit <code>ArchitectureGuardTest</code> 10 例使四层依赖方向首次获得机器强制（负向对照实验 7 例拦截）；N-4 以 CurrentUser + @PublicEndpoint 显式化并由守护测试机器校验，4 个受保护端点真机 401。当时残留「SecurityConfig 仍 permitAll()、路径级拦截未做」——该残留已于同日由 CR-031 补齐（Guard 增至 11 例，含 G8）。</div>
       </div></div>
       <div class="risk"><span class="dot" style="background:var(--ok)"></span><div>
         <div class="r-title">B5 = A3-10 消除 F-1/F-3/F-4（含 N-5/N-6/R-3）· ✅ 已闭环（CR-028）</div>
@@ -201,8 +446,8 @@
         <div class="r-desc">覆盖率不可测（jacoco 未接入，117 个测试无覆盖率数值）、静态扫描未接入（SpotBugs/ESLint）、Code Review 无第二角色、W-03 逐页走查未做。发起人未指定截止点（W-05 如实登记）。</div>
       </div></div>
     </div>
-    <div class="card">
-      <h3>🟡 开放的让步放行（已签署接受，未闭环）</h3>
+    <div class="panel">
+      <div class="panel-head"><h2>🟡 开放的让步放行（已签署接受，未闭环）</h2></div>
       <table>
         <tr><th>条目</th><th>状态 / 关闭前置</th></tr>
         <tr><td>W-01 单人评审替代会审</td><td>开放 · 外部评审补偿单人项目无对象，实质落空</td></tr>
@@ -216,9 +461,9 @@
     </div>
   </div>
 
-  <div class="grid2">
-    <div class="card">
-      <h3>🟠 复评 / 复测新发现（六项已全部处置）</h3>
+  <div class="grid2" style="margin-bottom:14px">
+    <div class="panel">
+      <div class="panel-head"><h2>🟠 复评 / 复测新发现（六项已全部处置）</h2></div>
       <table>
         <tr><th>#</th><th>问题</th><th>处置（CR-028）</th></tr>
         <tr><td>N-4 🔴</td><td>契约声明 bearerAuth ≠ 运行时强制（SecurityConfig 仍 permitAll）</td><td>✅ 已闭环 · CurrentUser/@PublicEndpoint + 守护测试机器校验；路径级拦截残留已由 CR-031 同日补齐（Guard G8）</td></tr>
@@ -229,8 +474,8 @@
         <tr><td>R-3</td><td>「domain 不依赖框架」被两上下文共同证伪（引用 common）</td><td>✅ 已落地（ArchUnit 放行 domain → common；§2.4 措辞修正）</td></tr>
       </table>
     </div>
-    <div class="card">
-      <h3>⚪ 设计门行动项 A3-1 ~ A3-11（11 项：闭环 9 / 开放 2）</h3>
+    <div class="panel">
+      <div class="panel-head"><h2>⚪ 设计门行动项 A3-1 ~ A3-11（11 项：闭环 9 / 开放 2）</h2></div>
       <table>
         <tr><th>#</th><th>事项</th><th>状态</th></tr>
         <tr><td>A3-1~4</td><td>D-1/D-2~7 修正 · v0.3/v0.4 追认 · OpenAPI 快照归档</td><td><span class="badge b-ok">✅ 闭环</span></td></tr>
@@ -238,30 +483,30 @@
         <tr><td>A3-10</td><td>消除 F-1/F-3/F-4（含 N-5 / N-6）· CR-028</td><td><span class="badge b-ok">✅ 09-12 闭环</span></td></tr>
         <tr><td>A3-11</td><td>四层范式第二样本复评（module/forum）</td><td><span class="badge b-ok">✅ 09-12 闭环</span></td></tr>
         <tr><td>A3-6</td><td>UI 产出与走查（W-03 补偿③）</td><td><span class="badge b-warn">☐ 提测门前置</span></td></tr>
-        <tr><td>A3-5</td><td>ER 图与数据量级预估</td><td><span class="badge b-done">☑ 2026-09-13（CR-035：12 表 erDiagram + 量级与扩容触发点）</span></td></tr>
+        <tr><td>A3-5</td><td>ER 图与数据量级预估</td><td><span class="badge b-ok">☑ 2026-09-13（CR-035：12 表 erDiagram + 量级与扩容触发点）</span></td></tr>
         <tr><td>A3-7</td><td>技术方案检查清单剩余 6 项 · CR-040</td><td><span class="badge b-ok">✅ 09-13 闭环（勾 1/3/5，留 2/4/6）</span></td></tr>
         <tr><td>A3-8</td><td>部署形态 + 机审服务商选型 · 备料已齐（CR-041）</td><td><span class="badge b-warn">☐ 待发起人在决策材料 §3 勾选</span></td></tr>
       </table>
     </div>
   </div>
 
-  <div class="card">
-    <h3>📄 想看细节去哪份文档</h3>
+  <div class="panel">
+    <div class="panel-head"><h2>📄 想看细节去哪份文档</h2></div>
     <table>
       <tr><th>想了解</th><th>单一入口</th></tr>
-      <tr><td>每次变更的来龙去脉</td><td><a href="变更日志/变更台账.md">变更日志/变更台账.md</a>（31 条 CR，§1 汇总表先看）</td></tr>
+      <tr><td>每次变更的来龙去脉</td><td><a href="变更日志/变更台账.md">变更日志/变更台账.md</a>（§1 汇总表先看）</td></tr>
       <tr><td>现在该干什么</td><td><a href="下一步行动.md">下一步行动.md</a> §1 阻塞项 + §4 三件事</td></tr>
       <tr><td>流程偏离与签署</td><td><a href="流程偏离记录.md">流程偏离记录.md</a> §4 签署汇总</td></tr>
-      <tr><td>Sprint 执行与验收证据</td><td><a href="开发/Sprint2计划.md">sprint-2.md</a> §5（A1~A5 逐条实测证据）</td></tr>
+      <tr><td>Sprint 执行与验收证据</td><td><a href="开发/Sprint2计划.md">开发/Sprint2计划.md</a> §5（A1~A5 逐条实测证据）</td></tr>
       <tr><td>UI 规范与截图</td><td><a href="设计/UI规范/界面规范.md">设计/UI规范/界面规范.md</a>（§8.1 12 张截图，已过时）</td></tr>
     </table>
   </div>
 </section>
 
-<!-- ============ ④ 待办与新需求 ============ -->
+<!-- ============ Tab ④ 待办与新需求 ============ -->
 <section class="tab" id="tab-todo">
-  <div class="card">
-    <h3>🎯 你现在就能动手的三件事（next-steps §4）</h3>
+  <div class="panel" style="margin-bottom:14px">
+    <div class="panel-head"><h2>🎯 你现在就能动手的三件事（next-steps §4）</h2></div>
     <div class="risk"><span class="todo-num">1</span><div>
       <div class="r-title">去要名册（B1 / B2）——唯一剩下的外部依赖</div>
       <div class="r-desc">找辅导员 / 班长 / 教学办，说清楚：校内学习平台、只做学号姓名哈希比对、不落明文。CSV 导入即可。名册到位前注册链路只能靠 bypass 开关验证（生产红线：bypass 必须 false）。</div>
@@ -272,21 +517,21 @@
     </div></div>
     <div class="risk"><span class="todo-num">3</span><div>
       <div class="r-title">收尾本轮执行入口的凭证与签署（两项小动作，均不需写代码）</div>
-      <div class="r-desc">① 提交本轮工作区：<b>已完成</b>——CR-027 ~ CR-032 与 CR-034 均已提交（CR-031 = `7720adc`、CR-032 = `b4530ed`、CR-034 = `a9b9356`；凭证按 CR-029 约定随 commit message 对齐、免回填）。**契约快照「提交后核对」已于 2026-09-13 执行并通过**——自运行中后端重抓 `/api/docs` 与仓库快照逐字节一致，快照自此对应提交 `7720adc`（api/README 升 v1.5.1）；② 由发起人签署关闭 W-02 / W-07：A3-9 已落地、关闭条件已具备，须发起人签署后方可关闭——任何文档都不代签（W-05 与本批无关、仍不得关闭）。</div>
+      <div class="r-desc">① 提交本轮工作区：<b>已完成</b>——CR-027 ~ CR-032 与 CR-034 均已提交（CR-031 = <code>7720adc</code>、CR-032 = <code>b4530ed</code>、CR-034 = <code>a9b9356</code>）。契约快照「提交后核对」已于 2026-09-13 执行并通过——快照自此对应提交 <code>7720adc</code>（api/README 升 v1.5.1）；② 由发起人签署关闭 W-02 / W-07：A3-9 已落地、关闭条件已具备，须发起人签署后方可关闭——任何文档都不代签（W-05 与本批无关、仍不得关闭）。</div>
     </div></div>
   </div>
 
-  <div class="grid2">
-    <div class="card">
-      <h3>🗺️ 后续 Sprint 的既定范围</h3>
-      <p style="font-weight:500;margin-bottom:4px">Sprint 3 · 互动与发现</p>
-      <p class="muted" style="margin-bottom:10px">~~F-QA-001 采纳最佳答案~~（✅ 已由 CR-043 落地，2026-09-13；通知发放挂起归 F-SOC-001）· F-FORUM-005 点赞收藏 · F-FORUM-008 站内搜索 · F-SOC-001 通知中心 · 热榜定时任务（ADR-006）</p>
-      <p style="font-weight:500;margin-bottom:4px">Sprint 4 · 治理与收尾</p>
+  <div class="grid2" style="margin-bottom:14px">
+    <div class="panel">
+      <div class="panel-head"><h2>🗺️ 后续 Sprint 的既定范围</h2></div>
+      <p style="font-weight:600;margin-bottom:4px">Sprint 3 · 互动与发现</p>
+      <p class="muted" style="margin-bottom:10px">~~F-QA-001 采纳最佳答案~~（✅ 已由 CR-043 落地，2026-09-13）· ~~F-FORUM-005 点赞收藏~~（✅ 已由 CR-048 落地，2026-09-13；通知发放挂起归 F-SOC-001）· F-FORUM-008 站内搜索 · F-SOC-001 通知中心 · 热榜定时任务（ADR-006）</p>
+      <p style="font-weight:600;margin-bottom:4px">Sprint 4 · 治理与收尾</p>
       <p class="muted">F-SAFE-001 机审对接（降级开关）· F-SAFE-002 举报 · F-SAFE-003 内容处置 · F-ADMIN-001~003 后台 · F-ACC-003 账号注销（7 天冷静期）</p>
       <p class="muted" style="margin-top:8px">提测准入门：冒烟 100% · CI 全绿 · 覆盖率 ≥60%（核心 ≥80%）· Code Review 无未解决评论</p>
     </div>
-    <div class="card">
-      <h3>💡 新提出的业务需求（CR-025 登记，接口就绪后另开 CR）</h3>
+    <div class="panel">
+      <div class="panel-head"><h2>💡 新提出的业务需求（CR-025 登记，接口就绪后另开 CR）</h2></div>
       <table>
         <tr><th>需求</th><th>卡点</th></tr>
         <tr><td>个人主页 /u/:id（设计稿已有）</td><td>无接口，页面仍是占位</td></tr>
@@ -301,8 +546,8 @@
     </div>
   </div>
 
-  <div class="card">
-    <h3>📋 并行事项（不阻塞开发）</h3>
+  <div class="panel">
+    <div class="panel-head"><h2>📋 并行事项（不阻塞开发）</h2></div>
     <table>
       <tr><th>#</th><th>事项</th><th>截止</th></tr>
       <tr><td>P2</td><td>隐私政策与用户协议文本（上线前置）</td><td>提测前</td></tr>
@@ -314,11 +559,15 @@
   </div>
 </section>
 
-<footer>Campus-Link 进度驾驶舱（进度驾驶舱.html）· 数据快照 2026-09-13 · 由 变更台账 / 下一步行动 / 流程偏离记录 / 设计门纪要 / Sprint2计划 五份事实文档提取生成 · <b>每次工作收尾由 AI 会话按 AGENTS.md「工作收尾约定」更新数据</b>，结构与样式不改</footer>
+<footer>
+  <div class="rule"></div>
+  Campus-Link 进度驾驶舱 · 视图 v2.0（2026-09-13 重构视觉与结构）· 数据快照 2026-09-13<br>
+  数据由 变更台账 / 下一步行动 / 流程偏离记录 / 设计门纪要 / Sprint2计划 五份事实文档提取生成 · <b>每次工作收尾由 AI 会话按 AGENTS.md「工作收尾约定」更新数据</b>，结构与样式不改
+</footer>
 </div>
 
 <script>
-/* ---------- CR 数据（提取自 变更日志/变更台账.md §1） ---------- */
+/* ---------- CR 数据（提取自 变更日志/变更台账.md §1，一字不改） ---------- */
 const CRS=[
  {id:"CR-001",date:"2026-08-30",title:"产品定位与 PRD 定稿",type:"范围（重大）",status:"none",review:"发起人口头确认"},
  {id:"CR-002",date:"2026-08-30",title:"服务范围锁定重庆工程学院单校，本期不外扩",type:"范围（收敛）",status:"part",review:"发起人决议"},
@@ -356,13 +605,19 @@ const CRS=[
 {id:"CR-035",date:"2026-09-13",title:"设计门 A3-5 落地：新增 docs/设计/数据模型ER图与量级预估.md——以 Flyway V1（12 张表）为唯一事实源的 Mermaid erDiagram（含多态无外键等三处「图上画不出的关系」如实标注）+ 索引清单照录 + 试点期量级与扩容触发点（估算非承诺，不改任何表结构）；gate-3 A3-5 置 ☑（11 项 / 闭环 8 / 开放 3）",type:"文档治理（设计门 A3-5 交付）",status:"full",review:"发起人指令（实施前登记）",hash:"78080f2"},
 {id:"CR-040",date:"2026-09-13",title:"设计门 A3-7 落地：技术方案文末检查清单剩余 6 项逐项确认——勾选第 1 项（数据模型覆盖 PRD 全部 P0：V1 12 张表逐项映射 + 索引支撑指标）、第 3 项（安全设计五项 §7.1 全有，注记如实区分设计覆盖与实现进度：CSP 未实现）、第 5 项（缓存/索引/降级/备份措施齐备，同注记）；保持不勾选第 2 项（6 行计划项契约未设计）、第 4 项（名册获取路径未确认，B1/B2）、第 6 项（A3-8 未决）；检查项原文一字未改，技术方案头部补 v0.7.5 注记；gate-3 A3-7 置 ☑（11 项 / 闭环 9 / 开放 2，剩余两项均非 AI 可执行）",type:"文档治理（设计门 A3-7 交付）",status:"full",review:"发起人指令（实施前登记）",hash:"—"},
 {id:"CR-041",date:"2026-09-13",title:"设计门 A3-8 决策备料：新增 docs/评审/部署与机审选型决策材料.md——部署形态二选一对比（公网+ICP vs 内网，建议 A，ICP 1~3 周窗口须并行启动）+ 机审服务商对比（阿里云 vs 腾讯天御，建议阿里云、实为比价决策）+ 发起人签署页（含暂缓选项）；只备料不代决策，A3-8 仍开放，gate-3 升 v1.12（统计不变 9/2）",type:"文档治理（设计门 A3-8 备料）",status:"full",review:"发起人指令（实施前登记）",hash:"—"},
-{id:"CR-043",date:"2026-09-13",title:"Sprint 3 首个功能：F-QA-001 采纳最佳答案——新受保护端点 POST /posts/{id}/accept（仅提问者，可更换、不能采纳自己回复，错误码 3002/3003）+ 出参透出采纳状态 + 楼层最佳答案置顶（is_accepted DESC）+ 前端采纳按钮/标识/列表徽标；零迁移；通知发放挂起归 F-SOC-001（单测 117→125 全绿，快照 v1.6 再生成 13 端点/31 schema）",type:"功能（论坛问答）",status:"full",review:"发起人当面授权（只做一个功能，做完后要进行测试）",hash:"—"},
+{id:"CR-043",date:"2026-09-13",title:"Sprint 3 首个功能：F-QA-001 采纳最佳答案——新受保护端点 POST /posts/{id}/accept（仅提问者，可更换、不能采纳自己回复，错误码 3002/3003）+ 出参透出采纳状态 + 楼层最佳答案置顶（is_accepted DESC）+ 前端采纳按钮/标识/列表徽标；零迁移；通知发放挂起归 F-SOC-001（单测 117→125 全绿，快照 v1.6 再生成 13 端点/31 schema）",type:"功能（论坛问答）",status:"full",review:"发起人当面授权（只做一个功能，做完后要进行测试）",hash:"493ef87"},
 {id:"CR-044",date:"2026-09-13",title:"提交信息语言方针：commit message 由「简洁英文」改为「中文」——保留 feat/docs/fix 类型前缀，作用域与描述用中文、正文写清「做了什么 / 解决了什么」；经发起人选定只改方针 + 最新一条（CR-043）改中文并强推，既有 26 条英文提交不回改（量化依据：全仓文档引用 19 个 commit hash / 130+ 处，重写历史会让凭证链整体失效）；工具侧 gpush.sh 新增 --force（force-with-lease）",type:"流程（AI 协作约定 / 提交规范）",status:"full",review:"发起人当面指令（实施前登记）",hash:"—"},
-{id:"CR-045",date:"2026-09-13",title:"文档一致性校准：修正下一步行动清单的头部版本号漂移——经全仓 27 份登记文档「头部版本 vs README §2 登记版本」逐份比对，真漂移仅 1 处（该文件头部停在 v1.10，而 §5 与 README §2 均已为 v1.11）；另 3 处疑似不一致经核为误报（其变更记录按新→旧倒序，首条才是最新版）。处置：头部升 v1.12 并记入 §5、关联阶段改为「Sprint 3 进行中」、最后更新改 2026-09-13；正文一字未改",type:"流程（文档一致性校准）",status:"full",review:"发起人指令（顺手校准）",hash:"—"}
+{id:"CR-045",date:"2026-09-13",title:"文档一致性校准：修正下一步行动清单头部版本号漂移——全仓 27 份登记文档「头部版本 vs README §2 登记版本」逐份比对，真漂移仅 1 处（头部停在 v1.10、登记已是 v1.11）；另 3 处疑似经核为误报（变更记录倒序、首条才是最新）；头部升 v1.12、关联阶段改「Sprint 3 进行中」，正文一字未改",type:"流程（文档一致性校准）",status:"full",review:"发起人指令（“顺手校准”）",hash:"—"},
+{id:"CR-046",date:"2026-09-13",title:"修正 backend/README.md 的 3 处失效链接（CR-030 文档中文化改名时该文件不在修复范围内，仍指向旧英文路径 docs/design/tech-design.md 与 docs/change-log.md；已改新路径并补 CR 锚点，正文一字未改；修正后全仓相对链接 2045 条 / 失效 0）",type:"流程（文档一致性修正）",status:"full",review:"发起人指令（“需要修改”）",hash:"—"},
+{id:"CR-047",date:"2026-09-13",title:"进度驾驶舱视觉重构（视图 v1.0 → v2.0）：发起人反馈「太丑、缺少项目开发流程感」——六阶段研发管线 + ◆ 评审门 + YOU ARE HERE 脉冲与 Sprint 交付列车恒定置顶、CR 时间线改 git-log 风格、KPI 卡上移横幅并动态取数；只改结构与样式、事实零新增，顺带把 CRS 由 38 补到 40（增 CR-045/046）",type:"流程（视图重构）",status:"full",review:"发起人当面指令（“重新设计优化”）",hash:"—"},
+{id:"CR-048",date:"2026-09-13",title:"Sprint 3 第二个功能：F-FORUM-005 点赞收藏——帖子/楼层点赞与帖子收藏均 toggle 语义（主键唯一约束去重），4 个新受保护端点（POST /posts/{id}/like、POST /posts/{postId}/replies/{replyId}/like、POST /posts/{id}/favorite 返回 {active,count} + GET /favorites/mine 分页）；详情出参补 likedByMe/favoritedByMe 与楼层 likedByMe/likeCount（登录填充、匿名恒 false，详情端点保持公开）；零迁移、ResultCode 无新增（复用 3001）；前端详情页交互 + 新增「我的收藏」页 /favorites + 顶栏入口；不做：通知（归 F-SOC-001）/ 个人主页整体 / 禁止自赞 / 回复收藏 / 热榜联动（单测 125→138 全绿，快照 v1.7 再生成 17 端点/33 schema；提交后须补快照「提交后核对」）",type:"功能（论坛互动）",status:"full",review:"发起人确认方案后实施（“开始实施”）",hash:"—"}
 ];
 const S_LABEL={full:["✅ 完整","s-full"],part:["🟡 部分","s-part"],none:["❌ 未做","s-none"]};
 const groups={};
 CRS.forEach(c=>{(groups[c.date]=groups[c.date]||[]).push(c)});
+
+/* KPI 动态口径：CR 总数取自数据数组本身，避免与文案漂移 */
+document.getElementById("k-cr").textContent=CRS.length;
 
 function renderTimeline(){
   const fd=document.getElementById("f-date").value,
@@ -375,19 +630,19 @@ function renderTimeline(){
     const items=groups[d].filter(c=>
       (!fs||c.status===fs)&&(!q||(c.id+c.title+c.type+c.review).toLowerCase().includes(q)));
     if(!items.length)return;
-    const g=document.createElement("div");g.className="tl-group";
-    g.innerHTML=`<div class="tl-date">📅 ${d}${d==="2026-09-12"?"（当天 11 条，含两次主色往返、设计稿还原、A3-9/A3-10 实施与路径级鉴权 CR-031）":d==="2026-09-13"?"（当天 8 条：CR-032 手册 5.1 · CR-034 实施方案约定 · CR-035 A3-5 ER 图 · CR-040 A3-7 检查清单 · CR-041 A3-8 决策备料 · CR-043 Sprint 3 首个功能 · CR-044 提交信息改中文 · CR-045 文档版本校准）":""}</div>`;
+    const g=document.createElement("div");g.className="log-date";
+    g.innerHTML=`<b>📅 ${d}</b><span class="cnt">${d==="2026-09-12"?"当天 11 条 · 含两次主色往返、设计稿还原、A3-9/A3-10 实施与路径级鉴权 CR-031":d==="2026-09-13"?"当天 11 条 · CR-032 手册 5.1 · CR-034 实施方案约定 · CR-035 A3-5 ER 图 · CR-040 A3-7 检查清单 · CR-041 A3-8 决策备料 · CR-043 Sprint 3 首个功能 · CR-044 提交信息改中文 · CR-045/046 文档一致性校准 · CR-047 驾驶舱视觉重构 · CR-048 Sprint 3 第二个功能":items.length+" 条"}</span>`;
+    box.appendChild(g);
     items.forEach(c=>{
       shown++;
       const [lb,cls]=S_LABEL[c.status];
-      const el=document.createElement("div");el.className="cr-item "+cls;
-      el.innerHTML=`<div class="cr-head"><b>${c.id}</b>
+      const el=document.createElement("div");el.className="commit "+cls;
+      el.innerHTML=`<div class="cm-head"><span class="cid">${c.id}</span>
         <span class="badge b-primary">${c.type}</span><span class="badge ${cls==="s-full"?"b-ok":cls==="s-part"?"b-warn":"b-danger"}">影响评估 ${lb}</span></div>
-        <div class="cr-title">${c.title}</div>
-        <div class="cr-meta">评审方式：${c.review}${c.hash?` · 提交凭证 <code>${c.hash}</code>`:""}</div>`;
-      g.appendChild(el);
+        <div class="cm-title">${c.title}</div>
+        <div class="cm-meta">评审方式：${c.review}${c.hash?` · 提交凭证 <span class="hash">${c.hash}</span>`:""}</div>`;
+      box.appendChild(el);
     });
-    box.appendChild(g);
   });
   document.getElementById("cr-count").textContent=`显示 ${shown} / ${CRS.length} 条`;
 }

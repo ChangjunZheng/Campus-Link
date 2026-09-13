@@ -7,8 +7,10 @@ import com.campuslink.common.web.ApiDocs;
 import com.campuslink.common.web.CurrentUser;
 import com.campuslink.common.web.PublicEndpoint;
 import com.campuslink.module.forum.application.ForumQueryApplicationService;
+import com.campuslink.module.forum.application.InteractionApplicationService;
 import com.campuslink.module.forum.application.PostApplicationService;
 import com.campuslink.module.forum.application.cmd.AcceptReplyCommand;
+import com.campuslink.module.forum.application.cmd.ForumResults.InteractionResult;
 import com.campuslink.module.forum.application.cmd.ForumResults.PostDetail;
 import com.campuslink.module.forum.application.cmd.ForumResults.PostSummary;
 import com.campuslink.module.forum.application.cmd.ForumResults.PublishedPost;
@@ -46,6 +48,7 @@ public class PostController {
 
     private final ForumQueryApplicationService forumQueryService;
     private final PostApplicationService postApplicationService;
+    private final InteractionApplicationService interactionApplicationService;
 
     @Operation(summary = "帖子列表（公开）：boardCode 缺省为全站最新，排序固定 created_at DESC")
     @ErrorCodes({ResultCode.NOT_FOUND})
@@ -59,12 +62,12 @@ public class PostController {
                 result.total(), result.page(), result.size()));
     }
 
-    @Operation(summary = "帖子详情（公开）：返回服务端渲染好的 contentHtml")
+    @Operation(summary = "帖子详情（公开）：返回服务端渲染好的 contentHtml；登录请求附带 likedByMe / favoritedByMe，匿名时恒 false")
     @ErrorCodes({ResultCode.NOT_FOUND})
     @PublicEndpoint
     @GetMapping("/{id}")
-    public ApiResponse<PostDetailVo> detail(@PathVariable("id") Long id) {
-        return ApiResponse.ok(PostDetailVo.from(forumQueryService.postDetail(id)));
+    public ApiResponse<PostDetailVo> detail(@PathVariable("id") Long id, Authentication authentication) {
+        return ApiResponse.ok(PostDetailVo.from(forumQueryService.postDetail(id, viewerIdOf(authentication))));
     }
 
     @Operation(summary = "发帖（需登录）：只返回 id，前端据此跳转详情")
@@ -88,5 +91,28 @@ public class PostController {
         long userId = CurrentUser.requireId(authentication);
         postApplicationService.acceptReply(userId, id, command.replyId());
         return ApiResponse.ok();
+    }
+
+    @Operation(summary = "点赞 / 取消点赞帖子（需登录，toggle）：active 为操作后状态，count 为最新点赞数")
+    @SecurityRequirement(name = ApiDocs.BEARER_AUTH)
+    @ErrorCodes({ResultCode.NOT_LOGGED_IN, ResultCode.NOT_FOUND})
+    @PostMapping("/{id}/like")
+    public ApiResponse<InteractionResult> like(@PathVariable("id") Long id, Authentication authentication) {
+        long userId = CurrentUser.requireId(authentication);
+        return ApiResponse.ok(interactionApplicationService.togglePostLike(userId, id));
+    }
+
+    @Operation(summary = "收藏 / 取消收藏帖子（需登录，toggle）：active 为操作后状态，count 为最新收藏数")
+    @SecurityRequirement(name = ApiDocs.BEARER_AUTH)
+    @ErrorCodes({ResultCode.NOT_LOGGED_IN, ResultCode.NOT_FOUND})
+    @PostMapping("/{id}/favorite")
+    public ApiResponse<InteractionResult> favorite(@PathVariable("id") Long id, Authentication authentication) {
+        long userId = CurrentUser.requireId(authentication);
+        return ApiResponse.ok(interactionApplicationService.togglePostFavorite(userId, id));
+    }
+
+    /** 详情端点保持公开；已登录时附带登录态回显（匿名 / principal 非 id 一律视为匿名，不抛 401） */
+    private static Long viewerIdOf(Authentication authentication) {
+        return authentication != null && authentication.getPrincipal() instanceof Long userId ? userId : null;
     }
 }

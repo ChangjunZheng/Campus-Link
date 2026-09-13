@@ -8,10 +8,13 @@ import com.campuslink.module.forum.application.cmd.ForumResults.ReplyItem;
 import com.campuslink.module.forum.domain.exception.BoardNotFoundException;
 import com.campuslink.module.forum.domain.exception.PostNotFoundException;
 import com.campuslink.module.forum.domain.gateway.BoardRepository;
+import com.campuslink.module.forum.domain.gateway.FavoriteRepository;
+import com.campuslink.module.forum.domain.gateway.LikeRepository;
 import com.campuslink.module.forum.domain.gateway.PageResult;
 import com.campuslink.module.forum.domain.gateway.PostRepository;
 import com.campuslink.module.forum.domain.gateway.ReplyRepository;
 import com.campuslink.module.forum.domain.model.Board;
+import com.campuslink.module.forum.domain.model.LikeTargetType;
 import com.campuslink.module.forum.domain.model.Post;
 import com.campuslink.module.forum.domain.model.Reply;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +22,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -42,6 +46,8 @@ public class ForumQueryApplicationService {
     private final BoardRepository boardRepository;
     private final PostRepository postRepository;
     private final ReplyRepository replyRepository;
+    private final LikeRepository likeRepository;
+    private final FavoriteRepository favoriteRepository;
     private final AccountApplicationService accountApplicationService;
     private final MarkdownRenderer markdownRenderer;
 
@@ -79,32 +85,71 @@ public class ForumQueryApplicationService {
         return new PageResult<>(items, found.total(), currentPage, pageSize);
     }
 
-    /** 帖子详情：contentHtml 为发布时渲染好的 HTML，请求时零渲染（ADR-005） */
-    public PostDetail postDetail(Long postId) {
+    /**
+     * 帖子详情：contentHtml 为发布时渲染好的 HTML，请求时零渲染（ADR-005）。
+     * viewerId 为 null（匿名）时 likedByMe / favoritedByMe 恒 false——详情端点保持公开，登录态回显是**附加**能力（F-FORUM-005）。
+     */
+    public PostDetail postDetail(Long postId, Long viewerId) {
         Post post = requireVisiblePost(postId);
         Board board = boardsById().get(post.getBoardId());
         String nickname = accountApplicationService.nicknamesOf(List.of(post.getAuthorId()))
                 .getOrDefault(post.getAuthorId(), NICKNAME_FALLBACK);
+        boolean likedByMe = viewerId != null
+                && likeRepository.findLikedTargetIds(viewerId, LikeTargetType.POST, List.of(postId)).contains(postId);
+        boolean favoritedByMe = viewerId != null
+                && favoriteRepository.findFavoritedPostIds(viewerId, List.of(postId)).contains(postId);
         return new PostDetail(post.getId(),
                 board == null ? null : board.getCode(),
                 board == null ? null : board.getName(),
                 board == null ? null : board.getType().name(),
                 post.getTitle(), post.getContentHtml(), post.getAuthorId(), nickname,
-                post.getReplyCount(), post.getLikeCount(), post.isAccepted(), post.getCreatedAt());
+                post.getReplyCount(), post.getLikeCount(), post.isAccepted(),
+                likedByMe, favoritedByMe, post.getCreatedAt());
     }
 
-    /** 楼层列表：帖子不可读则不暴露其楼层 */
-    public PageResult<ReplyItem> listReplies(Long postId, int page, int size) {
+    /** 楼层列表：帖子不可读则不暴露其楼层；viewerId 为 null（匿名）时 likedByMe 恒 false（F-FORUM-005） */
+    public PageResult<ReplyItem> listReplies(Long postId, int page, int size, Long viewerId) {
         requireVisiblePost(postId);
         int currentPage = normalizePage(page);
         int pageSize = normalizeSize(size);
         PageResult<Reply> found = replyRepository.findPageByPostId(postId, currentPage, pageSize);
         Map<Long, String> nicknames = accountApplicationService.nicknamesOf(
                 found.items().stream().map(Reply::getAuthorId).toList());
+        Set<Long> likedReplyIds = viewerId == null ? Set.of()
+                : likeRepository.findLikedTargetIds(viewerId, LikeTargetType.REPLY,
+                        found.items().stream().map(Reply::getId).toList());
         List<ReplyItem> items = found.items().stream()
                 .map(reply -> new ReplyItem(reply.getId(), reply.getFloorNo(), reply.getContentHtml(),
                         reply.getAuthorId(), nicknames.getOrDefault(reply.getAuthorId(), NICKNAME_FALLBACK),
-                        reply.isAccepted(), reply.getCreatedAt()))
+                        reply.isAccepted(), reply.getLikeCount(),
+                        likedReplyIds.contains(reply.getId()), reply.getCreatedAt()))
+                .toList();
+        return new PageResult<>(items, found.total(), currentPage, pageSize);
+    }
+
+    /**
+     * 我的收藏（F-FORUM-005）：按收藏时间倒序分页，出参复用 {@link PostSummary}（列表口径一致）。
+     * 收藏行为本人可见的私有列表——调用方（Controller）已要求登录。
+     */
+    public PageResult<PostSummary> listMyFavorites(long userId, int page, int size) {
+        int currentPage = normalizePage(page);
+        int pageSize = normalizeSize(size);
+        PageResult<Post> found = favoriteRepository.findFavoritePosts(userId, currentPage, pageSize);
+        Map<Long, Board> boardsById = boardsById();
+        Map<Long, String> nicknames = accountApplicationService.nicknamesOf(
+                found.items().stream().map(Post::getAuthorId).toList());
+        List<PostSummary> items = found.items().stream()
+                .map(post -> {
+                    Board board = boardsById.get(post.getBoardId());
+                    return new PostSummary(post.getId(),
+                            board == null ? null : board.getCode(),
+                            board == null ? null : board.getName(),
+                            post.getTitle(),
+                            nicknames.getOrDefault(post.getAuthorId(), NICKNAME_FALLBACK),
+                            post.getReplyCount(), post.getLikeCount(),
+                            markdownRenderer.toPlainSummary(post.getContentMd(), SUMMARY_MAX_CHARS),
+                            post.getCreatedAt(), post.isAccepted());
+                })
                 .toList();
         return new PageResult<>(items, found.total(), currentPage, pageSize);
     }

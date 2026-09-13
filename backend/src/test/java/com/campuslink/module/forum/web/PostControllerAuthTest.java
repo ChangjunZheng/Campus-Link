@@ -41,7 +41,10 @@ class PostControllerAuthTest {
 
     private final ForumQueryApplicationService forumQueryService = mock(ForumQueryApplicationService.class);
     private final PostApplicationService postApplicationService = mock(PostApplicationService.class);
-    private final PostController controller = new PostController(forumQueryService, postApplicationService);
+    private final com.campuslink.module.forum.application.InteractionApplicationService interactionApplicationService =
+            mock(com.campuslink.module.forum.application.InteractionApplicationService.class);
+    private final PostController controller = new PostController(forumQueryService, postApplicationService,
+            interactionApplicationService);
 
     @Test
     @DisplayName("匿名发帖 → 4001，且不触达发帖用例")

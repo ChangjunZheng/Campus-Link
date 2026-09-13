@@ -32,8 +32,8 @@ function onSearchClick() {
       <div class="mx-auto flex h-full max-w-page items-center justify-between max-md:py-4">
         <!-- 品牌字样用主色：WCAG 对 logo / 品牌名的文字不计对比度要求 -->
         <RouterLink to="/" class="flex shrink-0 items-center gap-2 text-title font-medium text-primary">
-          <img src="/logo.svg" alt="" class="h-[22px] w-[22px]" width="22" height="22" />
-          Campus-Link
+          <img src="/logo.png" alt="" class="h-[22px] w-auto" height="22" />
+          <img src="/wordmark.png" alt="Campus-Link" class="h-[20px] w-auto" height="20" />
         </RouterLink>
         <RouterLink to="/" class="flex items-center gap-1 text-body">
           <el-icon><ArrowLeft /></el-icon>
@@ -47,8 +47,8 @@ function onSearchClick() {
       <div class="mx-auto flex h-full max-w-page flex-wrap items-center gap-x-5 gap-y-1 max-md:py-2">
         <!-- 品牌字样用主色：WCAG 对 logo / 品牌名的文字不计对比度要求 -->
         <RouterLink to="/" class="order-1 flex shrink-0 items-center gap-2 text-title font-medium text-primary">
-          <img src="/logo.svg" alt="" class="h-[22px] w-[22px]" width="22" height="22" />
-          Campus-Link
+          <img src="/logo.png" alt="" class="h-[22px] w-auto" height="22" />
+          <img src="/wordmark.png" alt="Campus-Link" class="h-[20px] w-auto" height="20" />
         </RouterLink>
         <div class="order-2 ml-auto flex shrink-0 items-center gap-4 md:order-3 md:ml-0">
           <div class="hidden w-[200px] cursor-pointer md:block" @click="onSearchClick">
@@ -91,6 +91,7 @@ function onSearchClick() {
             <template #dropdown>
               <el-dropdown-menu>
                 <el-dropdown-item @click="router.push('/notifications')">通知中心</el-dropdown-item>
+                <el-dropdown-item @click="router.push('/favorites')">我的收藏</el-dropdown-item>
                 <el-dropdown-item divided @click="logout">退出登录</el-dropdown-item>
               </el-dropdown-menu>
             </template>

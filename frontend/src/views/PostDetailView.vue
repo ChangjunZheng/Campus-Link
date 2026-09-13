@@ -1,7 +1,17 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getPost, listReplies, publishReply, acceptReply, type PostDetailVo, type ReplyVo } from '../api/forum'
+import {
+  getPost,
+  listReplies,
+  publishReply,
+  acceptReply,
+  togglePostLike,
+  togglePostFavorite,
+  toggleReplyLike,
+  type PostDetailVo,
+  type ReplyVo,
+} from '../api/forum'
 import { ApiError } from '../api/client'
 import { useAuthStore } from '../stores/auth'
 import { useNarrowScreen } from '../composables/useNarrowScreen'
@@ -25,6 +35,58 @@ const repliesError = ref('')
 const replyMd = ref('')
 const submitting = ref(false)
 const acceptingReplyId = ref<number | null>(null)
+const togglingLike = ref(false)
+const togglingFavorite = ref(false)
+const likingReplyId = ref<number | null>(null)
+
+// 未登录点击互动按钮 → 登录后回跳本页（与回帖同一口径）
+function requireLoginOrRedirect(): boolean {
+  if (auth.isLoggedIn) return true
+  router.push({ path: '/login', query: { redirect: route.fullPath } })
+  return false
+}
+
+async function toggleLike() {
+  if (!post.value || !requireLoginOrRedirect()) return
+  togglingLike.value = true
+  try {
+    const res = await togglePostLike(post.value.id)
+    post.value.likeCount = res.count
+    post.value.likedByMe = res.active
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '点赞失败')
+  } finally {
+    togglingLike.value = false
+  }
+}
+
+async function toggleFavorite() {
+  if (!post.value || !requireLoginOrRedirect()) return
+  togglingFavorite.value = true
+  try {
+    const res = await togglePostFavorite(post.value.id)
+    post.value.favoritedByMe = res.active
+    ElMessage.success(res.active ? '已收藏，可在「我的收藏」查看' : '已取消收藏')
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '收藏操作失败')
+  } finally {
+    togglingFavorite.value = false
+  }
+}
+
+async function likeReply(r: ReplyVo) {
+  if (!post.value || !requireLoginOrRedirect()) return
+  likingReplyId.value = r.id
+  try {
+    const res = await toggleReplyLike(post.value.id, r.id)
+    r.likeCount = res.count
+    r.likedByMe = res.active
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '点赞失败')
+  } finally {
+    likingReplyId.value = null
+  }
+}
 
 // 采纳按钮可见性（F-QA-001）：仅提问者 + 问答帖；自己楼层不显示（后端 3003 兜底）
 const isAskerOfQuestion = computed(
@@ -174,6 +236,27 @@ watch(
           </div>
           <el-divider />
           <div class="markdown-body" v-html="post.contentHtml" />
+          <!-- 互动操作行（F-FORUM-005）：toggle 后用响应 {active, count} 回填本地状态 -->
+          <div class="mt-4 flex items-center gap-2">
+            <el-button
+              size="small"
+              :type="post.likedByMe ? 'primary' : 'default'"
+              :plain="!post.likedByMe"
+              :loading="togglingLike"
+              @click="toggleLike"
+            >
+              点赞{{ post.likeCount > 0 ? ` ${post.likeCount}` : '' }}
+            </el-button>
+            <el-button
+              size="small"
+              :type="post.favoritedByMe ? 'warning' : 'default'"
+              :plain="!post.favoritedByMe"
+              :loading="togglingFavorite"
+              @click="toggleFavorite"
+            >
+              {{ post.favoritedByMe ? '已收藏' : '收藏' }}
+            </el-button>
+          </div>
         </div>
       </el-card>
 
@@ -229,11 +312,21 @@ watch(
                   <span>{{ formatTime(r.createdAt) }}</span>
                   <el-tag v-if="r.accepted" type="success" effect="light" size="small">最佳答案</el-tag>
                   <el-button
+                    link
+                    size="small"
+                    :type="r.likedByMe ? 'primary' : 'default'"
+                    :loading="likingReplyId === r.id"
+                    class="ml-auto"
+                    @click="likeReply(r)"
+                  >
+                    赞{{ r.likeCount > 0 ? ` ${r.likeCount}` : '' }}
+                  </el-button>
+                  <el-button
                     v-if="canAccept(r)"
                     type="success"
                     effect="plain"
                     size="small"
-                    class="ml-auto"
+                    class="ml-2"
                     :loading="acceptingReplyId === r.id"
                     @click="adopt(r)"
                   >

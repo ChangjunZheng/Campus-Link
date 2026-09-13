@@ -8,6 +8,8 @@ import com.campuslink.module.forum.application.cmd.ForumResults.PostDetail;
 import com.campuslink.module.forum.application.cmd.ForumResults.PostSummary;
 import com.campuslink.module.forum.application.cmd.ForumResults.ReplyItem;
 import com.campuslink.module.forum.domain.gateway.BoardRepository;
+import com.campuslink.module.forum.domain.gateway.FavoriteRepository;
+import com.campuslink.module.forum.domain.gateway.LikeRepository;
 import com.campuslink.module.forum.domain.gateway.PageResult;
 import com.campuslink.module.forum.domain.gateway.PostRepository;
 import com.campuslink.module.forum.domain.gateway.ReplyRepository;
@@ -53,6 +55,10 @@ class ForumQueryApplicationServiceTest {
     @Mock
     private ReplyRepository replyRepository;
     @Mock
+    private LikeRepository likeRepository;
+    @Mock
+    private FavoriteRepository favoriteRepository;
+    @Mock
     private AccountApplicationService accountApplicationService;
 
     private ForumQueryApplicationService service;
@@ -60,7 +66,7 @@ class ForumQueryApplicationServiceTest {
     @BeforeEach
     void setUp() {
         service = new ForumQueryApplicationService(boardRepository, postRepository, replyRepository,
-                accountApplicationService, new MarkdownRenderer());
+                likeRepository, favoriteRepository, accountApplicationService, new MarkdownRenderer());
     }
 
     @Test
@@ -127,7 +133,7 @@ class ForumQueryApplicationServiceTest {
         when(boardRepository.findAllEnabled()).thenReturn(List.of(board(1L, "qna", "技术问答")));
         when(accountApplicationService.nicknamesOf(List.of(100L))).thenReturn(Map.of(100L, "张三"));
 
-        PostDetail detail = service.postDetail(9L);
+        PostDetail detail = service.postDetail(9L, null);
 
         assertThat(detail.contentHtml()).isEqualTo("<p>正文</p>");
         assertThat(detail.boardCode()).isEqualTo("qna");
@@ -140,10 +146,10 @@ class ForumQueryApplicationServiceTest {
     void invisiblePostHidesDetailAndReplies() {
         when(postRepository.findById(9L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.postDetail(9L))
+        assertThatThrownBy(() -> service.postDetail(9L, null))
                 .isInstanceOfSatisfying(ApiException.class,
                         e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_FOUND));
-        assertThatThrownBy(() -> service.listReplies(9L, 1, 20))
+        assertThatThrownBy(() -> service.listReplies(9L, 1, 20, null))
                 .isInstanceOfSatisfying(ApiException.class,
                         e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_FOUND));
 
@@ -157,7 +163,7 @@ class ForumQueryApplicationServiceTest {
                 Post.rehydrate(9L, 1L, 100L, BoardType.QUESTION, "标题", "正文", "<p>正文</p>",
                         PostStatus.REMOVED, 0, 0, false, null, CREATED_AT, CREATED_AT)));
 
-        assertThatThrownBy(() -> service.postDetail(9L))
+        assertThatThrownBy(() -> service.postDetail(9L, null))
                 .isInstanceOfSatisfying(ApiException.class,
                         e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_FOUND));
     }
@@ -171,11 +177,27 @@ class ForumQueryApplicationServiceTest {
         when(accountApplicationService.nicknamesOf(List.of(100L, 200L)))
                 .thenReturn(Map.of(100L, "张三", 200L, "李四"));
 
-        PageResult<ReplyItem> page = service.listReplies(9L, 1, 20);
+        PageResult<ReplyItem> page = service.listReplies(9L, 1, 20, null);
 
         assertThat(page.items()).extracting(ReplyItem::floorNo).containsExactly(1, 2);
         assertThat(page.items()).extracting(ReplyItem::authorNickname).containsExactly("张三", "李四");
         assertThat(page.total()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("详情登录态回显：viewerId 非空时批量查 likedByMe / favoritedByMe（F-FORUM-005）")
+    void detailWithViewerPopulatesMyState() {
+        when(postRepository.findById(9L)).thenReturn(Optional.of(post(9L, 100L)));
+        when(boardRepository.findAllEnabled()).thenReturn(List.of(board(1L, "qna", "技术问答")));
+        when(accountApplicationService.nicknamesOf(List.of(100L))).thenReturn(Map.of(100L, "张三"));
+        when(likeRepository.findLikedTargetIds(42L, com.campuslink.module.forum.domain.model.LikeTargetType.POST,
+                List.of(9L))).thenReturn(java.util.Set.of(9L));
+        when(favoriteRepository.findFavoritedPostIds(42L, List.of(9L))).thenReturn(java.util.Set.of());
+
+        PostDetail detail = service.postDetail(9L, 42L);
+
+        assertThat(detail.likedByMe()).isTrue();
+        assertThat(detail.favoritedByMe()).isFalse();
     }
 
     private static Post post(Long id, Long authorId) {
@@ -192,6 +214,6 @@ class ForumQueryApplicationServiceTest {
     }
 
     private static Reply reply(Long id, Long authorId, int floorNo) {
-        return Reply.rehydrate(id, 9L, authorId, floorNo, "内容", "<p>内容</p>", false, CREATED_AT);
+        return Reply.rehydrate(id, 9L, authorId, floorNo, "内容", "<p>内容</p>", false, 0, CREATED_AT);
     }
 }

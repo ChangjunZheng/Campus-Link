@@ -45,6 +45,10 @@ export interface PostDetailVo {
   replyCount: number
   likeCount: number
   accepted: boolean
+  /** 当前登录用户是否已点赞（F-FORUM-005）；匿名请求恒 false */
+  likedByMe: boolean
+  /** 当前登录用户是否已收藏（F-FORUM-005）；匿名请求恒 false */
+  favoritedByMe: boolean
   createdAt: string
 }
 
@@ -57,6 +61,8 @@ export interface ReplyVo {
   authorNickname: string
   /** 最佳答案（F-QA-001）；楼层列表按 is_accepted DESC 排序，最佳答案自然置顶 */
   accepted: boolean
+  /** 当前登录用户是否已点赞该楼层（F-FORUM-005）；匿名请求恒 false */
+  likedByMe: boolean
   createdAt: string
 }
 
@@ -85,3 +91,19 @@ export const publishReply = (postId: number | string, contentMd: string) =>
 /** 采纳最佳答案（仅提问者）：可更换（后一次覆盖前一次），不能采纳自己的回复（3003） */
 export const acceptReply = (postId: number | string, replyId: number) =>
   post<void>(`/posts/${postId}/accept`, { replyId })
+
+/** 点赞 / 取消点赞帖子（toggle，F-FORUM-005）：active 为操作后状态，count 为最新点赞数 */
+export const togglePostLike = (postId: number | string) =>
+  post<{ active: boolean; count: number }>(`/posts/${postId}/like`)
+
+/** 收藏 / 取消收藏帖子（toggle，F-FORUM-005） */
+export const togglePostFavorite = (postId: number | string) =>
+  post<{ active: boolean; count: number }>(`/posts/${postId}/favorite`)
+
+/** 点赞 / 取消点赞楼层（toggle，F-FORUM-005） */
+export const toggleReplyLike = (postId: number | string, replyId: number) =>
+  post<{ active: boolean; count: number }>(`/posts/${postId}/replies/${replyId}/like`)
+
+/** 我的收藏（需登录）：本人收藏的帖子，按收藏时间倒序（F-FORUM-005） */
+export const listMyFavorites = (page = 1, size = 20) =>
+  get<PageVo<PostSummaryVo>>(`/favorites/mine?page=${page}&size=${size}`)
