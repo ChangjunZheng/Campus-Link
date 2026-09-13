@@ -271,7 +271,7 @@
     </div></div>
     <div class="risk"><span class="todo-num">3</span><div>
       <div class="r-title">收尾本轮执行入口的凭证与签署（两项小动作，均不需写代码）</div>
-      <div class="r-desc">① 提交本轮工作区：CR-027 / CR-028 / CR-029 / CR-030 <b>已提交</b>（`55cac87` / `c806153`；凭证按 CR-029 约定随 commit message 对齐、免回填），<b>CR-031 / CR-032 的改动仍为未提交的工作区</b>（提交前先展示变更摘要、不自动 push）；② 由发起人签署关闭 W-02 / W-07：A3-9 已落地、关闭条件已具备，须发起人签署后方可关闭——任何文档都不代签（W-05 与本批无关、仍不得关闭）。另：契约快照 v1.5 来源为未提交的工作区（HEAD = `c806153`，CR-031 / CR-032 改动待提交），提交后须按 api/README §2 复核。</div>
+      <div class="r-desc">① 提交本轮工作区：<b>已完成</b>——CR-027 ~ CR-032 与 CR-034 均已提交（CR-031 = `7720adc`、CR-032 = `b4530ed`、CR-034 = `a9b9356`；凭证按 CR-029 约定随 commit message 对齐、免回填）。**剩余动作：契约快照 v1.5 的「提交后核对」现已可执行**——起后端栈后按 api/README §2 重抓比对（此前快照来源为未提交工作区，HEAD 曾 = `c806153`）；② 由发起人签署关闭 W-02 / W-07：A3-9 已落地、关闭条件已具备，须发起人签署后方可关闭——任何文档都不代签（W-05 与本批无关、仍不得关闭）。</div>
     </div></div>
   </div>
 
@@ -349,9 +349,9 @@ const CRS=[
  {id:"CR-028",date:"2026-09-12",title:"实施 A3-9 + A3-10（= B4/B5）✅ 已闭环：ArchUnit 架构守护测试（R-1 裁决禁止 web 注入 domain 端口）+ N-4 闭环（CurrentUser/PublicEndpoint 统一鉴权入口）+ F-1/F-3/F-4/N-5/N-6（单测 87→107）",type:"架构（机器强制）+ 缺陷修复",status:"full",review:"发起人指令（实施前登记）",hash:"55cac87"},
  {id:"CR-029",date:"2026-09-12",title:"流程瘦身（轻量登记首条）：CR 一行式登记、状态两处收口（台账+驾驶舱）、取消凭证回填仪式、AGENTS.md 新增汇报约定",type:"流程（治理降密度）",status:"full",review:"发起人当面指令",hash:"c806153"},
  {id:"CR-030",date:"2026-09-12",title:"文档治理转向：文档/文件夹改中文名（README.md 除外）+ 流程文档只留结论、日志式记录统一入 docs/变更日志/；批量迁移已执行（35 个 git mv + 1582 处链接修复）",type:"流程（文档治理）",status:"full",review:"发起人当面指令",hash:"c806153"},
- {id:"CR-031",date:"2026-09-12",title:"SecurityConfig 路径级鉴权落地（去 permitAll）：EndpointAuthorizationManager 以端点注解为单一事实来源 fail-closed + ApiErrorSecurityHandler 统一 401/403 出口（契约外壳不变）+ G8 守护；单测 107→117，快照 v1.5 再生成",type:"架构（安全）+ 缺陷修复",status:"full",review:"发起人指令（实施前登记）",hash:"待提交"},
-{id:"CR-032",date:"2026-09-13",title:"手册 5.1 补入 UI 稿可裁剪项（W-03 补偿①「手册那一半」）：流程手册升 v1.2，UI 稿裁剪自此有手册依据；W-03 补偿①② 齐备，A3-6 仅剩补偿③ 逐页走查",type:"流程（W-03 补偿① 执行）",status:"full",review:"发起人指令（实施前登记）",hash:"待提交"},
- {id:"CR-034",date:"2026-09-13",title:"新增「实施方案约定」：较大功能改造 / Bug 修复先写可实施方案、确认后再动代码（门槛：跨模块 / 接口契约 / DB 结构 / 新依赖 / 安全鉴权 / 根因跨层或改变对外行为的 Bug）；方案存 docs/开发/实施方案/CR-xxx-主题.md（一页六节），实施偏差追加不回改。编号取 034——CR-033 已由增量 PRD（发帖相似问题推荐）占用",type:"流程（实施前评审载体 + AI 协作约定）",status:"full",review:"发起人当面指令（实施前登记）",hash:"待提交"}
+ {id:"CR-031",date:"2026-09-12",title:"SecurityConfig 路径级鉴权落地（去 permitAll）：EndpointAuthorizationManager 以端点注解为单一事实来源 fail-closed + ApiErrorSecurityHandler 统一 401/403 出口（契约外壳不变）+ G8 守护；单测 107→117，快照 v1.5 再生成",type:"架构（安全）+ 缺陷修复",status:"full",review:"发起人指令（实施前登记）",hash:"7720adc"},
+{id:"CR-032",date:"2026-09-13",title:"手册 5.1 补入 UI 稿可裁剪项（W-03 补偿①「手册那一半」）：流程手册升 v1.2，UI 稿裁剪自此有手册依据；W-03 补偿①② 齐备，A3-6 仅剩补偿③ 逐页走查",type:"流程（W-03 补偿① 执行）",status:"full",review:"发起人指令（实施前登记）",hash:"b4530ed"},
+ {id:"CR-034",date:"2026-09-13",title:"新增「实施方案约定」：较大功能改造 / Bug 修复先写可实施方案、确认后再动代码（门槛：跨模块 / 接口契约 / DB 结构 / 新依赖 / 安全鉴权 / 根因跨层或改变对外行为的 Bug）；方案存 docs/开发/实施方案/CR-xxx-主题.md（一页六节），实施偏差追加不回改。编号取 034——CR-033 已由增量 PRD（发帖相似问题推荐）占用",type:"流程（实施前评审载体 + AI 协作约定）",status:"full",review:"发起人当面指令（实施前登记）",hash:"a9b9356"}
 ];
 const S_LABEL={full:["✅ 完整","s-full"],part:["🟡 部分","s-part"],none:["❌ 未做","s-none"]};
 const groups={};
