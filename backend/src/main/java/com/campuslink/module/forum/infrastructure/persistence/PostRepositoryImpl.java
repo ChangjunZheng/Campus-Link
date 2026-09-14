@@ -12,6 +12,8 @@ import com.campuslink.module.forum.infrastructure.persistence.mapper.PostMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 /** 适配器：PostRepository 端口的 MyBatis-Plus 实现 */
@@ -49,6 +51,18 @@ public class PostRepositoryImpl implements PostRepository {
                         .eq(PostDO::getId, id)
                         .eq(PostDO::getIsDeleted, false)))
                 .map(PostConverter::toDomain);
+    }
+
+    @Override
+    public List<Post> findByIds(Collection<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return postMapper.selectList(new LambdaQueryWrapper<PostDO>()
+                        .in(PostDO::getId, ids)
+                        .eq(PostDO::getIsDeleted, false)).stream()
+                .map(PostConverter::toDomain)
+                .toList();
     }
 
     @Override

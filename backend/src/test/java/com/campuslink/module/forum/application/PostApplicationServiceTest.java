@@ -13,6 +13,7 @@ import com.campuslink.module.forum.domain.model.BoardType;
 import com.campuslink.module.forum.domain.model.Post;
 import com.campuslink.module.forum.domain.model.PostStatus;
 import com.campuslink.module.forum.domain.model.Reply;
+import com.campuslink.module.notification.application.NotificationApplicationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -28,6 +29,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /** 发帖用例：渲染时机（发布时落库，ADR-005）、type 随版块、未知版块按资源不存在处理 */
@@ -40,6 +42,8 @@ class PostApplicationServiceTest {
     private PostRepository postRepository;
     @Mock
     private ReplyRepository replyRepository;
+    @Mock
+    private NotificationApplicationService notificationService;
 
     private PostApplicationService service;
 
@@ -47,7 +51,7 @@ class PostApplicationServiceTest {
     void setUp() {
         // MarkdownRenderer 是纯组件（无 I/O），直接 new，不必走 Spring 上下文
         service = new PostApplicationService(boardRepository, postRepository, replyRepository,
-                new MarkdownRenderer());
+                new MarkdownRenderer(), notificationService);
     }
 
     @Test
@@ -99,6 +103,8 @@ class PostApplicationServiceTest {
 
         verify(postRepository).updateAcceptedReply(123L, 456L);
         verify(replyRepository).updateAcceptedFlags(123L, 456L);
+        // 采纳通知发给被采纳楼层的作者（F-SOC-001）
+        verify(notificationService).replyAccepted(42L, 456L, 999L);
     }
 
     @Test
@@ -112,6 +118,7 @@ class PostApplicationServiceTest {
 
         verify(postRepository, never()).updateAcceptedReply(any(), any());
         verify(replyRepository, never()).updateAcceptedFlags(any(), any());
+        verifyNoInteractions(notificationService);
     }
 
     @Test

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   getPost,
@@ -38,6 +38,8 @@ const acceptingReplyId = ref<number | null>(null)
 const togglingLike = ref(false)
 const togglingFavorite = ref(false)
 const likingReplyId = ref<number | null>(null)
+/** 从通知跳入时被点名的楼层 id（?floor=），命中则滚动 + 高亮 */
+const focusedFloorId = ref('')
 
 // 未登录点击互动按钮 → 登录后回跳本页（与回帖同一口径）
 function requireLoginOrRedirect(): boolean {
@@ -184,13 +186,32 @@ async function submitReply() {
   }
 }
 
+/**
+ * 通知跳转定位（F-SOC-001）：`?floor=<replyId>` 命中当前页楼层时滚动并高亮。
+ * 楼层不在本页时不猜页码——最佳答案置顶会改变分页组成，猜错反而跳错楼层，落到帖子即可。
+ */
+async function focusFloorFromQuery() {
+  const raw = String(route.query.floor ?? '')
+  if (!raw) {
+    return
+  }
+  await nextTick()
+  const el = document.getElementById(`floor-${raw}`)
+  if (!el) {
+    return
+  }
+  focusedFloorId.value = raw
+  el.scrollIntoView({ block: 'center' })
+}
+
 watch(
   postId,
   () => {
     page.value = 1
     replyMd.value = ''
+    focusedFloorId.value = ''
     loadPost()
-    loadReplies()
+    loadReplies().then(focusFloorFromQuery)
   },
   { immediate: true },
 )
@@ -300,8 +321,10 @@ watch(
           <ul v-else>
             <li
               v-for="r in replies"
+              :id="`floor-${r.id}`"
               :key="r.id"
-              class="border-b-[0.5px] border-divider py-3 first:pt-0 last:border-b-0"
+              class="border-b-[0.5px] border-divider py-3 transition-colors first:pt-0 last:border-b-0"
+              :class="focusedFloorId === String(r.id) ? 'bg-primary-soft' : ''"
             >
               <div class="mx-auto max-w-reading">
                 <div class="mb-1.5 flex flex-wrap items-center gap-1.5 text-caption text-ink-meta">

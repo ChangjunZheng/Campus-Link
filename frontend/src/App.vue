@@ -3,11 +3,13 @@ import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ArrowDown, ArrowLeft, Bell, Search } from '@element-plus/icons-vue'
 import { useAuthStore } from './stores/auth'
+import { useUnreadNotifications } from './composables/useUnreadNotifications'
 import { BOARDS } from './constants/boards'
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
+const { unreadCount } = useUnreadNotifications()
 
 const nickname = computed(() => auth.user?.nickname || '')
 const avatarText = computed(() => (nickname.value ? nickname.value.slice(0, 1) : ''))
@@ -78,7 +80,9 @@ function onSearchSubmit() {
             <el-icon :size="18"><Search /></el-icon>
           </button>
           <RouterLink to="/notifications" class="text-ink-regular hover:text-link" aria-label="通知中心">
-            <el-icon :size="18"><Bell /></el-icon>
+            <el-badge :value="unreadCount" :max="99" :hidden="!unreadCount">
+              <el-icon :size="18"><Bell /></el-icon>
+            </el-badge>
           </RouterLink>
           <el-dropdown v-if="isLoggedIn">
             <span class="flex cursor-pointer items-center gap-1.5">

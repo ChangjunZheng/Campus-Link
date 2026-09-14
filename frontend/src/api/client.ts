@@ -50,3 +50,6 @@ export const get = <T>(path: string): Promise<T> => request<T>(path)
 
 export const post = <T>(path: string, data?: unknown): Promise<T> =>
   request<T>(path, { method: 'POST', body: data === undefined ? undefined : JSON.stringify(data) })
+
+export const put = <T>(path: string, data?: unknown): Promise<T> =>
+  request<T>(path, { method: 'PUT', body: data === undefined ? undefined : JSON.stringify(data) })

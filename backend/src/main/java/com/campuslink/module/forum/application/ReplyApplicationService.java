@@ -8,6 +8,7 @@ import com.campuslink.module.forum.domain.gateway.PostRepository;
 import com.campuslink.module.forum.domain.gateway.ReplyRepository;
 import com.campuslink.module.forum.domain.model.Post;
 import com.campuslink.module.forum.domain.model.Reply;
+import com.campuslink.module.notification.application.NotificationApplicationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +21,7 @@ public class ReplyApplicationService {
     private final PostRepository postRepository;
     private final ReplyRepository replyRepository;
     private final MarkdownRenderer markdownRenderer;
+    private final NotificationApplicationService notificationService;
 
     /**
      * 回帖：楼层号与 {@code reply_count} 由**同一次递增**派生——{@code incrementReplyCountAndGet} 的
@@ -36,6 +38,9 @@ public class ReplyApplicationService {
         int floorNo = postRepository.incrementReplyCountAndGet(post.getId());
         Reply reply = Reply.post(post.getId(), authorId, floorNo, command.contentMd(),
                 markdownRenderer.render(command.contentMd()));
-        return new PublishedReply(replyRepository.save(reply).getId(), floorNo);
+        Long replyId = replyRepository.save(reply).getId();
+        // 通知与回帖同事务写入（F-SOC-001）；自问自答不产生通知，抑制逻辑归 notification 侧统一兜底
+        notificationService.postReplied(authorId, replyId, post.getAuthorId());
+        return new PublishedReply(replyId, floorNo);
     }
 }

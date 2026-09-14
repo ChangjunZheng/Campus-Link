@@ -2,6 +2,8 @@ package com.campuslink.module.forum.domain.gateway;
 
 import com.campuslink.module.forum.domain.model.Post;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 /** 帖子仓储端口（端口定义在 domain、实现在 infrastructure，DIP） */
@@ -27,6 +29,12 @@ public interface PostRepository {
      * 不进入聚合）；{@code status} 是否可见由应用层按 {@link Post#isVisible()} 判定。
      */
     Optional<Post> findById(Long id);
+
+    /**
+     * 批量按 id 查**未删除**的帖子（读侧约定同 {@link #findById}）；通知读时组装用（F-SOC-001），
+     * 一页一次取齐标题，不做 N+1。空集合由实现短路，不会发出 {@code IN ()} 非法 SQL。
+     */
+    List<Post> findByIds(Collection<Long> ids);
 
     /** 新增帖子（INSERT）；返回带数据库生成 id 与时间戳的聚合 */
     Post save(Post post);

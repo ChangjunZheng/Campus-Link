@@ -13,6 +13,7 @@ import com.campuslink.module.forum.domain.gateway.ReplyRepository;
 import com.campuslink.module.forum.domain.model.Board;
 import com.campuslink.module.forum.domain.model.Post;
 import com.campuslink.module.forum.domain.model.Reply;
+import com.campuslink.module.notification.application.NotificationApplicationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +27,7 @@ public class PostApplicationService {
     private final PostRepository postRepository;
     private final ReplyRepository replyRepository;
     private final MarkdownRenderer markdownRenderer;
+    private final NotificationApplicationService notificationService;
 
     /**
      * 发帖：{@code contentHtml} 在**发布时**渲染后随帖子一起落库，请求时零渲染（ADR-005）；
@@ -61,5 +63,7 @@ public class PostApplicationService {
         post.acceptReply(reply.getId(), reply.getAuthorId());
         postRepository.updateAcceptedReply(postId, replyId);
         replyRepository.updateAcceptedFlags(postId, replyId);
+        // 采纳通知发给被采纳楼层的作者（F-SOC-001）；"不能采纳自己回复"已由领域规则拦下，此处不需再判自触发
+        notificationService.replyAccepted(askerId, replyId, reply.getAuthorId());
     }
 }

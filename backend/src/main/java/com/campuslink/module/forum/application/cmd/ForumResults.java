@@ -43,4 +43,16 @@ public final class ForumResults {
     /** 点赞 / 收藏 toggle 结果（F-FORUM-005）：active 为操作后的状态（true=已赞 / 已收藏），count 为操作后的最新计数 */
     public record InteractionResult(boolean active, int count) {
     }
+
+    /**
+     * 帖子只读摘要（F-SOC-001 通知读时组装用）：跨上下文出参必须留在 application 包
+     * （守护测试 G4 禁止 notification 引 forum 的 domain / web 类型），故不复用 {@code Post} 聚合。
+     * 已删除的帖子不出现在结果中，由调用方决定回落文案。
+     */
+    public record PostBrief(String title) {
+    }
+
+    /** 楼层只读摘要（同上）：postId 与 floorNo 供通知条目跳转定位 */
+    public record ReplyBrief(Long postId, int floorNo) {
+    }
 }

@@ -2,20 +2,20 @@
 
 | 文档信息 | 内容 |
 |---------|------|
-| 版本 | v1.8 |
+| 版本 | v1.9 |
 | 状态 | 已归档（**快照**，接口契约变更后须再生成，见 §2） |
 | 维护人 | 技术负责人（发起人兼任） |
-| 最后更新 | 2026-09-13 |
+| 最后更新 | 2026-09-14 |
 | 对应行动项 | [设计门纪要](../../评审/设计门纪要.md) **A3-4**：补归档 OpenAPI 快照，或补 2~3 个主链路接口请求/响应结构（**两个备选项本文都做**） |
-| 变更登记 | [CR-019](../../变更日志/变更台账.md#cr-019)（首次归档）· [CR-021](../../变更日志/变更台账.md#cr-021)（修复 N-1 / N-2 / N-3 后**再生成**：契约新增错误响应与 bearerAuth 声明）· [CR-022](../../变更日志/变更台账.md#cr-022)（Sprint 2 MVP 新增 6 个论坛端点后**再生成**：6 → **12** 端点）· [CR-028](../../变更日志/变更台账.md#cr-028)（**N-4 闭环后**再生成：`bearerAuth` 描述据实改写，**端点 / schema 数一字未变**）· [CR-031](../../变更日志/变更台账.md#cr-031)（**路径级鉴权落地后再生成**：`bearerAuth` 描述随框架拦截据实改写，**端点 / schema / `security` 声明仍未变**）· [CR-043](../../变更日志/变更台账.md)（**采纳最佳答案落地后再生成**：新增 `POST /posts/{id}/accept` 与 `AcceptReplyCommand` schema，12 → **13** 端点）· [CR-048](../../变更日志/变更台账.md)（**点赞收藏落地后再生成**：新增 4 端点与 `InteractionResult` schema，13 → **17** 端点）· [CR-049](../../变更日志/变更台账.md)（**站内搜索落地后再生成**：新增公开端点 `GET /posts/search`，17 → **18** 端点，**schema 数未变**） |
+| 变更登记 | [CR-019](../../变更日志/变更台账.md#cr-019)（首次归档）· [CR-021](../../变更日志/变更台账.md#cr-021)（修复 N-1 / N-2 / N-3 后**再生成**：契约新增错误响应与 bearerAuth 声明）· [CR-022](../../变更日志/变更台账.md#cr-022)（Sprint 2 MVP 新增 6 个论坛端点后**再生成**：6 → **12** 端点）· [CR-028](../../变更日志/变更台账.md#cr-028)（**N-4 闭环后**再生成：`bearerAuth` 描述据实改写，**端点 / schema 数一字未变**）· [CR-031](../../变更日志/变更台账.md#cr-031)（**路径级鉴权落地后再生成**：`bearerAuth` 描述随框架拦截据实改写，**端点 / schema / `security` 声明仍未变**）· [CR-043](../../变更日志/变更台账.md)（**采纳最佳答案落地后再生成**：新增 `POST /posts/{id}/accept` 与 `AcceptReplyCommand` schema，12 → **13** 端点）· [CR-048](../../变更日志/变更台账.md)（**点赞收藏落地后再生成**：新增 4 端点与 `InteractionResult` schema，13 → **17** 端点）· [CR-049](../../变更日志/变更台账.md)（**站内搜索落地后再生成**：新增公开端点 `GET /posts/search`，17 → **18** 端点，**schema 数未变**）· [CR-050](../../变更日志/变更台账.md)（**通知中心落地后再生成**：新建 `module/notification` 上下文，新增 3 个受保护端点与 7 个 schema，18 → **21** 操作 / 33 → **40** schema；⚠️ 本次 diff **非纯新增**，另有 1 处 springdoc 的 `operationId` 重编号，见 §2） |
 | 关联记录 | [技术方案](../技术方案.md) §5 接口契约 · [PRD](../../需求/产品需求文档.md) F-ACC-004 · [Sprint 1 计划](../../开发/Sprint1计划.md) · [Sprint 2 计划](../../开发/Sprint2计划.md) · [Sprint 2 增量设计](../../开发/Sprint2增量设计.md) |
 
 ## 1. 这份文件是什么、不是什么
 
 - **是**：`openapi.json` —— 由 springdoc 从**运行中的后端**导出的一次**冻结快照**，用于设计门归档与"文档 vs 实现"的差异比对；
 - **不是**手写的接口规范：契约的权威来源永远是运行中的服务（`GET /api/docs`，Swagger UI 在 `/api/docs/swagger-ui.html`）。本文与快照一旦落后于代码，以代码为准并**立即再生成**；
-- **覆盖范围是**已实现的 **18 个端点**（账号 6 + 论坛 12），不得读成"全部接口契约已归档"——[技术方案](../技术方案.md) §5 接口表中仍有多行属后续 Sprint 计划项（逐条差异见 §5）。因此技术方案文末检查清单第 3 项"接口契约**完整**"**仍不勾选**；
-- **自 [CR-021](../../变更日志/变更台账.md#cr-021) 起，快照也表达错误响应与鉴权**：每个操作都声明了 4xx / 5xx 及错误体 schema `ApiError`，`components.securitySchemes.bearerAuth` 已定义，**9 个**受保护操作带 `security`（`users/me`、`admin/roster/import`、`POST /posts`、`POST /posts/{postId}/replies`、`POST /posts/{id}/accept`、点赞 ×2、收藏、`favorites/mine`）。**N-4 的"漏写鉴权静默变公开"缺口已由 [CR-028](../../变更日志/变更台账.md#cr-028) 闭环**（统一入口 `CurrentUser` + `ArchitectureGuardTest` 机器校验）；**路径级拦截已由 [CR-031](../../变更日志/变更台账.md#cr-031) 落地**（`SecurityConfig` 去 `permitAll()`，按端点注解裁决，见 §6.2），另有 4 类事实快照表达不了（§6）——读快照前必须先看 §6；
+- **覆盖范围是**已实现的 **21 个端点**（19 条路径，本文口径为"**一个 operation 计一个端点**"，故路径数与端点数本就不同：`/api/v1/posts` 与 `/api/v1/posts/{postId}/replies` 各含 GET + POST），账号 6 + 论坛 12 + **通知 3**，不得读成"全部接口契约已归档"——[技术方案](../技术方案.md) §5 接口表中仍有多行属后续 Sprint 计划项（逐条差异见 §5）。因此技术方案文末检查清单第 3 项"接口契约**完整**"**仍不勾选**；
+- **自 [CR-021](../../变更日志/变更台账.md#cr-021) 起，快照也表达错误响应与鉴权**：每个操作都声明了 4xx / 5xx 及错误体 schema `ApiError`，`components.securitySchemes.bearerAuth` 已定义，**12 个**受保护操作带 `security`（`users/me`、`admin/roster/import`、`POST /posts`、`POST /posts/{postId}/replies`、`POST /posts/{id}/accept`、点赞 ×2、收藏、`favorites/mine`、**通知 ×3**（列表 / 未读数 / 全部已读，[CR-050](../../变更日志/变更台账.md) —— 前三个不属于账号或论坛上下文的受保护端点）。**N-4 的"漏写鉴权静默变公开"缺口已由 [CR-028](../../变更日志/变更台账.md#cr-028) 闭环**（统一入口 `CurrentUser` + `ArchitectureGuardTest` 机器校验）；**路径级拦截已由 [CR-031](../../变更日志/变更台账.md#cr-031) 落地**（`SecurityConfig` 去 `permitAll()`，按端点注解裁决，见 §6.2），另有 4 类事实快照表达不了（§6）——读快照前必须先看 §6；
 - **不留多份历史副本**：本目录只有一个当前快照，历史版本由 git 承担（[CR-008](../../变更日志/变更台账.md#cr-008) 的教训——不该用 zip / 副本替代 git 历史）。
 
 ## 2. 快照来源与再生成
@@ -23,15 +23,15 @@
 | 项 | 值 |
 |---|---|
 | 首次归档 | 2026-09-11（[CR-019](../../变更日志/变更台账.md#cr-019)，源提交 `68d40ae`，6 端点 / 13 schema） |
-| **本次生成时间** | **2026-09-13 22:57**（[CR-049](../../变更日志/变更台账.md) 站内搜索落地后**再生成**：新增 1 个公开端点，17 → **18** 端点；**schema 数未变**，仍 33——搜索复用既有 `ApiResponsePageVoPostSummaryVo`） |
-| **代码来源** | ⚠️ **未提交的工作区**（`HEAD` = `c510493`，即 CR-048）。**"提交后核对"须在 CR-049 代码提交后按 §2 方法补做**（与 v1.3 / v1.5 / v1.7 同例）。方法学备注：本次快照直接自本机 **8088** 端口实例抓取，`servers` 天然即 `http://localhost:8088`，**无需回写**（v1.6 / v1.7 因 8088 被旧栈占用而改抓 8093 / 8094 并回写，本次无此问题）；与 `HEAD` 快照脚本比对，差异**恰为**新增 path `/api/v1/posts/search` 一处，**零删除、零 schema 增删、`security` 声明未变**，无意外漂移 |
+| **本次生成时间** | **2026-09-14 22:46**（[CR-050](../../变更日志/变更台账.md) 通知中心落地后**再生成**：新增 3 个受保护端点，18 → **21** 操作；**schema 33 → 40**（新增 7 个：`NotificationVo` / `PageVoNotificationVo` / `UnreadCountResult` / `MarkAllReadResult` + 对应 `ApiResponse*` 外壳 3 个）；**tag 7 → 8**（新增 `notification`）；受保护操作 **9 → 12**） |
+| **代码来源** | ⚠️ **未提交的工作区**（`HEAD` = `5cdcf93`，即 CR-049）。**"提交后核对"须在 CR-050 代码提交后按 §2 方法补做**（与 v1.3 / v1.5 / v1.7 同例）。方法学备注：本次快照直接自本机 **8088** 端口实例抓取（`APP_ROSTER_BYPASS=false` 的重启实例，注册链路走真实名册表），`servers` 天然即 `http://localhost:8088`，**无需回写**；⚠️ 抓取须用 **`http://localhost:8088/api/docs`** 而非 `127.0.0.1`——springdoc 会把 `servers` 回显成请求 Host，那是**抓取方式**差异、不是契约差异（v1.8.1 已记过一次） |
 | 后端地址 | `http://localhost:8088`（开发端口，[CR-012](../../变更日志/变更台账.md#cr-012)）——快照 `servers` 字段即此值，**部署形态（ADR-011）确定后须重生成** |
 | 生成方 | springdoc-openapi 3.1.0（`springdoc-openapi-starter-webmvc-ui`） |
 | 规范版本 | OpenAPI **3.1.0**；`info.title` = `Campus-Link API`，`info.version` = `0.1.0`（未随 Sprint 递增，见 §7 遗留） |
-| 规模 | **7 个 tag** / **18 个端点** / **33 个 schema**（v1.7 为 17 端点 / 33 schema）。v1.8 **无新增 schema**：搜索出参复用既有 `ApiResponsePageVoPostSummaryVo`。⚠️ **顺带修正一处陈旧事实**：tag 数自 [CR-048](../../变更日志/变更台账.md) 新增 `favorite` tag 起实际为 **7**（`board` / `favorite` / `admin-roster` / `auth` / `user` / `post` / `reply`），而 v1.7 / v1.5 / v1.4 / v1.3 的本文一直写"6 个 tag"——本次按快照实际值更正，**快照文件本身从未因此变动** |
+| 规模 | **8 个 tag** / **21 个端点**（19 条路径）/ **40 个 schema**（v1.8 为 7 tag / 18 端点 / 33 schema）；文件 **52003 → 59977 字节**。tag 清单：`admin-roster` / `auth` / `board` / `favorite` / **`notification`**（本次新增）/ `post` / `reply` / `user` |
 | 落盘处理 | 原始响应单行压缩 → 按 2 空格缩进格式化。**键序保持 springdoc 原序，未排序、未删改任何字段**；本次 `servers` **无需回写**（直接抓 8088） |
 | 可复现性 | 格式化方法与历次一致（`json.dumps(ensure_ascii=False, indent=2)` + 尾部换行），`git diff` 仍可作为契约变更的可靠信号 |
-| 本次 diff 性质 | **纯新增、零删改**：`git diff` **98 行新增 / 0 行删除**，内容恰为一个新 path `/api/v1/posts/search`（5 个 query 参数 + 4 个响应分支）。无任何既有端点、字段、类型、`security` 声明被改动 |
+| 本次 diff 性质 | ⚠️ **非纯新增**：`git diff --numstat` **322 行新增 / 1 行删除**。删除行不像 v1.4 / v1.5 那样是一次文案改写（那两次也是 1 增 1 删），而是**历次再生成里第一次动到某个既有端点自身的内容**——`GET /api/v1/boards` 的 `operationId` 由 **`list_2` → `list_3`**。根因：springdoc 默认生成器按"**方法名 + 同名出现次序**"编号，`list` 这个方法名现在被 4 个 Controller 共用（`PostController` / `ReplyController` / **`NotificationController`（本次新增）** / `BoardController`），新操作插在中间把 boards 的序号顶后一位（`GET /notifications` 取到 `list_2`）。**判定：生成器编号漂移，不是契约变化**——该端点的路径 / 方法 / 入参 / 出参 / `security` 全部未变，且前端 `src/api/*` 为**手写**、项目无 openapi 代码生成环节，故**无破坏性**。**但如实登记这条纪律**：`git diff` 出现删除行即须逐行看清并给出判定，**不能默认"多了几个端点而已"**；其余 322 行新增恰为 3 个通知端点与 7 个 schema，无其他既有字段被改动 |
 
 **再生成命令**（在仓库根目录执行；先按 `AGENTS.md`"常用命令"起栈：本机 MySQL / Redis + `mvn spring-boot:run`）：
 
@@ -43,7 +43,7 @@ git diff --stat openapi.json   # 非空即契约有变更，须同步技术方�
 
 **再生成触发点**（已写入 `AGENTS.md`）：① 新增 / 修改端点或请求响应模型后；② 每个 Sprint 收尾；③ 部署形态确定后（`servers` 会变）；④ ~~N-1 / N-2 修复后~~ **已完成**（[CR-021](../../变更日志/变更台账.md#cr-021)）；⑤ 改了 `common/result/ResultCode` 的错误码、提示语或 `getHttpStatus()` 映射后——契约里的状态码与 description 全部由它派生，改它即改契约；⑥ ~~`SecurityConfig` 从 `permitAll()` 改为真正按路径授权后~~ **已完成**（[CR-031](../../变更日志/变更台账.md#cr-031)，2026-09-12 再生成：`security` 声明未变，`bearerAuth` 描述已写明"框架按端点注解裁决、未登录由过滤器链产出 401 / 4001"）；⑦ ~~Sprint 2 MVP 的 6 个论坛端点合入前~~ **已完成**（[CR-022](../../变更日志/变更台账.md#cr-022)，2026-09-12 再生成）；⑧ 增删端点的 `@PublicEndpoint` / `@SecurityRequirement` 声明、或改动 `common/web/CurrentUser` 鉴权入口语义后（[CR-028](../../变更日志/变更台账.md#cr-028) 起该纪律由 `ArchitectureGuardTest` 机器校验，但**快照的 `security` 声明不会自动跟随**，仍须重抓）；⑨ ~~N-4 闭环后复核 `bearerAuth` 描述~~ **已完成**（[CR-028](../../变更日志/变更台账.md#cr-028)，2026-09-12 再生成，diff 仅 1 行文案）。**新增**：⑩ 改动 `security/EndpointAuthorizationManager` 的裁决口径（如 fail-closed 范围、非 module 处理器放行规则）后——**运行时行为变了而契约描述可能落后**，须重抓并核对 `bearerAuth` 描述。**其中 ① 是高频触发点**：Sprint 2 起每次加端点都要重抓一次，`git diff` 非空即须同步本文 §3 / §4 与技术方案 §5。
 
-## 3. 端点清单（快照实际覆盖的 18 个）
+## 3. 端点清单（快照实际覆盖的 21 个）
 
 ### 3.1 账号上下文（`module/account`，6 个，Sprint 1）
 
@@ -77,6 +77,18 @@ git diff --stat openapi.json   # 非空即契约有变更，须同步技术方�
 >
 > ⚠️ **`accepted` 而非 `isAccepted`**：[增量设计](../../开发/Sprint2增量设计.md) §3.4 写的字段名是 `isAccepted`，**落码实际为 `accepted`**（Java record 组件名 `accepted` → Jackson 序列化即 `accepted`，无 `is` 前缀）。**以快照为准**，前端已按 `accepted` 对接；设计文档已同步修正（[增量设计](../../开发/Sprint2增量设计.md) §8 的 P-1）。
 
+### 3.3 通知上下文（`module/notification`，3 个，[CR-050](../../变更日志/变更台账.md) / F-SOC-001）
+
+| 方法 | 路径 | tag | 摘要 | 请求体 | `data` 类型 | **快照声明的鉴权** | **运行时实际强制方式**（见 N-4） |
+|------|------|-----|------|--------|------------|------------------|--------------------------------|
+| GET | `/api/v1/notifications?unread=&page=&size=` | notification | 我的通知列表，按 `created_at DESC` 分页；`unread` **三态**：缺省=不限、`true`=只未读、`false`=只已读（`page` 默认 1、`size` 默认 20） | — | `PageVo<NotificationVo>` | **`security: bearerAuth`** | **框架层前置拦截 → 匿名 `401 / 4001`**（§4.7 实测）；业务层 `CurrentUser.requireId(authentication)` 同码兜底。⚠️ **`unread` 非数字（如 `maybe`）在匿名时仍是 `401`**（框架先于 Bean Validation），登录后才 `400 / 1001` |
+| GET | `/api/v1/notifications/unread-count` | notification | 未读通知数（顶栏铃铛角标；前端 30s 轮询 + 路由切换补读，**无实时推送**） | — | `UnreadCountResult{unreadCount}` | **`security: bearerAuth`** | 同上（框架层 + `CurrentUser.requireId`） |
+| PUT | `/api/v1/notifications/read-all` | notification | 全部标记已读；`updated` 为**本次新标记**的条数，无未读时为 `0`（**幂等**，§4.7 实测连打两次为 `1` → `0`） | — | `MarkAllReadResult{updated}` | **`security: bearerAuth`** | 同上。**只有"全部已读"，没有"单条已读"**——点进某条通知不会把它自己标为已读（[技术方案](../技术方案.md) §5 已如实登记） |
+
+> ⚠️ **`NotificationVo` 的三个可空字段在前端是"可选属性"，不是"值为 null 的属性"**：`postId` / `postTitle` / `floorNo` 由服务端**读时组装**（跨上下文调 `module/account` 取昵称、调 `module/forum` 取标题与楼层号），目标帖已删时 `postId` / `postTitle` 为 `null`、`floorNo` 仅楼层类通知有值。而后端全局 `spring.jackson.default-property-inclusion: non_null`（`application.yml`）会把 `null` 字段**从 JSON 里整个删掉**，所以前端拿到的是 `undefined`。⚠️ **由此产生过一个真实缺陷**：`NotificationsView.vue` 原判空写作 `n.postId === null`、`n.floorNo !== null`，两条都恒不成立，导致帖级通知渲染出「#undefined 楼」、点进去跳 `/post/undefined`——CR-050 真机走查发现并改为真值判断（`if (!n.postId)` / `v-if="n.floorNo"`），类型声明同步改为可选（`postId?: number`）。**这条口径对所有接口通用**：判空一律用真值判断，`=== null` 在带 `non_null` 的响应上不可靠；快照里 `NotificationVo` 仍把这三个字段列在 `properties` 下且**不带 `required`**，与"可能不出现"一致。
+>
+> **`type` 取值**：`reply` / `like` / `favorite` / `accept` 四类**已实现并会真的产出**；V1 迁移还留有一个 `quote`（引用回复）取值，但**引用回复从未建模，通知侧也不产出**（与 [技术方案](../技术方案.md) §5 的 `quote` 未产出说明一致）。`targetType` 为 `POST` / `REPLY`，`targetId` 指向楼层或帖子本身——**跳转用 `postId`，定位用 `?floor=<targetId>`（仅 `targetType=REPLY`）**。
+
 **快照中各端点声明的非 200 响应**（description 为 `提示语（错误码）`，由 `ResultCode` 派生；下表为本次抓取的实际内容）：
 
 | 端点 | 声明的状态码 | description（错误码） |
@@ -99,6 +111,9 @@ git diff --stat openapi.json   # 非空即契约有变更，须同步技术方�
 | `POST /posts/{id}/favorite` | 400 / 401 / 404 / 500 | 400：`1001`；401：`4001`；404：`3001` |
 | `POST /posts/{postId}/replies/{replyId}/like` | 400 / 401 / 404 / 500 | 400：`1001`；401：`4001`；404：`3001`（帖子或楼层不存在，防探测统一提示） |
 | `GET /favorites/mine` | 400 / 401 / 500 | 400：`1001`；401：`4001` |
+| `GET /notifications` | 400 / 401 / 500 | 400：`1001`（`unread` 非布尔、`page`·`size` 非数字）；401：`4001`。⚠️ **越界不报错、口径与 `GET /posts/search` 一致**（§4.7 实测）：`page=99` → 200 且 `list` 空、`total` 照常、`page` 原样回显；`page=0` 归一为 1；`size=999` 归一为 100 |
+| `GET /notifications/unread-count` | 401 / 500 | 401：`4001`（无入参，`1001` 无用武之地；`9999` 自动补） |
+| `PUT /notifications/read-all` | 401 / 500 | 401：`4001`（同上）。**没有"资源不存在"支**：全部已读对零条通知也是 200 / `updated: 0` |
 
 > ✅ **N-4 的"漏写鉴权静默变公开"缺口已由 [CR-028](../../变更日志/变更台账.md#cr-028) 闭环，路径级拦截已由 [CR-031](../../变更日志/变更台账.md#cr-031) 补齐**。机制是**三层**：① **统一入口** `common/web/CurrentUser`（`requireId` / `requireRole`，未登录 `401 / 4001`、权限不足 `403 / 4002`）——上表第 8 列的强制逻辑全部收敛到它；② **显式声明锚点** `common/web/PublicEndpoint`（公开）与 `@SecurityRequirement`（受保护）二选一，由 `ArchitectureGuardTest` **机器校验**两条纪律：**每个** HTTP 映射方法必须且只能声明其一（漏写即测试失败）· **凡**声明 `@SecurityRequirement` 的方法必须真的调用 `CurrentUser`（只声明不调用同样失败）——因此"新增端点忘了加鉴权"不再是静默的；③ **框架层（[CR-031](../../变更日志/变更台账.md#cr-031) 起）**：`config/SecurityConfig` 已去掉 `anyRequest().permitAll()`，改由 `security/EndpointAuthorizationManager` **按同一批注解裁决**（`@PublicEndpoint` 放行、`@SecurityRequirement` 要求已登录、`com.campuslink.module.*` 端点两者都没标即 fail-closed），匿名请求在**进入业务代码前**即被过滤器链内的 `security/ApiErrorSecurityHandler` 拒为 `401 / 4001`。
 >
@@ -362,6 +377,69 @@ git diff --stat openapi.json   # 非空即契约有变更，须同步技术方�
 >
 > ✅ **回归面**（同批实测，均无变化）：`GET /posts` → total=14 / `created_at DESC`；`GET /boards` → 6 项；`GET /posts/13` → 详情 14 字段齐（含 [CR-048](../../变更日志/变更台账.md) 的 `likedByMe` / `favoritedByMe`）；`GET /posts/13/replies` → 200；`GET /favorites/mine` 匿名 → `401 / 4001`。前端 `/search` 已浏览器实测（宽屏顶栏搜索框 `readOnly` 已解除、`maxlength=50`、回车跳转 `/search?keyword=`；窄屏图标跳 `/search`；版块 / 时间下拉变更即重搜并把条件写回 URL；无结果态出「去提问」按钮；1 字关键词在前端先拦为「关键词至少 2 个字」不发请求）。⚠️ **目视走查未完成**：本轮内嵌浏览器视口为 `0×0`，截图与指针事件通道均不可用，故**宽屏 / 窄屏的视觉呈现只做了 DOM 结构校验、未做像素级目视**，该残留归入 [W-03](../../流程偏离记录.md) 补偿③ 的逐页走查。
 
+### 4.7 通知中心（[CR-050](../../变更日志/变更台账.md) / F-SOC-001，2026-09-14 真机实测）
+
+链路：**A 触发 → B 收通知 → B 查未读数 → B 列表分页与 `unread` 筛选 → B 全部已读**。取证环境为 `APP_ROSTER_BYPASS=false` 的真实名册链路：以 SUPERADMIN 导入名册批次 `cr050-smoke` 后注册 **小A**（`userId=25`，触发者）与 **小B**（`userId=24`，接收者），小B 是目标帖 `id=15` 的作者。以下响应体与 `traceId` 均为真实抓取值。
+
+```jsonc
+// ① 触发：A 在 B 的帖子下回帖 → HTTP 200（论坛侧顺带把通知写进 notifications，同事务）
+{ "code": 0, "message": "成功", "data": { "id": 19, "floorNo": 4 }, "traceId": "ce43a647d18c" }
+
+// ② 触发：A 收藏 B 的帖子 —— 但 A 此前已收藏，本次 POST 是 **toggle 取消**（active:false）
+//    因此**不产生** favorite 通知：这正是"取消交互不发通知"的复测证据
+{ "code": 0, "message": "成功", "data": { "active": false, "count": 0 }, "traceId": "a8a5256db45d" }
+
+// ③ B GET /notifications/unread-count → 只有 ① 这一条未读
+{ "code": 0, "message": "成功", "data": { "unreadCount": 1 }, "traceId": "174724328b74" }
+
+// ④ B GET /notifications?page=1&size=2 → 读时组装出昵称 / 标题 / 楼层号
+{ "code": 0, "message": "成功", "data": { "list": [
+    { "id": 9, "type": "reply", "actorId": 25, "actorNickname": "小A", "targetType": "REPLY", "targetId": 19,
+      "postId": 15, "postTitle": "CR050 通知冒烟帖", "floorNo": 4, "read": false,
+      "createdAt": "2026-09-14T23:06:34Z" },            // ← ⚠️ 时区缺陷见下方注记
+    { "id": 8, "type": "like", "actorId": 25, "actorNickname": "小A", "targetType": "POST", "targetId": 15,
+      "postId": 15, "postTitle": "CR050 通知冒烟帖", "read": true,
+      "createdAt": "2026-09-14T22:47:34Z" } ],
+  "total": 8, "page": 1, "size": 2 }, "traceId": "14c9ec9413a8" }
+// 注意第 2 条是**帖子级**点赞通知，JSON 里**根本没有 floorNo 这个键**（不是 "floorNo": null）——见下方 non_null 注记
+
+// ⑤ B GET /notifications?unread=true&page=1&size=2 → 只回未读
+{ "code": 0, "message": "成功", "data": { "list": [ { "id": 9, "type": "reply", "read": false, "…": "…" } ],
+  "total": 1, "page": 1, "size": 2 }, "traceId": "d51d1f91eeb1" }
+
+// ⑥ B GET /notifications?unread=false&page=1&size=1 → 只回已读，与 ⑤ 互补（1 + 7 = 8 = total）
+{ "code": 0, "message": "成功", "data": { "list": [ { "id": 8, "type": "like", "read": true, "…": "…" } ],
+  "total": 7, "page": 1, "size": 1 }, "traceId": "8ddbd46ee96e" }
+
+// ⑦ B PUT /notifications/read-all → updated 是本次新标记条数
+{ "code": 0, "message": "成功", "data": { "updated": 1 }, "traceId": "173bf2efd1a0" }
+// ⑧ 再打一次（幂等，不报错、不重复计数）
+{ "code": 0, "message": "成功", "data": { "updated": 0 }, "traceId": "68a8ffe50978" }
+// ⑨ 未读数归零
+{ "code": 0, "message": "成功", "data": { "unreadCount": 0 }, "traceId": "f74e5990399f" }
+
+// ⑩⑪⑫ 三个端点匿名访问 → 一律 HTTP 401 / 4001（框架层在进入业务代码前拦截）
+{ "code": 4001, "message": "未登录", "traceId": "888c2123f3b6" }   // GET /notifications
+{ "code": 4001, "message": "未登录", "traceId": "fb3d27388803" }   // GET /notifications/unread-count
+{ "code": 4001, "message": "未登录", "traceId": "d6c3a4083a31" }   // PUT /notifications/read-all
+
+// ⑬ 受保护端点 + 非法入参 + 匿名：unread=maybe → 仍是 401（框架先于参数绑定，CR-031 的既有口径）
+{ "code": 4001, "message": "未登录", "traceId": "ced22da1b269" }
+// ⑭ 同一请求带合法 token → 才落 400 / 1001
+{ "code": 1001, "message": "参数错误", "traceId": "d92d2f9586b0" }
+```
+
+> 🔍 **两处"只有真机才暴露"的缺陷，本次已修**（单测全绿期间它们一直存在）：
+>
+> | 缺陷 | 表现 | 根因 | 处置 |
+> |------|------|------|------|
+> | **`unread` 筛选语义反了** | `unread=true` 返回**已读**、`unread=false` 返回**未读**（实测：3 条未读时 `unread=true` 的 `total=0`；全部已读后反而 `total=3`） | 入参叫 `unread`（"只看未读"）、列叫 `is_read`，**语义相反**，适配器却直接 `.eq(is_read, unread)` | `NotificationRepositoryImpl.findPage` 改为 `!unread`（`unread == null` 时不加条件）；**新增适配层测试** `NotificationRepositoryImplFilterTest` 3 例——从捕获的 `QueryWrapper` 里正则取出 `is_read = #{ew.paramNameValuePairs.MPGENVALx}` 的绑定值断言（`true→false` / `false→true` / `null→该列根本不出现在 SQL 段`）。⚠️ **为何必须新增**：应用层是 Mockito 打桩的 service 测试，**结构上看不见适配器的列语义**，这类缺陷只能靠"捕 SQL 参数"的适配层测试或真机兜住 |
+> | **前端把可空字段当 `null` 判** | 帖级通知渲染出「**#undefined 楼**」、点进去跳 `/post/undefined` | 全局 `default-property-inclusion: non_null` 把 `null` 字段**从 JSON 删掉**，前端拿到 `undefined`，而代码写的是 `n.postId === null` / `n.floorNo !== null` | 类型改为可选属性（`postId?: number` / `floorNo?: number`），判空改真值判断（`if (!n.postId)` / `v-if="n.floorNo"`）。**这条对所有接口通用**，已在 §3.3 写成口径 |
+>
+> ⚠️ **一处本次发现、未修的缺陷（属既有链路，非 CR-050 引入）**：上面 ④ 的 `createdAt` 是 **`2026-09-14T23:06:34Z`，而真实 UTC 时刻约 `15:06Z`**——写侧由 MySQL 填（V1 迁移各表均 `created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP`，Java 侧不传值），存进去的是**服务器本地墙钟 +08:00**；读侧 JDBC URL 带 **`serverTimezone=UTC`**（`application.yml` 第 17 行），驱动把同一串数字**当 UTC** 读成 `Instant`，于是序列化出的 `Z` 值整体**偏 +8 小时**。表现：帖子详情显示"**发布于 2026-09-15 06:38**"（未来时间）、35 分钟前的内容显示"刚刚"、约 24 小时前的显示"16 小时前"。**Sprint 2 起影响全部时间戳**，通知中心只是把它照出来了。本次**不改**（根因在数据源与时区口径、跨所有读写链路，改法要先定"库里到底存 UTC 还是存本地"这一决策并可能重写历史行），已登记为问题台账条目与 [CR-051](../../变更日志/变更台账.md) 候选。
+>
+> ✅ **回归面**（同批实测，均无变化）：`GET /posts`、`GET /boards`、`GET /posts/15`、`GET /posts/15/replies` 形状不变（`GET /boards` 仅 `operationId` 由 `list_2` → `list_3`，见 §2）；点赞 / 收藏 / 采纳三条触发链在 CR-050 挂点后仍各自 200；**自触发不发**（自己赞自己的帖，`notifications` 行数不变）、**toggle 取消不发**（② 即为证据）。前端 `/notifications` 已浏览器实测（顶栏铃铛角标读数 → 列表 → 「全部 / 未读」切换 → 点楼层类通知跳 `/post/15?floor=<replyId>` 并高亮 → 「全部已读」后角标消失），⚠️ **目视走查仍受限于 `0×0` 视口**：本轮用 DOM 结构 + `getComputedStyle` + `scrollY` 取证（高亮类 `bg-primary-soft` 命中、滚动到 `scrollY=834`），**像素级视觉未验**，归 [W-03](../../流程偏离记录.md) 补偿③。
+
 ## 5. 与技术方案 §5 接口表的逐条差异
 
 | 类别 | 端点 | 处置 |
@@ -369,8 +447,8 @@ git diff --stat openapi.json   # 非空即契约有变更，须同步技术方�
 | **§5 已列且已实现（账号 5 行）** | `POST /auth/verify-student`、`POST /auth/captcha`、`POST /auth/register`、`POST /auth/login`、`POST /admin/roster/import` | 无需动作 |
 | **§5 未列、已补入并实现** | `GET /api/v1/users/me`（[CR-019](../../变更日志/变更台账.md#cr-019) 补入）、`GET /api/v1/boards`、`GET /api/v1/posts/{postId}/replies`（[CR-022](../../变更日志/变更台账.md#cr-022) 的 MVP 范围新增，**§5 原表没有这两行**） | ✅ 技术方案 §5 已同步补入这两行 |
 | **本次由"计划项"转为"已实现"（MVP 子集）** | `GET /posts`（**仅全站最新 / 版块内时间序，无 `sort=hot`**）、`POST /posts`（**无标签**）、`GET /posts/{id}`（**无 DELETE**）、`POST /posts/{id}/replies`（**无 `quotedReplyId`**） | 技术方案 §5 已标注"已实现（MVP 子集）"与未实现部分 |
-| **§5 已列但仍未实现**（后续 Sprint） | `GET /boards/{code}/posts`（**已由 `GET /posts?boardCode=` 替代**，不是缺口）、`sort=hot` 与 `hot_score`（ADR-006 定时任务）、`DELETE /posts/{id}`、`PUT /posts/{id}/accepted-reply`、**toggle 版点赞 / 收藏已由 [CR-048](../../变更日志/变更台账.md) 实现并取代**（原列的 `POST\|DELETE` 双方法语义收敛为单一 POST toggle）、`GET\|PUT /notifications`、~~`GET /search`~~ **站内搜索已由 [CR-049](../../变更日志/变更台账.md) 实现，落点为 `GET /posts/search`**（**仅标题 + 标签**；正文全文检索 = F-FORUM-009，仍属 P1 未实现）、`POST /reports`、`/admin/...` 处置台与工单 | 契约尚未设计；各 Sprint 开工前补 §5 并在实现后重生成快照（对应 [sprint-2.md](../../开发/Sprint2计划.md) §1 的 OUT 清单） |
-| **§5 有约定但快照无对应表达** | 时间 ISO 8601 UTC、错误码**分段规则**（分页口径已随本次同步为 `page/size`，不再是差异） | **错误码自 [CR-021](../../变更日志/变更台账.md#cr-021) 起部分可见**：具体码与提示语出现在各响应的 description 里（§3 的非 200 表），但"1xxx 通用 / 2xxx 账号 / 21xx 学籍 …"这一**分段规则**OpenAPI 表达不了，仍须读技术方案 §5 |
+| **§5 已列但仍未实现**（后续 Sprint） | `GET /boards/{code}/posts`（**已由 `GET /posts?boardCode=` 替代**，不是缺口）、`sort=hot` 与 `hot_score`（ADR-006 定时任务）、`DELETE /posts/{id}`、`PUT /posts/{id}/accepted-reply`、**toggle 版点赞 / 收藏已由 [CR-048](../../变更日志/变更台账.md) 实现并取代**（原列的 `POST\|DELETE` 双方法语义收敛为单一 POST toggle）、`GET\|PUT /notifications` **通知已由 [CR-050](../../变更日志/变更台账.md) 实现，落点为 `GET /notifications?unread=&page=&size=` + `GET /notifications/unread-count` + `PUT /notifications/read-all`**（原计划的 `PUT /notifications` 由 `read-all` **取代**、不留作缺口；**单条已读未实现**，`quote` 类通知不产出）、~~`GET /search`~~ **站内搜索已由 [CR-049](../../变更日志/变更台账.md) 实现，落点为 `GET /posts/search`**（**仅标题 + 标签**；正文全文检索 = F-FORUM-009，仍属 P1 未实现）、`POST /reports`、`/admin/...` 处置台与工单 | 契约尚未设计；各 Sprint 开工前补 §5 并在实现后重生成快照（对应 [sprint-2.md](../../开发/Sprint2计划.md) §1 的 OUT 清单） |
+| **§5 有约定但快照无对应表达** | 时间 ISO 8601 UTC、错误码**分段规则**（分页口径已随本次同步为 `page/size`，不再是差异） | **错误码自 [CR-021](../../变更日志/变更台账.md#cr-021) 起部分可见**：具体码与提示语出现在各响应的 description 里（§3 的非 200 表），但"1xxx 通用 / 2xxx 账号 / 21xx 学籍 …"这一**分段规则**OpenAPI 表达不了，仍须读技术方案 §5。⚠️ **时间这一项现在不只是"快照表达不了"，而是"实现与约定相反"**：字段类型确为 `string` + `format: date-time`、后缀 `Z`，**但值带 +8 小时偏移**（JDBC `serverTimezone=UTC` vs MySQL 写本地墙钟），故**读快照不得把 `Z` 当作真 UTC**，实测取证见 §4.7 的时区注记 |
 
 ## 6. 快照的已知缺口与表达极限（读快照前必须知道）
 
@@ -397,7 +475,7 @@ git diff --stat openapi.json   # 非空即契约有变更，须同步技术方�
 | 内容 | 为什么表达不了 | 读者该看哪里 |
 |------|--------------|------------|
 | 错误码语义 | `2101` 三态同码同提示的**防名册枚举**约定（PRD F-ACC-004）在 OpenAPI 里没有对应结构，只体现在 §4.1 的实测响应里 | [技术方案](../技术方案.md) §5 与 [PRD](../../需求/产品需求文档.md) |
-| 统一响应外壳是逐端点展开的 | 快照里是 `ApiResponseAuthResponse`、`ApiResponseUserVo` 等 **12 个具体类型**（⚠️ 本次更正：[CR-048](../../变更日志/变更台账.md) 新增 `ApiResponseInteractionResult` 后即为 12，v1.7 的本文仍写 11；[CR-049](../../变更日志/变更台账.md) 的搜索端点**未新增**——复用 `ApiResponsePageVoPostSummaryVo`），没有 `ApiResponse<T>` 泛型表达；改外壳字段会同时改动这 12 个 schema | 读 diff 时注意"一处改动、多处变化" |
+| 统一响应外壳是逐端点展开的 | 快照里是 `ApiResponseAuthResponse`、`ApiResponseUserVo` 等 **15 个具体类型**（⚠️ 本次更正：[CR-048](../../变更日志/变更台账.md) 新增 `ApiResponseInteractionResult` 后即为 12，v1.7 的本文仍写 11；[CR-049](../../变更日志/变更台账.md) 的搜索端点**未新增**——复用 `ApiResponsePageVoPostSummaryVo`；[CR-050](../../变更日志/变更台账.md) 通知中心 +3 → 现为 **15**：`ApiResponsePageVoNotificationVo` / `ApiResponseUnreadCountResult` / `ApiResponseMarkAllReadResult`），没有 `ApiResponse<T>` 泛型表达；改外壳字段会同时改动这 15 个 schema | 读 diff 时注意"一处改动、多处变化" |
 | **`405`（`1002` 方法不允许）与 `404`（`1004` 无此路由）** | `OperationCustomizer` 只能修改**已注册的 operation**，而"不存在的路径"根本没有 operation，"不允许的方法"也无从挂在某个 operation 上 | §4.4 的 ④⑤ 实测响应 + `GlobalExceptionHandler` |
 | **`415`（`1003` 媒体类型不支持）** | springdoc 按 Controller 的 `consumes` 生成请求体媒体类型，不生成 415 响应分支 | §4.4 的 ③ 实测响应 |
 
@@ -405,6 +483,8 @@ git diff --stat openapi.json   # 非空即契约有变更，须同步技术方�
 
 ## 7. 变更记录
 
+- **v1.9（2026-09-14）——[CR-050](../../变更日志/变更台账.md) 通知中心落地后再生成**：新建限界上下文 `module/notification`（第三个上下文），新增 **3 个受保护端点**（`GET /notifications?unread=&page=&size=` / `GET /notifications/unread-count` / `PUT /notifications/read-all`），18 → **21** 操作（19 条路径）/ 33 → **40** schema（+7：`NotificationVo`、`PageVoNotificationVo`、`UnreadCountResult`、`MarkAllReadResult` 与 3 个 `ApiResponse*` 外壳）/ tag 7 → **8**（新增 `notification`）/ 受保护操作 9 → **12**。⚠️ **本次 diff 非纯新增**：`git diff --numstat` **322 增 / 1 删**，删除行是 `GET /api/v1/boards` 的 `operationId` **`list_2` → `list_3`**——springdoc 按"方法名 + 同名次序"编号，`NotificationController.list` 加入后把 boards 的序号顶后一位；**判定为生成器编号漂移、非契约变化、无破坏性**（该端点路径 / 方法 / 入参 / 出参 / `security` 全未变，前端 `src/api/*` 手写、无代码生成环节），但这是历次再生成**第一次动到既有端点自身内容**，纪律随之收紧为"见删除行必逐行判定"。同步范围：**§1** 覆盖 18 → 21、受保护 9 → 12；**§2** 本次来源与规模、diff 性质；**§3** 新增 **3.3 通知上下文**表（含 `unread` 三态、读时组装、**`non_null` 使可空字段在前端是"可选"而非"null"**这条通用口径）与非 200 表 3 行（分页越界口径实测）；**§4.7** 新增通知中心真机实测（触发链 + 三端点 + 幂等 + 3 条匿名 401 + 非法入参的 401 / 400 分档，全部真实 `traceId`）；**§5** 通知行由"仍未实现"改为"已实现并取代原计划 `PUT /notifications`"，并对"时间 ISO 8601 UTC"补一条**实现与约定相反**的警示；**§6.3** `ApiResponse*` 具体类型 12 → 15。**真机才暴露的两处缺陷已修**：① `GET /notifications` 的 **`unread` 筛选反义**（入参 `unread` 与列 `is_read` 语义相反，适配器直接 `.eq(is_read, unread)`），改 `!unread` 并**新增适配层测试** `NotificationRepositoryImplFilterTest` 3 例（应用层 Mockito 结构上看不见列语义）；② 前端 `n.postId === null` / `n.floorNo !== null` 在 `non_null` 下恒不成立，渲染出「#undefined 楼」并跳 `/post/undefined`，改真值判断 + 类型改可选。**发现 1 处未修缺陷（不属本次范围、Sprint 2 起即存在）**：时间戳整体偏 **+8 小时**（V1 各表 `DEFAULT CURRENT_TIMESTAMP` 写本地墙钟 + JDBC `serverTimezone=UTC` 读成 UTC），已登记为问题台账条目与 **CR-051 候选**。单测 145 → **162** 全绿。快照自本机 8088 实例（`APP_ROSTER_BYPASS=false` 重启实例）抓取，`servers` 无需回写。**遗留**：① 快照的"提交后核对"须在 CR-050 代码提交后按 §2 方法补做（与 v1.3 / v1.5 / v1.7 同例）；② `info.version` 仍为 `0.1.0`；③ **`/notifications` 页像素级目视走查未完成**（内嵌浏览器视口 `0×0`，只做了 DOM 结构 / `getComputedStyle` / `scrollY` 取证），归 [W-03](../../流程偏离记录.md) 补偿③；④ 通知**无实时推送**（30s 轮询 + 切页补读），单条已读与 `quote` 类通知未实现。
+- **v1.8.1（2026-09-13）——补记提交凭证与"提交后核对"结果，快照文件零改动**：CR-049 已提交为 `5cdcf93`；自**运行中后端**（8088 实例）重抓 `/api/docs` 并规范化后与仓库快照**逐字节一致**——v1.8 遗留的"提交后核对"就此完成，快照来源由"未提交的工作区"更正为**提交 `5cdcf93`**。**过程如实记**：首次以 `http://127.0.0.1:8088` 为 Host 抓取时，springdoc 会把 `servers` 回显为请求 Host（`http://127.0.0.1:8088`），与快照仅此一处不同；改以 `http://localhost:8088` 重抓即完全一致——这是 springdoc 回显请求 Host 的行为，**不是契约变化**，快照文件从未因此变动。
 - **v1.8（2026-09-13）——[CR-049](../../变更日志/变更台账.md) 站内搜索落地后再生成，契约纯新增**：新增**公开**端点 `GET /api/v1/posts/search`（5 个 query 参数：`keyword` 必填 2~50 字、`boardCode`、`days` 仅 7/30/90、`page`、`size`；出参复用 `PageVo<PostSummaryVo>`），17 → **18** 端点；**schema 数未变**（33）、**tag 数未变**、**`security` 声明未变**（受保护操作仍 9 个）；`git diff` **98 行新增 / 0 行删除**。本次直接自 8088 实例抓取，`servers` **无需回写**（不同于 v1.6 / v1.7 的 8093 / 8094 变通）。**再生成过程中发现并修正一处自己引入的契约瑕疵**：`@ErrorCodes` 里显式写了 `INVALID_PARAM`，而 `OpenApiErrorResponseCustomizer` 本就会自动补通用 400，导致 400 的 description 变成 `参数错误（1001）；参数错误（1001）`——已删去显式声明（只留 `NOT_FOUND`），重编译重启后重抓确认归一为单条 `参数错误（1001）`；旧快照零重复，属本次新增端点独有。并同步本文：**§1** 覆盖范围 17 → 18（论坛 11 → 12）；**§2** 换成本次来源与规模；**§3** 标题与 §3.2 表新增搜索行（含 `ngram_token_size` 决定 2 字下限的约束说明）、非 200 表新增一行；**§4.6** 新增站内搜索实测（PRD 验收主用例 + 相关度优先于时间的取证 + 校验矩阵 + 两处临时置数的还原确认 + 回归面）；**§5** `GET /search` 由"仍未实现"划掉并标注落点。**顺带更正两处陈旧计数**（均只改本文、快照文件从未因此变动）：tag 数自 CR-048 起实际为 **7**（本文自 v1.3 起一直写 6）、`ApiResponse*` 具体类型自 CR-048 起实际为 **12**（v1.7 仍写 11）。**遗留**：① 快照的"提交后核对"须在 CR-049 代码提交后按 §2 方法补做（与 v1.3 / v1.5 / v1.7 同例）；② `info.version` 仍为 `0.1.0`；③ **`tags` 侧只有 `LIKE` 兜底、无真实数据来源**（发帖链路从未建模标签，详见 §4.6 的如实说明）；④ 前端**宽屏 / 窄屏目视走查未完成**（内嵌浏览器视口 `0×0`，只做了 DOM 结构校验），归 [W-03](../../流程偏离记录.md) 补偿③。
 - **v1.7.1（2026-09-13）——补记提交凭证与"提交后核对"结果，快照文件零改动**：CR-048 已提交为 `c510493`（同批含 CR-046 / CR-047 文档）；自**运行中后端**（8094 临时端口实例，Redis 已另行启动）重抓 `/api/docs` 并按 §2 命令格式化、`servers` 归一回 `http://localhost:8088`，与仓库快照**逐字节一致**——v1.7 遗留的"提交后核对"就此完成，快照来源由"未提交的工作区"更正为**提交 `c510493`**。
 - **v1.7（2026-09-13）——[CR-048](../../变更日志/变更台账.md) 点赞收藏落地后再生成，契约纯新增 + 出参扩展**：新增 4 个受保护端点——`POST /posts/{id}/like`、`POST /posts/{id}/favorite`、`POST /posts/{postId}/replies/{replyId}/like`（三者均为 **toggle**，响应 `InteractionResult{active, count}`）与 `GET /favorites/mine`（`PageVo<PostSummaryVo>`），13 → **17** 端点 / 31 → **33** schema（新增 `InteractionResult`、`ApiResponseInteractionResult`）；两个既有 VO 扩展字段：`PostDetailVo` +`likedByMe` +`favoritedByMe`、`ReplyVo` +`likeCount` +`likedByMe`（匿名访问详情 / 楼层列表仍 200，登录态回显字段恒 false）。快照自 8094 临时端口实例抓取（8088 被旧栈占用），`servers` 回写既定值；与 v1.6 比对核对差异恰为上述内容，无意外漂移。§1 / §2 / §3.2 / 非 200 表 / §5 已同步。**遗留**：提交后核对待 CR-048 提交后补做（→ v1.7.1 已完成）；`info.version` 仍为 `0.1.0`。

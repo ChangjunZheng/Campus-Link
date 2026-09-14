@@ -11,6 +11,7 @@ import com.campuslink.module.forum.domain.model.BoardType;
 import com.campuslink.module.forum.domain.model.Post;
 import com.campuslink.module.forum.domain.model.PostStatus;
 import com.campuslink.module.forum.domain.model.Reply;
+import com.campuslink.module.notification.application.NotificationApplicationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -44,12 +45,15 @@ class ReplyApplicationServiceTest {
     private PostRepository postRepository;
     @Mock
     private ReplyRepository replyRepository;
+    @Mock
+    private NotificationApplicationService notificationService;
 
     private ReplyApplicationService service;
 
     @BeforeEach
     void setUp() {
-        service = new ReplyApplicationService(postRepository, replyRepository, new MarkdownRenderer());
+        service = new ReplyApplicationService(postRepository, replyRepository, new MarkdownRenderer(),
+                notificationService);
     }
 
     @Test
@@ -71,10 +75,12 @@ class ReplyApplicationServiceTest {
         assertThat(saved.getPostId()).isEqualTo(POST_ID);
         assertThat(saved.getAuthorId()).isEqualTo(AUTHOR_ID);
         assertThat(saved.getContentHtml()).contains("<strong>hi</strong>");
+        // 回帖成功后同事务发通知给帖子作者（F-SOC-001）
+        verify(notificationService).postReplied(AUTHOR_ID, 456L, 7L);
     }
 
     @Test
-    @DisplayName("帖子不存在 → 3001，且不分配楼层、不落库")
+    @DisplayName("帖子不存在 → 3001，且不分配楼层、不落库、不发通知")
     void missingPostIsNotFound() {
         when(postRepository.findById(POST_ID)).thenReturn(Optional.empty());
 
@@ -83,7 +89,7 @@ class ReplyApplicationServiceTest {
                         e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_FOUND));
 
         verify(postRepository, never()).incrementReplyCountAndGet(any());
-        verifyNoInteractions(replyRepository);
+        verifyNoInteractions(replyRepository, notificationService);
     }
 
     @Test

@@ -11,6 +11,8 @@ import com.campuslink.module.forum.infrastructure.persistence.mapper.ReplyMapper
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 /** 适配器：ReplyRepository 端口的 MyBatis-Plus 实现 */
@@ -42,6 +44,18 @@ public class ReplyRepositoryImpl implements ReplyRepository {
                         .eq(ReplyDO::getId, id)
                         .eq(ReplyDO::getIsDeleted, false)))
                 .map(ReplyConverter::toDomain);
+    }
+
+    @Override
+    public List<Reply> findByIds(Collection<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return replyMapper.selectList(new LambdaQueryWrapper<ReplyDO>()
+                        .in(ReplyDO::getId, ids)
+                        .eq(ReplyDO::getIsDeleted, false)).stream()
+                .map(ReplyConverter::toDomain)
+                .toList();
     }
 
     @Override

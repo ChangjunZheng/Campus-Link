@@ -13,6 +13,7 @@ import com.campuslink.module.forum.domain.model.LikeTargetType;
 import com.campuslink.module.forum.domain.model.Post;
 import com.campuslink.module.forum.domain.model.PostStatus;
 import com.campuslink.module.forum.domain.model.Reply;
+import com.campuslink.module.notification.application.NotificationApplicationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -30,11 +31,12 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
  * 点赞 / 收藏 toggle 用例（F-FORUM-005）：目标存在性核验先行（不可读一律 3001），
- * toggle 结果决定计数增减方向，计数读回值作为响应回显。
+ * toggle 结果决定计数增减方向，计数读回值作为响应回显；互动通知（F-SOC-001）只在生效时发出。
  */
 @ExtendWith(MockitoExtension.class)
 class InteractionApplicationServiceTest {
@@ -49,13 +51,15 @@ class InteractionApplicationServiceTest {
     private LikeRepository likeRepository;
     @Mock
     private FavoriteRepository favoriteRepository;
+    @Mock
+    private NotificationApplicationService notificationService;
 
     private InteractionApplicationService service;
 
     @BeforeEach
     void setUp() {
         service = new InteractionApplicationService(postRepository, replyRepository,
-                likeRepository, favoriteRepository);
+                likeRepository, favoriteRepository, notificationService);
     }
 
     @Test
@@ -130,6 +134,42 @@ class InteractionApplicationServiceTest {
         assertThat(result.active()).isTrue();
         assertThat(result.count()).isEqualTo(2);
         verify(postRepository, never()).adjustLikeCount(anyLong(), anyInt());
+    }
+
+    @Test
+    @DisplayName("互动生效 → 通知发给目标作者（帖子类发给帖子作者，楼层类发给楼层作者）")
+    void activeInteractionNotifiesTargetAuthor() {
+        when(postRepository.findById(9L)).thenReturn(Optional.of(post()));
+        when(replyRepository.findById(11L)).thenReturn(Optional.of(reply()));
+        when(likeRepository.toggle(42L, LikeTargetType.POST, 9L)).thenReturn(true);
+        when(postRepository.adjustLikeCount(9L, 1)).thenReturn(5);
+        when(likeRepository.toggle(42L, LikeTargetType.REPLY, 11L)).thenReturn(true);
+        when(replyRepository.adjustLikeCount(11L, 1)).thenReturn(3);
+        when(favoriteRepository.toggle(42L, 9L)).thenReturn(true);
+        when(postRepository.adjustFavoriteCount(9L, 1)).thenReturn(2);
+
+        service.togglePostLike(42L, 9L);
+        service.toggleReplyLike(42L, 11L);
+        service.togglePostFavorite(42L, 9L);
+
+        verify(notificationService).postLiked(42L, 9L, 100L);
+        verify(notificationService).replyLiked(42L, 11L, 100L);
+        verify(notificationService).postFavorited(42L, 9L, 100L);
+    }
+
+    @Test
+    @DisplayName("取消点赞 / 取消收藏 → 不发通知（已送达的通知不随取消撤回）")
+    void cancelledInteractionSendsNoNotification() {
+        when(postRepository.findById(9L)).thenReturn(Optional.of(post()));
+        when(likeRepository.toggle(42L, LikeTargetType.POST, 9L)).thenReturn(false);
+        when(postRepository.adjustLikeCount(9L, -1)).thenReturn(4);
+        when(favoriteRepository.toggle(42L, 9L)).thenReturn(false);
+        when(postRepository.adjustFavoriteCount(9L, -1)).thenReturn(1);
+
+        service.togglePostLike(42L, 9L);
+        service.togglePostFavorite(42L, 9L);
+
+        verifyNoInteractions(notificationService);
     }
 
     private static Post post() {
