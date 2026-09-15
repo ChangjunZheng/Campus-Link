@@ -93,13 +93,13 @@ loadNotifications()
     </div>
   </el-card>
 
-  <el-card shadow="never">
-    <el-skeleton v-if="loading" animated>
+  <el-card shadow="never" :body-style="{ padding: 0 }">
+    <el-skeleton v-if="loading" animated class="px-5 pt-4">
       <template #template>
         <div
           v-for="i in 4"
           :key="i"
-          class="border-b-[0.5px] border-divider py-3 first:pt-0 last:border-b-0 last:pb-0"
+          class="border-b-[0.5px] border-divider py-3 last:border-b-0"
         >
           <el-skeleton-item variant="text" style="width: 46%" />
           <el-skeleton-item variant="text" class="mt-2" style="width: 72%" />
@@ -107,9 +107,11 @@ loadNotifications()
       </template>
     </el-skeleton>
 
-    <el-alert v-else-if="loadError" type="error" :closable="false" show-icon :title="loadError">
-      <el-button size="small" @click="loadNotifications">重新加载</el-button>
-    </el-alert>
+    <div v-else-if="loadError" class="p-5">
+      <el-alert type="error" :closable="false" show-icon :title="loadError">
+        <el-button size="small" @click="loadNotifications">重新加载</el-button>
+      </el-alert>
+    </div>
 
     <div v-else-if="!items.length" class="py-10 text-center">
       <p class="text-body text-ink-regular">{{ onlyUnread ? '没有未读通知' : '还没有收到通知' }}</p>
@@ -123,7 +125,8 @@ loadNotifications()
         <li
           v-for="n in items"
           :key="n.id"
-          class="flex items-start gap-2.5 border-b-[0.5px] border-divider py-3 first:pt-0 last:border-b-0 last:pb-0"
+          class="flex items-start gap-2.5 border-b-[0.5px] border-divider px-5 py-3 transition-colors duration-fast ease-standard last:border-b-0"
+          :class="n.read ? 'hover:bg-bg-hover' : 'bg-primary-soft'"
         >
           <!-- 未读用小圆点占位，保证已读 / 未读行首对齐（不为对齐再用 invisible 字符） -->
           <span
@@ -148,7 +151,7 @@ loadNotifications()
           </div>
         </li>
       </ul>
-      <div v-if="total > size" class="mt-4 flex justify-center">
+      <div v-if="total > size" class="flex justify-center px-5 py-4">
         <el-pagination
           layout="prev, pager, next"
           :total="total"

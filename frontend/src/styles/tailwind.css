@@ -18,9 +18,23 @@
   --color-ink-meta: var(--cl-text-meta);
   --color-page: var(--cl-bg-page);
   --color-card: var(--cl-bg-card);
+  --color-bg-hover: var(--cl-bg-hover);
   --color-line: var(--cl-border-base);
   --color-divider: var(--cl-border-divider);
   --color-code: var(--cl-bg-code);
+  --color-success-soft: var(--cl-color-success-soft);
+
+  /* 6 版块识别色（CR-052，仅图标容器 / 小点缀） */
+  --color-board-qna: var(--cl-board-qna);
+  --color-board-resources: var(--cl-board-resources);
+  --color-board-interview: var(--cl-board-interview);
+  --color-board-contest: var(--cl-board-contest);
+  --color-board-course: var(--cl-board-course);
+  --color-board-chat: var(--cl-board-chat);
+
+  --duration-fast: var(--cl-duration-fast);
+  --duration-base: var(--cl-duration-base);
+  --ease-standard: var(--cl-ease-standard);
 
   --text-caption: var(--cl-font-caption);
   --text-note: var(--cl-font-sm);

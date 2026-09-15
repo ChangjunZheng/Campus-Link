@@ -1,11 +1,19 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { EditPen, QuestionFilled, Search, ArrowRight } from '@element-plus/icons-vue'
 import { listPosts, type PostSummaryVo } from '../api/forum'
 import { BOARDS } from '../constants/boards'
 import { useAuthStore } from '../stores/auth'
-import { formatRelativeTime } from '../utils/time'
+import PostListItem from '../components/PostListItem.vue'
 
 const auth = useAuthStore()
+
+/** hero 右侧「快速开始」入口（CR-052 品牌化） */
+const quickEntries = [
+  { label: '我要提问 / 发帖', to: '/publish', icon: EditPen },
+  { label: '逛技术问答版块', to: '/board/qna', icon: QuestionFilled },
+  { label: '搜索全站内容', to: '/search', icon: Search },
+]
 
 const latest = ref<PostSummaryVo[]>([])
 const total = ref(0)
@@ -40,43 +48,77 @@ onMounted(loadLatest)
 
 <template>
   <div>
-    <el-card shadow="never" class="mb-4 text-center" :body-style="{ padding: 'var(--cl-space-5)' }">
-      <h1 class="my-2 text-balance text-hero font-medium text-ink">问有所答 · 学有同伴 · 求职有路</h1>
-      <p class="text-body text-ink-regular">
-        重庆工程学院计算机专业学生的垂直交流论坛。技术问答、学习资源、面经求职、竞赛与课程，都可以在这里讨论。
-      </p>
-      <div class="flex justify-center gap-3">
-        <RouterLink to="/publish">
-          <el-button type="primary">发布帖子</el-button>
-        </RouterLink>
-        <RouterLink v-if="!auth.isLoggedIn" to="/login">
-          <el-button>学籍核验注册</el-button>
-        </RouterLink>
-      </div>
-    </el-card>
+    <!-- hero 品牌横幅（CR-052：左主张 + 右快速开始，全站唯一渐变底） -->
+    <section class="cl-hero-bg mb-4 overflow-hidden rounded-lg border-[0.5px] border-line">
+      <div class="flex flex-col gap-6 p-6 md:flex-row md:items-center md:justify-between md:p-8">
+        <div class="max-w-[620px]">
+          <h1 class="text-balance text-hero font-medium text-ink">问有所答 · 学有同伴 · 求职有路</h1>
+          <p class="mt-2.5 text-body leading-body text-ink-regular">
+            重庆工程学院计算机专业学生的垂直交流论坛。技术问答、学习资源、面经求职、竞赛与课程，都可以在这里讨论。
+          </p>
+          <div class="mt-5 flex flex-wrap gap-3">
+            <RouterLink to="/publish">
+              <el-button type="primary" size="large">发布帖子</el-button>
+            </RouterLink>
+            <RouterLink v-if="!auth.isLoggedIn" to="/login">
+              <el-button size="large">学籍核验注册</el-button>
+            </RouterLink>
+          </div>
+        </div>
 
+        <div class="flex w-full flex-none flex-col gap-2 md:w-[264px]">
+          <p class="px-1 text-caption text-ink-meta">快速开始</p>
+          <RouterLink
+            v-for="quick in quickEntries"
+            :key="quick.to"
+            :to="quick.to"
+            class="group flex items-center gap-2.5 rounded-md border-[0.5px] border-line bg-card px-3 py-2.5 transition-colors duration-fast ease-standard hover:border-primary"
+          >
+            <span class="inline-flex h-7 w-7 flex-none items-center justify-center rounded-sm bg-primary-soft text-primary">
+              <el-icon :size="15"><component :is="quick.icon" /></el-icon>
+            </span>
+            <span class="flex-1 text-note text-ink-regular">{{ quick.label }}</span>
+            <el-icon
+              :size="14"
+              class="text-ink-meta transition-transform duration-fast ease-standard group-hover:translate-x-0.5"
+            >
+              <ArrowRight />
+            </el-icon>
+          </RouterLink>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6 版块矩阵：线性图标 + 识别色淡底，hover 微抬、图标实色化 -->
     <el-row :gutter="16">
       <el-col v-for="b in BOARDS" :key="b.code" :xs="24" :sm="12" :md="8">
         <RouterLink :to="`/board/${b.code}`" class="block">
-          <el-card shadow="hover" class="mb-4">
-            <h3 class="mb-2 text-title font-medium text-ink">{{ b.name }}</h3>
-            <p class="text-note text-ink-meta">{{ b.desc }}</p>
+          <el-card shadow="never" class="cl-board-card mb-4" :body-style="{ padding: 'var(--cl-space-4)' }">
+            <div class="flex items-start gap-3">
+              <span :class="['cl-board-icon', `cl-board-icon--${b.code}`]">
+                <el-icon :size="20"><component :is="b.icon" /></el-icon>
+              </span>
+              <div class="min-w-0">
+                <h3 class="text-title-sm font-medium text-ink">{{ b.name }}</h3>
+                <p class="mt-0.5 text-caption leading-body text-ink-meta">{{ b.description }}</p>
+              </div>
+            </div>
           </el-card>
         </RouterLink>
       </el-col>
     </el-row>
 
-    <el-card shadow="never">
+    <el-card shadow="never" :body-style="{ padding: 0 }">
       <template #header>
         <span class="font-medium">全站最新</span>
       </template>
 
-      <el-skeleton v-if="loading" animated>
+      <el-skeleton v-if="loading" animated class="px-5 pt-4">
         <template #template>
           <div
             v-for="i in 5"
             :key="i"
-            class="border-b-[0.5px] border-divider py-3 first:pt-0 last:border-b-0 last:pb-0"
+            class="border-b-[0.5px] border-divider py-3 last:border-b-0"
           >
             <el-skeleton-item variant="text" style="width: 56%" />
             <div class="mt-2 flex items-center gap-2">
@@ -88,15 +130,11 @@ onMounted(loadLatest)
         </template>
       </el-skeleton>
 
-      <el-alert
-        v-else-if="loadError"
-        type="error"
-        :closable="false"
-        show-icon
-        :title="loadError"
-      >
-        <el-button size="small" @click="loadLatest">重新加载</el-button>
-      </el-alert>
+      <div v-else-if="loadError" class="p-5">
+        <el-alert type="error" :closable="false" show-icon :title="loadError">
+          <el-button size="small" @click="loadLatest">重新加载</el-button>
+        </el-alert>
+      </div>
 
       <div v-else-if="!latest.length" class="py-10 text-center">
         <p class="text-body text-ink-regular">还没有帖子，来发第一帖吧</p>
@@ -107,29 +145,9 @@ onMounted(loadLatest)
 
       <template v-else>
         <ul>
-          <li
-            v-for="p in latest"
-            :key="p.id"
-            class="border-b-[0.5px] border-divider py-3 first:pt-0 last:border-b-0 last:pb-0"
-          >
-            <RouterLink :to="`/post/${p.id}`" class="text-title-sm text-ink hover:text-link">
-              {{ p.title }}
-            </RouterLink>
-            <div class="mt-1.5 flex flex-wrap items-center gap-1.5 text-caption text-ink-meta">
-              <RouterLink :to="`/board/${p.boardCode}`" class="text-link hover:underline">
-                {{ p.boardName }}
-              </RouterLink>
-              <span>·</span>
-              <span>{{ p.authorNickname }}</span>
-              <el-tag v-if="p.accepted" type="success" effect="light" size="small">已采纳</el-tag>
-              <span>·</span>
-              <span>{{ p.replyCount }} 回复</span>
-              <span>·</span>
-              <span>{{ formatRelativeTime(p.createdAt) }}</span>
-            </div>
-          </li>
+          <PostListItem v-for="p in latest" :key="p.id" :post="p" show-board />
         </ul>
-        <div class="mt-4 flex justify-center">
+        <div class="flex justify-center px-5 py-4">
           <el-pagination
             v-if="total > size"
             layout="prev, pager, next"

@@ -12,6 +12,7 @@ import {
   type PostDetailVo,
   type ReplyVo,
 } from '../api/forum'
+import { CircleCheckFilled } from '@element-plus/icons-vue'
 import { ApiError } from '../api/client'
 import { useAuthStore } from '../stores/auth'
 import { useNarrowScreen } from '../composables/useNarrowScreen'
@@ -281,19 +282,19 @@ watch(
         </div>
       </el-card>
 
-      <el-card shadow="never" class="mb-4">
+      <el-card shadow="never" class="mb-4" :body-style="{ padding: 0 }">
         <template #header>
           <span class="font-medium">
             全部回复<template v-if="!repliesLoading && !repliesError">（{{ total }}）</template>
           </span>
         </template>
 
-        <el-skeleton v-if="repliesLoading" animated>
+        <el-skeleton v-if="repliesLoading" animated class="px-5 pt-4">
           <template #template>
             <div
               v-for="i in 3"
               :key="i"
-              class="border-b-[0.5px] border-divider py-3 first:pt-0 last:border-b-0 last:pb-0"
+              class="border-b-[0.5px] border-divider py-3 last:border-b-0"
             >
               <div class="mx-auto max-w-reading">
                 <el-skeleton-item variant="text" style="width: 42%" />
@@ -304,18 +305,19 @@ watch(
           </template>
         </el-skeleton>
 
-        <el-alert
-          v-else-if="repliesError"
-          type="error"
-          :closable="false"
-          show-icon
-          :title="repliesError"
-        >
-          <el-button size="small" @click="loadReplies">重新加载</el-button>
-        </el-alert>
+        <div v-else-if="repliesError" class="p-5">
+          <el-alert
+            type="error"
+            :closable="false"
+            show-icon
+            :title="repliesError"
+          >
+            <el-button size="small" @click="loadReplies">重新加载</el-button>
+          </el-alert>
+        </div>
 
         <template v-else>
-          <p v-if="!replies.length" class="py-6 text-center text-body text-ink-regular">
+          <p v-if="!replies.length" class="px-5 py-6 text-center text-body text-ink-regular">
             还没有回复，来占一楼
           </p>
           <ul v-else>
@@ -323,17 +325,31 @@ watch(
               v-for="r in replies"
               :id="`floor-${r.id}`"
               :key="r.id"
-              class="border-b-[0.5px] border-divider py-3 transition-colors first:pt-0 last:border-b-0"
-              :class="focusedFloorId === String(r.id) ? 'bg-primary-soft' : ''"
+              class="border-b-[0.5px] border-divider px-5 py-3 transition-colors duration-fast ease-standard last:border-b-0"
+              :class="{
+                'cl-floor-accepted': r.accepted,
+                'cl-floor-focused': focusedFloorId === String(r.id),
+              }"
             >
               <div class="mx-auto max-w-reading">
                 <div class="mb-1.5 flex flex-wrap items-center gap-1.5 text-caption text-ink-meta">
-                  <span class="font-medium text-link">#{{ r.floorNo }} 楼</span>
-                  <span>·</span>
+                  <span class="inline-flex items-center rounded-sm bg-code px-1.5 py-px text-ink-regular">
+                    #{{ r.floorNo }} 楼
+                  </span>
                   <span class="text-ink">{{ r.authorNickname }}</span>
-                  <span>·</span>
+                  <el-tag
+                    v-if="post.authorId === r.authorId"
+                    type="primary"
+                    effect="light"
+                    size="small"
+                  >
+                    楼主
+                  </el-tag>
+                  <span aria-hidden="true">·</span>
                   <span>{{ formatTime(r.createdAt) }}</span>
-                  <el-tag v-if="r.accepted" type="success" effect="light" size="small">最佳答案</el-tag>
+                  <el-tag v-if="r.accepted" type="success" effect="light" size="small">
+                    <el-icon class="mr-0.5" :size="12"><CircleCheckFilled /></el-icon>最佳答案
+                  </el-tag>
                   <el-button
                     link
                     size="small"
@@ -361,7 +377,7 @@ watch(
             </li>
           </ul>
 
-          <div v-if="total > size" class="mt-4 flex justify-center">
+          <div v-if="total > size" class="flex justify-center px-5 py-4">
             <el-pagination
               layout="prev, pager, next"
               :total="total"
@@ -371,7 +387,7 @@ watch(
             />
           </div>
 
-          <div class="mx-auto mt-4 max-w-reading">
+          <div class="mx-auto mt-4 max-w-reading px-5 pb-5">
             <template v-if="auth.isLoggedIn">
               <el-input
                 v-model="replyMd"

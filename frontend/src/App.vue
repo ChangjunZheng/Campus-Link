@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ArrowDown, ArrowLeft, Bell, Search } from '@element-plus/icons-vue'
 import { useAuthStore } from './stores/auth'
@@ -19,6 +19,17 @@ const bare = computed(() => Boolean(route.meta.bare))
 
 const searchKeyword = ref('')
 
+/** 顶栏滚动态（CR-052）：向下滚动超过 4px 后转半透明毛玻璃，回顶复原 */
+const scrolled = ref(false)
+function onScroll() {
+  scrolled.value = window.scrollY > 4
+}
+onMounted(() => {
+  onScroll()
+  window.addEventListener('scroll', onScroll, { passive: true })
+})
+onBeforeUnmount(() => window.removeEventListener('scroll', onScroll))
+
 function logout() {
   auth.logout()
   router.push('/')
@@ -33,7 +44,11 @@ function onSearchSubmit() {
 
 <template>
   <el-container class="min-h-screen">
-    <el-header v-if="bare" class="border-b-[0.5px] border-line bg-card">
+    <el-header
+      v-if="bare"
+      class="cl-app-header border-b-[0.5px] border-line bg-card"
+      :class="{ 'is-scrolled': scrolled }"
+    >
       <!-- 窄屏下 --el-header-height 为 auto（tokens.css），补上下内边距撑回约 56px -->
       <div class="mx-auto flex h-full max-w-page items-center justify-between max-md:py-4">
         <!-- 品牌字样用主色：WCAG 对 logo / 品牌名的文字不计对比度要求 -->
@@ -47,7 +62,11 @@ function onSearchSubmit() {
         </RouterLink>
       </div>
     </el-header>
-    <el-header v-else class="border-b-[0.5px] border-line bg-card">
+    <el-header
+      v-else
+      class="cl-app-header border-b-[0.5px] border-line bg-card"
+      :class="{ 'is-scrolled': scrolled }"
+    >
       <!-- 窄屏折成两行（设计稿 page-09）：第一行 logo + 图标，第二行版块胶囊带；
            行高由 tokens.css 的窄屏媒体查询把 --el-header-height 放开为 auto -->
       <div class="mx-auto flex h-full max-w-page flex-wrap items-center gap-x-5 gap-y-1 max-md:py-2">
@@ -130,10 +149,19 @@ function onSearchSubmit() {
       </div>
     </el-header>
     <el-main class="mx-auto w-full max-w-page">
-      <RouterView />
+      <!-- key 用 fullPath：同组件换参（如 /board/qna → /board/chat）也要触发淡入；
+           外包一层 div 保证 Transition 子节点恒为单元素（部分视图是多根 fragment，直接动画会告警且淡入失效） -->
+      <RouterView v-slot="{ Component: viewComponent, route: viewRoute }">
+        <transition name="route-fade" mode="out-in">
+          <div :key="viewRoute.fullPath">
+            <component :is="viewComponent" />
+          </div>
+        </transition>
+      </RouterView>
     </el-main>
-    <el-footer v-if="!bare" class="text-center text-caption text-ink-meta">
-      Campus-Link · 重庆工程学院计算机专业学生社区
+    <el-footer v-if="!bare" class="text-center">
+      <p class="text-note text-ink-regular">问有所答 · 学有同伴 · 求职有路</p>
+      <p class="mt-1 text-caption text-ink-meta">Campus-Link · 重庆工程学院计算机专业学生社区</p>
     </el-footer>
   </el-container>
 </template>

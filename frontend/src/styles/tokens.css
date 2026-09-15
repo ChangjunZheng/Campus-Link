@@ -70,6 +70,33 @@
 
   --cl-font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB',
     'Microsoft YaHei', '微软雅黑', Arial, sans-serif;
+
+  /* ---- 动效（CR-052：时长 / 缓动令牌，过渡只消费这两个，不手写魔法值） ---- */
+  --cl-duration-fast: 0.15s;
+  --cl-duration-base: 0.25s;
+  --cl-ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ---- 键盘焦点环（CR-052：补可访问性，仅作用于自有元素，EP 控件保留自身内描边焦点） ---- */
+  --cl-focus-ring: 0 0 0 2px color-mix(in srgb, var(--cl-color-primary) 30%, #fff);
+
+  /* ---- 成功色弱底（最佳答案楼层强调，CR-052） ---- */
+  --cl-color-success-soft: color-mix(in srgb, var(--cl-color-success) 10%, #fff);
+
+  /* ---- hero 品牌横幅背景（CR-052：全站唯一渐变，对 ui-guideline §2「装饰为零」的定点偏离①） ---- */
+  --cl-hero-bg: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--cl-color-primary) 10%, #fff) 0%,
+    color-mix(in srgb, var(--cl-color-primary) 3%, #fff) 55%,
+    #fff 100%
+  );
+
+  /* ---- 6 版块识别色（CR-052 定点偏离②：仅用于图标容器底 / 小点缀，禁止用作文本色——AA 只认 link/ink 色） ---- */
+  --cl-board-qna: #2f6fed; /* 技术问答 */
+  --cl-board-resources: #0f9d77; /* 学习资源 */
+  --cl-board-interview: #d98324; /* 面经求职 */
+  --cl-board-contest: #c04d8f; /* 竞赛交流 */
+  --cl-board-course: #7a5af0; /* 课程交流 */
+  --cl-board-chat: #0ea5b7; /* 闲聊灌水 */
 }
 
 /* ---- Element Plus 变量桥接：主色 / 文本 / 圆角 / 字号 / 边框宽度 ---- */
@@ -114,6 +141,26 @@
     --el-header-height: auto;
     --el-header-padding: 0 var(--cl-space-4);
   }
+}
+
+/* sticky 全局顶栏（CR-052）：滚动后吸附并转半透明毛玻璃——定点偏离④，毛玻璃全站仅此一处。
+   规则刻意留在 @layer 外：滚动态半透明底要压过 App.vue 顶栏根上的 Tailwind bg-card（无层胜有层） */
+.cl-app-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.cl-app-header.is-scrolled {
+  background: rgb(255 255 255 / 85%);
+  backdrop-filter: saturate(180%) blur(8px);
+  -webkit-backdrop-filter: saturate(180%) blur(8px);
+}
+
+/* 全局页脚两行文案（CR-052）：EP footer 默认 height 60px / 零上下内边距，撑不开两行 */
+.el-footer.el-footer {
+  height: auto;
+  padding: var(--cl-space-5) var(--cl-space-4);
 }
 
 /* ---- 组件级结构规则：EP 把这些值写死在组件规则里，变量够不到 ---- */
@@ -245,6 +292,7 @@
   a {
     color: var(--cl-color-link);
     text-decoration: none;
+    transition: color var(--cl-duration-fast) var(--cl-ease-standard);
   }
 
   a:hover {
@@ -256,6 +304,43 @@
   ::selection {
     background: var(--cl-color-primary-soft);
   }
+
+  /* 键盘焦点环（CR-052）：只给自有 a / 原生 button；EP 组件（.el-button / 输入控件）
+     有自己的焦点样式，不叠加外轮廓避免双重焦点 */
+  a:focus-visible,
+  button:not(.el-button):focus-visible {
+    outline: 2px solid var(--cl-color-primary);
+    outline-offset: 2px;
+    border-radius: var(--cl-radius-sm);
+  }
+
+  /* 细滚动条（CR-052）：Firefox */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--cl-border-base) transparent;
+  }
+
+  /* 细滚动条：WebKit（thumb 内缩 2px 呈细条，轨道透明） */
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: 8px;
+    background: var(--cl-border-base);
+    background-clip: content-box;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: var(--cl-text-placeholder);
+    background-clip: content-box;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
 }
 
 /* ---- Markdown 正文（服务端渲染，ADR-005）----
@@ -263,6 +348,154 @@
    发帖预览与帖子详情共用这一份，不再写进组件的 scoped 样式。
    放 components 层：低于 utilities，页面若显式给工具类仍可覆盖。 */
 @layer components {
+  /* 路由切换淡入（CR-052）：进 240ms 轻微上浮，出 120ms 纯淡出，避免双向位移抖动 */
+  .route-fade-enter-active {
+    transition:
+      opacity var(--cl-duration-base) var(--cl-ease-standard),
+      transform var(--cl-duration-base) var(--cl-ease-standard);
+  }
+
+  .route-fade-leave-active {
+    transition: opacity 0.12s var(--cl-ease-standard);
+  }
+
+  .route-fade-enter-from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  .route-fade-leave-to {
+    opacity: 0;
+  }
+
+  /* hero 品牌横幅背景（CR-052 定点偏离①：全站唯一渐变，仅首页 hero 消费） */
+  .cl-hero-bg {
+    background-image: var(--cl-hero-bg);
+  }
+
+  /* 最佳答案楼层整体强调（CR-052）：浅绿底 + 左侧 success 竖条；
+     inset 阴影不占布局、不会顶歪楼层对齐，且非外投影，不违反"去卡片阴影" */
+  .cl-floor-accepted {
+    background: var(--cl-color-success-soft);
+    box-shadow: inset 3px 0 0 var(--cl-color-success);
+  }
+
+  /* ?floor= 定位高亮（CR-052）：outline 不占布局，可与最佳答案绿底叠加 */
+  .cl-floor-focused {
+    outline: 2px solid var(--cl-color-primary);
+    outline-offset: -2px;
+  }
+
+  /* Markdown 编辑器工具条按钮（CR-052）：28px 方形、线性图标，hover 主色淡底 */
+  .cl-md-tool {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: var(--cl-radius-sm);
+    color: var(--cl-text-regular);
+    transition:
+      background-color var(--cl-duration-fast) var(--cl-ease-standard),
+      color var(--cl-duration-fast) var(--cl-ease-standard);
+  }
+
+  .cl-md-tool:hover:not(:disabled) {
+    background: var(--cl-color-primary-soft);
+    color: var(--cl-color-link);
+  }
+
+  .cl-md-tool:disabled {
+    color: var(--cl-text-placeholder);
+    cursor: not-allowed;
+  }
+
+  /* 版块图标容器（CR-052 定点偏离②：识别色只用于图标淡底 / hover 实色，不承担文字） */
+  .cl-board-icon {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: var(--cl-radius-md);
+    transition:
+      background-color var(--cl-duration-base) var(--cl-ease-standard),
+      color var(--cl-duration-base) var(--cl-ease-standard);
+  }
+
+  .cl-board-icon--qna {
+    background: color-mix(in srgb, var(--cl-board-qna) 12%, #fff);
+    color: var(--cl-board-qna);
+  }
+
+  .cl-board-icon--resources {
+    background: color-mix(in srgb, var(--cl-board-resources) 12%, #fff);
+    color: var(--cl-board-resources);
+  }
+
+  .cl-board-icon--interview {
+    background: color-mix(in srgb, var(--cl-board-interview) 12%, #fff);
+    color: var(--cl-board-interview);
+  }
+
+  .cl-board-icon--contest {
+    background: color-mix(in srgb, var(--cl-board-contest) 12%, #fff);
+    color: var(--cl-board-contest);
+  }
+
+  .cl-board-icon--course {
+    background: color-mix(in srgb, var(--cl-board-course) 12%, #fff);
+    color: var(--cl-board-course);
+  }
+
+  .cl-board-icon--chat {
+    background: color-mix(in srgb, var(--cl-board-chat) 12%, #fff);
+    color: var(--cl-board-chat);
+  }
+
+  /* 版块卡 hover 微抬（CR-052 定点偏离③：translateY 但不用投影，反馈靠主色描边 + 图标实色化） */
+  .cl-board-card {
+    transition:
+      transform var(--cl-duration-base) var(--cl-ease-standard),
+      border-color var(--cl-duration-base) var(--cl-ease-standard);
+  }
+
+  .cl-board-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--cl-color-primary);
+  }
+
+  .cl-board-card:hover .cl-board-icon--qna {
+    background: var(--cl-board-qna);
+    color: #fff;
+  }
+
+  .cl-board-card:hover .cl-board-icon--resources {
+    background: var(--cl-board-resources);
+    color: #fff;
+  }
+
+  .cl-board-card:hover .cl-board-icon--interview {
+    background: var(--cl-board-interview);
+    color: #fff;
+  }
+
+  .cl-board-card:hover .cl-board-icon--contest {
+    background: var(--cl-board-contest);
+    color: #fff;
+  }
+
+  .cl-board-card:hover .cl-board-icon--course {
+    background: var(--cl-board-course);
+    color: #fff;
+  }
+
+  .cl-board-card:hover .cl-board-icon--chat {
+    background: var(--cl-board-chat);
+    color: #fff;
+  }
+
   .markdown-body {
     color: var(--cl-text-primary);
     font-size: var(--cl-font-body);

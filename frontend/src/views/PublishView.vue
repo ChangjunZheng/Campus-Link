@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { nextTick, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { Link, List, Picture } from '@element-plus/icons-vue'
 import { listBoards, publishPost, type BoardVo } from '../api/forum'
 import { useNarrowScreen } from '../composables/useNarrowScreen'
 
@@ -90,19 +91,34 @@ async function submit() {
           <el-input v-model="form.title" maxlength="100" show-word-limit placeholder="一句话说清问题或主题（1~100 字）" />
         </div>
 
-        <div class="mt-3 flex flex-wrap items-center gap-1 rounded-md bg-code px-2 py-1">
-          <button type="button" class="rounded px-2 py-1 text-note text-ink-regular hover:bg-primary-soft hover:text-link" @click="wrap('**', '**', '加粗文字')">B</button>
-          <button type="button" class="rounded px-2 py-1 text-note text-ink-regular hover:bg-primary-soft hover:text-link" @click="wrap('*', '*', '斜体文字')">I</button>
-          <button type="button" class="rounded px-2 py-1 text-note text-ink-regular hover:bg-primary-soft hover:text-link" @click="wrap('```\n', '\n```', '代码')">代码块</button>
-          <button type="button" class="rounded px-2 py-1 text-note text-ink-regular hover:bg-primary-soft hover:text-link" @click="wrap('- ', '', '列表项')">列表</button>
-          <button type="button" class="rounded px-2 py-1 text-note text-ink-regular hover:bg-primary-soft hover:text-link" @click="wrap('[', '](https://)', '链接文字')">链接</button>
+        <div class="mt-3 flex flex-wrap items-center gap-1 rounded-md bg-code px-2 py-1" role="toolbar" aria-label="Markdown 工具条">
+          <!-- EP 图标库无粗体 / 斜体 / 代码图标，沿用编辑器通行的字符写法（B / I / </>） -->
+          <button type="button" class="cl-md-tool font-medium" title="加粗" aria-label="加粗" @click="wrap('**', '**', '加粗文字')">B</button>
+          <button type="button" class="cl-md-tool italic" title="斜体" aria-label="斜体" @click="wrap('*', '*', '斜体文字')">I</button>
+          <span class="mx-0.5 h-4 w-px bg-line" aria-hidden="true" />
           <button
             type="button"
-            class="cursor-not-allowed rounded px-2 py-1 text-note text-ink-meta"
+            class="cl-md-tool font-mono text-caption"
+            title="代码块"
+            aria-label="代码块"
+            @click="wrap('```\n', '\n```', '代码')"
+          >
+            &lt;/&gt;
+          </button>
+          <button type="button" class="cl-md-tool" title="无序列表" aria-label="无序列表" @click="wrap('- ', '', '列表项')">
+            <el-icon :size="15"><List /></el-icon>
+          </button>
+          <button type="button" class="cl-md-tool" title="插入链接" aria-label="插入链接" @click="wrap('[', '](https://)', '链接文字')">
+            <el-icon :size="15"><Link /></el-icon>
+          </button>
+          <button
+            type="button"
+            class="cl-md-tool"
             disabled
             title="图片上传即将开放（暂无上传接口）"
+            aria-label="图片（暂未开放）"
           >
-            图片
+            <el-icon :size="15"><Picture /></el-icon>
           </button>
         </div>
 

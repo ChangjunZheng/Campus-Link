@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { Search } from '@element-plus/icons-vue'
 import { searchPosts, type PostSummaryVo } from '../api/forum'
 import { BOARDS } from '../constants/boards'
-import { formatRelativeTime } from '../utils/time'
+import PostListItem from '../components/PostListItem.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -132,13 +132,13 @@ onMounted(async () => {
     </div>
   </el-card>
 
-  <el-card shadow="never">
-    <el-skeleton v-if="loading" animated>
+  <el-card shadow="never" :body-style="{ padding: 0 }">
+    <el-skeleton v-if="loading" animated class="px-5 pt-4">
       <template #template>
         <div
           v-for="i in 4"
           :key="i"
-          class="border-b-[0.5px] border-divider py-3 first:pt-0 last:border-b-0 last:pb-0"
+          class="border-b-[0.5px] border-divider py-3 last:border-b-0"
         >
           <el-skeleton-item variant="text" style="width: 46%" />
           <el-skeleton-item variant="text" class="mt-2" style="width: 100%" />
@@ -150,11 +150,15 @@ onMounted(async () => {
       </template>
     </el-skeleton>
 
-    <el-alert v-else-if="loadError && !searched" type="warning" :closable="false" show-icon :title="loadError" />
+    <div v-else-if="loadError && !searched" class="p-5">
+      <el-alert type="warning" :closable="false" show-icon :title="loadError" />
+    </div>
 
-    <el-alert v-else-if="loadError" type="error" :closable="false" show-icon :title="loadError">
-      <el-button size="small" @click="onSubmit">重新搜索</el-button>
-    </el-alert>
+    <div v-else-if="loadError" class="p-5">
+      <el-alert type="error" :closable="false" show-icon :title="loadError">
+        <el-button size="small" @click="onSubmit">重新搜索</el-button>
+      </el-alert>
+    </div>
 
     <div v-else-if="!searched" class="py-10 text-center">
       <p class="text-body text-ink-regular">输入关键词搜索帖子标题与标签</p>
@@ -168,30 +172,13 @@ onMounted(async () => {
     </div>
 
     <template v-else>
-      <p class="mb-3 text-note text-ink-meta">共 {{ total }} 条结果</p>
+      <div class="border-b-[0.5px] border-divider px-5 py-2.5 text-note text-ink-meta">
+        共 {{ total }} 条结果
+      </div>
       <ul>
-        <li
-          v-for="p in posts"
-          :key="p.id"
-          class="border-b-[0.5px] border-divider py-3 first:pt-0 last:border-b-0 last:pb-0"
-        >
-          <RouterLink :to="`/post/${p.id}`" class="text-title-sm font-medium text-ink hover:text-link">
-            {{ p.title }}
-          </RouterLink>
-          <p class="my-1.5 line-clamp-2 text-note text-ink-regular">{{ p.summary }}</p>
-          <div class="flex flex-wrap items-center gap-1.5 text-caption text-ink-meta">
-            <el-tag v-if="p.accepted" type="success" effect="light" size="small">已采纳</el-tag>
-            <RouterLink :to="`/board/${p.boardCode}`" class="hover:text-link">{{ p.boardName }}</RouterLink>
-            <span>·</span>
-            <span>{{ p.authorNickname }}</span>
-            <span>·</span>
-            <span>{{ p.replyCount }} 回复</span>
-            <span>·</span>
-            <span>{{ formatRelativeTime(p.createdAt) }}</span>
-          </div>
-        </li>
+        <PostListItem v-for="p in posts" :key="p.id" :post="p" show-board />
       </ul>
-      <div v-if="total > size" class="mt-4 flex justify-center">
+      <div v-if="total > size" class="flex justify-center px-5 py-4">
         <el-pagination
           layout="prev, pager, next"
           :total="total"

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { listMyFavorites, type PostSummaryVo } from '../api/forum'
-import { formatRelativeTime } from '../utils/time'
+import PostListItem from '../components/PostListItem.vue'
 
 const posts = ref<PostSummaryVo[]>([])
 const total = ref(0)
@@ -40,13 +40,13 @@ loadFavorites()
     <p class="mt-1.5 text-note text-ink-meta">按收藏时间倒序，仅本人可见</p>
   </el-card>
 
-  <el-card shadow="never">
-    <el-skeleton v-if="loading" animated>
+  <el-card shadow="never" :body-style="{ padding: 0 }">
+    <el-skeleton v-if="loading" animated class="px-5 pt-4">
       <template #template>
         <div
           v-for="i in 4"
           :key="i"
-          class="border-b-[0.5px] border-divider py-3 first:pt-0 last:border-b-0 last:pb-0"
+          class="border-b-[0.5px] border-divider py-3 last:border-b-0"
         >
           <el-skeleton-item variant="text" style="width: 46%" />
           <el-skeleton-item variant="text" class="mt-2" style="width: 100%" />
@@ -55,15 +55,11 @@ loadFavorites()
       </template>
     </el-skeleton>
 
-    <el-alert
-      v-else-if="loadError"
-      type="error"
-      :closable="false"
-      show-icon
-      :title="loadError"
-    >
-      <el-button size="small" @click="loadFavorites">重新加载</el-button>
-    </el-alert>
+    <div v-else-if="loadError" class="p-5">
+      <el-alert type="error" :closable="false" show-icon :title="loadError">
+        <el-button size="small" @click="loadFavorites">重新加载</el-button>
+      </el-alert>
+    </div>
 
     <div v-else-if="!posts.length" class="py-10 text-center">
       <p class="text-body text-ink-regular">还没有收藏的帖子</p>
@@ -74,26 +70,9 @@ loadFavorites()
 
     <template v-else>
       <ul>
-        <li
-          v-for="p in posts"
-          :key="p.id"
-          class="border-b-[0.5px] border-divider py-3 first:pt-0 last:border-b-0 last:pb-0"
-        >
-          <RouterLink :to="`/post/${p.id}`" class="text-title-sm font-medium text-ink hover:text-link">
-            {{ p.title }}
-          </RouterLink>
-          <p class="my-1.5 line-clamp-2 text-note text-ink-regular">{{ p.summary }}</p>
-          <div class="flex flex-wrap items-center gap-1.5 text-caption text-ink-meta">
-            <el-tag v-if="p.accepted" type="success" effect="light" size="small">已采纳</el-tag>
-            <span>{{ p.authorNickname }}</span>
-            <span>·</span>
-            <span>{{ p.replyCount }} 回复</span>
-            <span>·</span>
-            <span>{{ formatRelativeTime(p.createdAt) }}</span>
-          </div>
-        </li>
+        <PostListItem v-for="p in posts" :key="p.id" :post="p" show-board />
       </ul>
-      <div v-if="total > size" class="mt-4 flex justify-center">
+      <div v-if="total > size" class="flex justify-center px-5 py-4">
         <el-pagination
           layout="prev, pager, next"
           :total="total"
