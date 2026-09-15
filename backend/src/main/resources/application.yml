@@ -14,7 +14,11 @@ spring:
     validate-on-migrate: true
     clean-disabled: true
   datasource:
-    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:campuslink}?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC&useSSL=false&allowPublicKeyRetrieval=true
+    # 时间口径（CR-051，闭环台账 L-6）：V1 各表用 DEFAULT CURRENT_TIMESTAMP 写 DATETIME，取值取决于**会话时区**；
+    # 只声明 connectionTimeZone 而不加 forceConnectionTimeZoneToSession 时，驱动不改会话时区，
+    # 本机 SYSTEM（UTC+8）会把本地墙钟写进库、再被当成 UTC 读出来，全库时间戳整体偏 +8 小时。
+    # 两个参数必须成对出现，缺一个即回到缺陷状态——由 DataSourceTimezoneTest 守护。
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:campuslink}?useUnicode=true&characterEncoding=utf8&connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true&useSSL=false&allowPublicKeyRetrieval=true
     username: ${DB_USER:campuslink}
     password: ${DB_PASSWORD:campuslink}
     driver-class-name: com.mysql.cj.jdbc.Driver

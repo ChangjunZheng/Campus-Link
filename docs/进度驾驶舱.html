@@ -249,7 +249,7 @@
       <p class="sub">重庆工程学院计算机专业学生交流论坛 · 企业七阶段流程（BRD → PRD → 设计 → 开发 → …）· 单人 + AI 协作</p>
       <div class="chips">
         <span class="chip">数据快照 <b>2026-09-15</b></span>
-        <span class="chip">change-log <b>v1.46</b></span>
+        <span class="chip">change-log <b>v1.47</b></span>
         <span class="chip">next-steps <b>v1.12</b></span>
         <span class="chip">waivers <b>v1.9</b></span>
         <span class="chip">视图产物 · 已登记（docs/README.md §2 / §3）</span>
@@ -258,7 +258,7 @@
     <div class="kpis" id="kpis">
       <div class="kpi"><b id="k-cr">–</b><span>变更记录（CR）</span></div>
       <div class="kpi"><b>2<small> / 4</small></b><span>Sprint 已交付（S1 · S2 MVP）</span></div>
-      <div class="kpi"><b>162<small> / 162</small></b><span>后端单测全绿（CR-050 后）</span></div>
+      <div class="kpi"><b>164<small> / 164</small></b><span>后端单测全绿（CR-051 后）</span></div>
       <div class="kpi"><b>21<small> / 40</small></b><span>契约端点 / schema</span></div>
       <div class="kpi"><b>8<small> + </small>2</b><span>真实页面 + 占位页</span></div>
       <div class="kpi"><b>0</b><span>经正式变更评审（如实登记）</span></div>
@@ -363,7 +363,7 @@
 <!-- ============ 详情 Tab 导航 ============ -->
 <nav class="tabs">
   <button class="active" data-tab="overview">① 总览：项目走到哪了</button>
-  <button data-tab="timeline">② 变更时间线：45 次 CR</button>
+  <button data-tab="timeline">② 变更时间线：46 次 CR</button>
   <button data-tab="issues">③ 问题与欠账台账</button>
   <button data-tab="todo">④ 待办与新需求</button>
 </nav>
@@ -397,7 +397,7 @@
         </div></div>
         <div class="risk"><span class="dot" style="background:var(--ink-3)"></span><div>
           <div class="r-title">治理模式声明（如实登记，非批评）</div>
-          <div class="r-desc">45 次 CR「经正式变更评审」0 次；手册最低 5 动作：① 需求评审 ❌ ② 技术评审 ❌ ③ 自测+CR 🟡 ④⑤ 阶段未启动。发起人已签署 W-01~W-07 接受此模式，风险转为「已知已接受」。</div>
+          <div class="r-desc">46 次 CR「经正式变更评审」0 次；手册最低 5 动作：① 需求评审 ❌ ② 技术评审 ❌ ③ 自测+CR 🟡 ④⑤ 阶段未启动。发起人已签署 W-01~W-07 接受此模式，风险转为「已知已接受」。</div>
         </div></div>
       </div>
       <div class="panel">
@@ -424,7 +424,7 @@
   <div class="gitlog" id="timeline"></div>
   <div class="panel" style="margin-top:16px">
     <div class="panel-head"><h2>📊 影响评估统计（如实登记口径）</h2></div>
-    <p>45 次变更：完整 <b>35</b>（CR-004/005/007/009/010/011/015/017/018/019/020/021/023/024/025/026/027/028/029/030/031/032/034/035/040/041/043/044/045/046/047/048/049/050/052）· 部分 <b>8</b> · 未做 <b>2</b>（CR-001/003）。<b>经正式变更评审 0 次</b>——手册 4.2 要求四方同步，单人项目无第二角色可同步。<b>CR-029 起改轻量登记（一行式），状态只维护台账 + 本驾驶舱两处</b>；<b>编号不连续为预期</b>（CR-033 / CR-036~039 / CR-042 已由六份增量 PRD 草案预留，均待发起人评审；CR-051 已由问题 L-6 预留给全库时间戳 +8h 源头修复）；CR-052（前端界面美化·适度品牌化）已于 2026-09-15 实施完成并回置入「完整」档——构建全绿、9 路由真机走查通过，零接口 / 零依赖 / 零迁移）。</p>
+    <p>46 次变更：完整 <b>36</b>（CR-004/005/007/009/010/011/015/017/018/019/020/021/023/024/025/026/027/028/029/030/031/032/034/035/040/041/043/044/045/046/047/048/049/050/051/052）· 部分 <b>8</b> · 未做 <b>2</b>（CR-001/003）。<b>经正式变更评审 0 次</b>——手册 4.2 要求四方同步，单人项目无第二角色可同步。<b>CR-029 起改轻量登记（一行式），状态只维护台账 + 本驾驶舱两处</b>；<b>编号不连续为预期</b>（CR-033 / CR-036~039 / CR-042 已由六份增量 PRD 草案预留，均待发起人评审）；CR-052（前端界面美化·适度品牌化）已于 2026-09-15 实施完成并回置入「完整」档——构建全绿、9 路由真机走查通过，零接口 / 零依赖 / 零迁移；<b>CR-051（全库时间戳时区口径修复）已于 2026-09-15 实施完成</b>——数据源两参数成对强制会话时区 + <code>DataSourceTimezoneTest</code> 2 例守护 + 存量一次性 −8h 校正，<b>台账 §3 问题 L-6 就此闭环</b>（该编号原由 L-6 预留，现兑现，故下一个自由编号为 <b>CR-053</b>）。</p>
   </div>
 </section>
 
@@ -443,11 +443,11 @@
       </div></div>
       <div class="risk"><span class="dot" style="background:var(--danger)"></span><div>
         <div class="r-title">提测准入门欠账（阶段四出口）· 7 项中 4 项未满足</div>
-        <div class="r-desc">覆盖率不可测（jacoco 未接入，162 个测试无覆盖率数值）、静态扫描未接入（SpotBugs/ESLint）、Code Review 无第二角色、W-03 逐页走查未做。发起人未指定截止点（W-05 如实登记）。</div>
+        <div class="r-desc">覆盖率不可测（jacoco 未接入，164 个测试无覆盖率数值）、静态扫描未接入（SpotBugs/ESLint）、Code Review 无第二角色、W-03 逐页走查未做。发起人未指定截止点（W-05 如实登记）。</div>
       </div></div>
-      <div class="risk"><span class="dot" style="background:var(--danger)"></span><div>
-        <div class="r-title">L-6 全库时间戳整体偏 +8 小时（CR-050 真机验证期间发现）· 未修 · CR-051 候选</div>
-        <div class="r-desc">根因：V1 各表 <code>created_at DATETIME DEFAULT CURRENT_TIMESTAMP</code> 写入 MySQL 服务端<b>本地墙钟</b>，而连接串带 <code>serverTimezone=UTC</code> 按 UTC 读出并下发 <code>...Z</code>，比对真实 UTC 快 8 小时。后果：<code>formatRelativeTime</code> 的 diff 恒偏小 8h，<b>真实 8 小时内的一切一律渲染为「刚刚」</b>、跨天档位前移约一天，绝对时间展示同样失真（可落在未来）；<b>排序不受影响</b>（全表等量平移）。登记于 <a href="变更日志/变更台账.md">变更台账</a> §3 L-6，修法在源头，<b>不在前端做 -8h 补偿</b>。</div>
+      <div class="risk"><span class="dot" style="background:var(--ok)"></span><div>
+        <div class="r-title">L-6 全库时间戳整体偏 +8 小时（CR-050 真机验证期间发现）· ✅ 已处置（2026-09-15，CR-051）</div>
+        <div class="r-desc">根因：V1 各表 <code>created_at DATETIME DEFAULT CURRENT_TIMESTAMP</code> 写入 MySQL 服务端<b>本地墙钟</b>，而连接串带 <code>serverTimezone=UTC</code> 按 UTC 读出并下发 <code>...Z</code>，比对真实 UTC 快 8 小时。后果：<code>formatRelativeTime</code> 的 diff 恒偏小 8h，<b>真实 8 小时内的一切一律渲染为「刚刚」</b>、跨天档位前移约一天，绝对时间展示同样失真（可落在未来）；<b>排序不受影响</b>（全表等量平移）。登记于 <a href="变更日志/变更台账.md">变更台账</a> §3 L-6，修法在源头，<b>不在前端做 -8h 补偿</b>。<br><b>实际处置（CR-051，上方原文保留为历史）</b>：实测修正根因表述——<code>serverTimezone</code> 只是 <code>connectionTimeZone</code> 的<b>已弃用别名</b>，只告诉驱动如何解释 DATETIME、<b>从不改会话时区</b>；改为 <code>connectionTimeZone=UTC&amp;forceConnectionTimeZoneToSession=true</code>（<b>两参数必须成对</b>，缺一个即回到缺陷态）由 <code>config/DataSourceTimezoneTest</code> 2 例守护；不改 V1 DDL、不新增 <code>V*.sql</code>、列类型仍 <code>DATETIME</code>；存量开发数据 <code>mysqldump</code> 备份后于同一事务对 <b>11 表 / 19 列</b>一次性 <code>−8 HOUR</code> 校正（<b>不做成幂等的 <code>D*.py</code></b>，因该校正天然不可重入）。验证：单测 <b>162 → 164</b> 全绿、各写入口落库值距 <code>UTC_TIMESTAMP()</code> 0~1 秒、<code>Date.now()-t</code> 由 <b>−7.69h</b> 变 <b>+0.31h</b>（首页恢复「13 分钟前」）、排序与搜索 <code>days</code> 窗无回归、契约快照重抓 <code>git diff</code> 为空。<b>残留两条</b>：① 一次性校正<b>不可重入</b>，生产环境须按方案 §7「每表一条语句、同时 SET 多列」人工执行一次（一列一条语句会让 <code>updated_at</code> 被 <code>ON UPDATE CURRENT_TIMESTAMP</code> 隐式覆写，对外零影响但取证失真）；② <code>RedisCaptchaStore</code> 的日限键取 <b>UTC 日界</b>（北京 08:00 重置）——属日界选择、非偏移缺陷，<b>本次未改</b>并已登记为已知事实。</div>
       </div></div>
     </div>
     <div class="panel">
@@ -540,7 +540,7 @@
         <tr><th>需求</th><th>卡点</th></tr>
         <tr><td>个人主页 /u/:id（设计稿已有）</td><td>无接口，页面仍是占位</td></tr>
         <tr><td>通知中心 /notifications（设计稿已有）</td><td><b>✅ 已由 CR-050 实现</b>（列表 + 未读角标 + 全部已读；无实时推送，30s 轮询）</td></tr>
-        <tr><td>搜索 /search（设计稿已有）</td><td>无接口，顶栏搜索框保持禁用</td></tr>
+        <tr><td>搜索 /search（设计稿已有）</td><td><b>✅ 已由 CR-049 实现</b>（公开端点 <code>GET /posts/search</code>、顶栏搜索框已解禁；正文全文检索归 F-FORUM-009 P1、标签侧因发帖链路未建模标签暂无真实数据来源）</td></tr>
         <tr><td>发帖标签 / 存草稿</td><td>无字段 / 无接口</td></tr>
         <tr><td>首页「最新/热门」切换</td><td>无热门排序参数</td></tr>
         <tr><td>「已采纳」标记（列表 + 楼层级高亮）</td><td><b>✅ 已由 CR-043 实现</b>（列表徽标 + 楼层标识 + 置顶）</td></tr>
@@ -565,7 +565,7 @@
 
 <footer>
   <div class="rule"></div>
-  Campus-Link 进度驾驶舱 · 视图 v2.0（2026-09-13 重构视觉与结构）· 数据快照 2026-09-14<br>
+  Campus-Link 进度驾驶舱 · 视图 v2.0（2026-09-13 重构视觉与结构）· 数据快照 2026-09-15<br>
   数据由 变更台账 / 下一步行动 / 流程偏离记录 / 设计门纪要 / Sprint2计划 五份事实文档提取生成 · <b>每次工作收尾由 AI 会话按 AGENTS.md「工作收尾约定」更新数据</b>，结构与样式不改
 </footer>
 </div>
@@ -617,7 +617,8 @@ const CRS=[
 {id:"CR-048",date:"2026-09-13",title:"Sprint 3 第二个功能：F-FORUM-005 点赞收藏——帖子/楼层点赞与帖子收藏均 toggle 语义（主键唯一约束去重），4 个新受保护端点（POST /posts/{id}/like、POST /posts/{postId}/replies/{replyId}/like、POST /posts/{id}/favorite 返回 {active,count} + GET /favorites/mine 分页）；详情出参补 likedByMe/favoritedByMe 与楼层 likedByMe/likeCount（登录填充、匿名恒 false，详情端点保持公开）；零迁移、ResultCode 无新增（复用 3001）；前端详情页交互 + 新增「我的收藏」页 /favorites + 顶栏入口；不做：通知（归 F-SOC-001）/ 个人主页整体 / 禁止自赞 / 回复收藏 / 热榜联动（单测 125→138 全绿，快照 v1.7 再生成 17 端点/33 schema；「提交后核对」已完成（c510493 逐字节一致））",type:"功能（论坛互动）",status:"full",review:"发起人确认方案后实施（“开始实施”）",hash:"c510493"},
 {id:"CR-049",date:"2026-09-13",title:"Sprint 3 第三个功能：F-FORUM-008 站内搜索——新增公开端点 GET /posts/search（keyword 必填 2~50 字、boardCode / days（仅受理 7·30·90）可选筛选、分页 page/size），检索走 V1 已就位的 FULLTEXT ft_posts_title（ngram 分词）取相关度 + posts.tags LIKE 兜底、相关度相同再按 created_at DESC, id DESC；出参复用 PostSummaryVo；零迁移、ResultCode 无新增（复用 1001 / 3001）；前端顶栏搜索框由「禁而可视」解禁为可输入（宽屏回车即搜 / 窄屏图标进搜索页）+ 新增搜索结果页 /search（按 searched 标志分四种非结果态，无结果给「去提问」引导）；不做：正文全文检索（F-FORUM-009 P1）、tags / post_tags 关联表启用与发帖标签输入、搜索热词与历史、外部搜索引擎（单测 138→145 全绿，真机 24 例冒烟通过，快照 v1.8 再生成 18 端点/33 schema、diff 98 行纯新增；⚠️ 浏览器视口 0×0 → 前端只做到 DOM 结构校验 + 合成事件，像素级目视走查与截图归 W-03 补偿③/②，仍未执行）；「提交后核对」已完成（5cdcf93 规范化后逐字节一致）",type:"功能（论坛搜索）",status:"full",review:"发起人确认方案后实施（“开始实施”）",hash:"5cdcf93"},
 {id:"CR-050",date:"2026-09-14",title:"Sprint 3 第四个功能：F-SOC-001 通知中心——新建第三个限界上下文 module/notification 四层（照抄 account/forum 范式），5 个触发点分布在 forum 的 3 个 application 服务（回帖 / 采纳 / 帖子赞 / 楼层赞 / 收藏，自触发抑制、toggle 取消不发）；3 个新受保护端点（GET /notifications 分页 unread 三态 / GET /notifications/unread-count / PUT /notifications/read-all）；通知内容读时组装零加列（跨上下文只调对方 application 取昵称 / 标题 / 楼层号）；因 ArchUnit G4，PageResult / PageVo 在本上下文另建一份（范式约束下的有意重复）；前端 /notifications 由占位转 NotificationsView（全部·未读筛选 / 全部已读 / 四态 / 分页）+ 顶栏铃铛 el-badge 未读角标（30s 轮询）+ 详情页 ?floor= 定位；零迁移、ResultCode 无新增；不做：quote 通知、逐条已读、实时推送、通知设置、F-SAFE-003 处置通知（单测 145→162 全绿，真机 14 条响应取证，快照 v1.9 再生成 21 端点/40 schema/tag 8/受保护 12；真机才暴露并修掉 2 处缺陷：unread 筛选反义（只能在适配层拦）、前端 === null 判空在 non_null 序列化下恒不成立致「#undefined 楼」；顺带发现全库时间戳偏 +8 小时，登记为台账外问题 L-6 / CR-051 候选、本次不修；⚠️ 浏览器视口 0×0 → 只做到 DOM + getComputedStyle + scrollY 取证，像素级走查归 W-03 补偿③）",type:"功能（互动通知）",status:"full",review:"发起人确认方案后实施（“审阅方案并确认开始实施 CR-050”）",hash:"70c6ca9"},
-{id:"CR-052",date:"2026-09-15",title:"前端界面美化（方案二·适度品牌化，纯展示层）：A 全局质感（sticky 毛玻璃顶栏 / 路由淡入 / :focus-visible 焦点环 / 细滚动条 / 动效令牌）、B 首页 hero 品牌横幅 +「快速开始」三入口 + 6 版块卡线性图标与识别色淡底、C 新增 PostListItem.vue 统一首页/版块/搜索/收藏四处列表（闭环界面规范 §5.1 的 P0② 挂账、首页补摘要、回复数徽章化）、D 详情页最佳答案楼层浅绿强调 + 左侧竖条 + 楼层号徽标 +「楼主」标、E 登录页品牌双栏（表单逻辑零改动）、F 发帖工具条图标化（wrap 逻辑不动）；12 改 + 1 新增，零接口 / 零新依赖 / 零迁移（openapi diff 为空、后端 162 测试未触碰）；对界面规范 §2「装饰为零」仅 4 处定点偏离（hero 唯一渐变 / 版块色仅图标容器 / hover 微抬无投影 / 毛玻璃仅顶栏），规范升 v1.7 加注；npm run build 全绿、9 路由真机走查通过（含工具条 wrap 实测）；两处自修复：列表标题改回真实 RouterLink href、transition 包单根 div 消除多根视图告警；⚠️ 走查视口固定 655 宽，桌面 ≥768 横排未目视（响应式类 + 构建兜底，待发起人宽屏复核）；编号 052——CR-051 已由 L-6 时间戳 +8h 预留",type:"UI（样式 / 前端结构）",status:"full",review:"发起人选定方案二并授权连续实施（完成后统一审核）",hash:""}
+{id:"CR-051",date:"2026-09-15",title:"全库时间戳时区口径修复（闭环台账外问题 L-6）：<b>生产代码只改 1 处</b>——数据源 URL 的 <code>serverTimezone=UTC</code>（mysql-connector-j <b>已弃用别名</b>，只影响驱动如何解释 DATETIME、<b>不改 MySQL 会话时区</b>）换成 <code>connectionTimeZone=UTC&amp;forceConnectionTimeZoneToSession=true</code>，驱动建连后把会话 <code>time_zone</code> 设为 <code>+00:00</code>，于是 V1 各表的 <code>DEFAULT CURRENT_TIMESTAMP</code> 与 <code>Instant</code> 绑定<b>双双落 UTC 墙钟</b>，技术方案 §4.1「所有时间字段存 UTC」由声明变为事实；⚠️ <b>两参数必须成对</b>（缺一个即回到缺陷态），新增 <code>config/DataSourceTimezoneTest</code> 2 例锁死该声明并禁止回退旧写法。开发库存量 <b>11 表 / 19 列</b>先 <code>mysqldump</code> 全库备份、再在同一事务内一次性 <code>−8 HOUR</code> 校正（<code>flyway_schema_history</code> 排除在外：其 <code>installed_on</code> 为 TIMESTAMP 且不参与校验）。<b>不做</b>：不改 V1 DDL、不新增 <code>V*.sql</code>、不把 DATETIME 改 TIMESTAMP、<b>不做成 <code>scripts/data/D*.py</code></b>（该校正天然不可重入、违反数据轨幂等硬性约定，生产须按方案 §7 语句在维护窗口人工执行一次）、<b>不在前端做 −8h 补偿</b>、不动 <code>spring.jackson.time-zone</code>（对 Instant 序列化无影响）。<b>验证</b>：单测 <b>162 → 164</b> 全绿；真机各写入路径（发帖 / 回帖 / 采纳 / 帖子赞 / 楼层赞 / 收藏 / 通知 / 注册 / 审计）的 <code>created_at</code> 与 <code>UTC_TIMESTAMP()</code> 差 <b>0~1 秒</b>（发帖那条记 68s，系「发帖与查询相隔 68 秒」的采集口径，落库值与 UTC 墙钟精确相等）；<code>Date.now()-t</code> 由 <b>−7.69h 变 +0.31h</b>、首页相对时间由恒「刚刚」恢复为「13 分钟前」；排序 / 搜索 <code>days=7/30/90</code> / 6 个受保护端点匿名 401 全部无回归；<b>契约快照重抓 <code>git diff</code> 为空</b>（不动 Controller / VO / ResultCode / 鉴权声明，正是方案验收点）。命中 CR-034「Bug 修复跨层 + 修复改变既有对外行为」门槛，实施结果与 <b>4 处偏差</b>补记方案 §8（含 <code>updated_at</code> 被 <code>ON UPDATE CURRENT_TIMESTAMP</code> 隐式覆写、计数由 10/20 纠正为 11/19、临时置 <code>APP_ROSTER_BYPASS=false</code> 跑真实链路、本环境 SPA 详情页走查不可执行）；文档同步技术方案 v0.7.11 + 接口契约 README v1.9.2（快照文件零改动）",type:"缺陷修复（数据口径 / 配置）",status:"full",review:"发起人确认方案后实施（“方案确认，开始实施”，登记与实施同批）",hash:""},
+{id:"CR-052",date:"2026-09-15",title:"前端界面美化（方案二·适度品牌化，纯展示层）：A 全局质感（sticky 毛玻璃顶栏 / 路由淡入 / :focus-visible 焦点环 / 细滚动条 / 动效令牌）、B 首页 hero 品牌横幅 +「快速开始」三入口 + 6 版块卡线性图标与识别色淡底、C 新增 PostListItem.vue 统一首页/版块/搜索/收藏四处列表（闭环界面规范 §5.1 的 P0② 挂账、首页补摘要、回复数徽章化）、D 详情页最佳答案楼层浅绿强调 + 左侧竖条 + 楼层号徽标 +「楼主」标、E 登录页品牌双栏（表单逻辑零改动）、F 发帖工具条图标化（wrap 逻辑不动）；12 改 + 1 新增，零接口 / 零新依赖 / 零迁移（openapi diff 为空、后端 162 测试未触碰）；对界面规范 §2「装饰为零」仅 4 处定点偏离（hero 唯一渐变 / 版块色仅图标容器 / hover 微抬无投影 / 毛玻璃仅顶栏），规范升 v1.7 加注；npm run build 全绿、9 路由真机走查通过（含工具条 wrap 实测）；两处自修复：列表标题改回真实 RouterLink href、transition 包单根 div 消除多根视图告警；⚠️ 走查视口固定 655 宽，桌面 ≥768 横排未目视（响应式类 + 构建兜底，待发起人宽屏复核）；编号 052——CR-051 已由 L-6 时间戳 +8h 预留",type:"UI（样式 / 前端结构）",status:"full",review:"发起人选定方案二并授权连续实施（完成后统一审核）",hash:"0612b18"}
 ];
 const S_LABEL={full:["✅ 完整","s-full"],part:["🟡 部分","s-part"],none:["❌ 未做","s-none"]};
 const groups={};
@@ -638,7 +639,7 @@ function renderTimeline(){
       (!fs||c.status===fs)&&(!q||(c.id+c.title+c.type+c.review).toLowerCase().includes(q)));
     if(!items.length)return;
     const g=document.createElement("div");g.className="log-date";
-    g.innerHTML=`<b>📅 ${d}</b><span class="cnt">${d==="2026-09-12"?"当天 11 条 · 含两次主色往返、设计稿还原、A3-9/A3-10 实施与路径级鉴权 CR-031":d==="2026-09-13"?"当天 12 条 · CR-032 手册 5.1 · CR-034 实施方案约定 · CR-035 A3-5 ER 图 · CR-040 A3-7 检查清单 · CR-041 A3-8 决策备料 · CR-043 Sprint 3 首个功能 · CR-044 提交信息改中文 · CR-045/046 文档一致性校准 · CR-047 驾驶舱视觉重构 · CR-048 Sprint 3 第二个功能 · CR-049 Sprint 3 第三个功能":d==="2026-09-14"?"当天 1 条 · CR-050 通知中心（Sprint 3 第四个功能）":d==="2026-09-15"?"当天 1 条 · CR-052 前端界面美化（适度品牌化，纯展示层）":items.length+" 条"}</span>`;
+    g.innerHTML=`<b>📅 ${d}</b><span class="cnt">${d==="2026-09-12"?"当天 11 条 · 含两次主色往返、设计稿还原、A3-9/A3-10 实施与路径级鉴权 CR-031":d==="2026-09-13"?"当天 12 条 · CR-032 手册 5.1 · CR-034 实施方案约定 · CR-035 A3-5 ER 图 · CR-040 A3-7 检查清单 · CR-041 A3-8 决策备料 · CR-043 Sprint 3 首个功能 · CR-044 提交信息改中文 · CR-045/046 文档一致性校准 · CR-047 驾驶舱视觉重构 · CR-048 Sprint 3 第二个功能 · CR-049 Sprint 3 第三个功能":d==="2026-09-14"?"当天 1 条 · CR-050 通知中心（Sprint 3 第四个功能）":d==="2026-09-15"?"当天 2 条 · CR-051 全库时间戳时区口径修复（闭环台账外问题 L-6）+ CR-052 前端界面美化（适度品牌化，纯展示层）":items.length+" 条"}</span>`;
     box.appendChild(g);
     items.forEach(c=>{
       shown++;
