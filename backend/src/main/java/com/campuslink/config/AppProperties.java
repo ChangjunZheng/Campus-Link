@@ -14,6 +14,7 @@ public class AppProperties {
     private Roster roster = new Roster();
     private CodeSender codeSender = new CodeSender();
     private Cors cors = new Cors();
+    private Hot hot = new Hot();
 
     @Data
     public static class Jwt {
@@ -59,5 +60,29 @@ public class AppProperties {
     @Data
     public static class Cors {
         private String allowedOrigins = "http://localhost:5173";
+    }
+
+    /**
+     * 热榜（ADR-006）：权重与 λ 是**待试点数据调优**的参数（PRD Q6），不是结论，故全部可配、调参不改代码。
+     *
+     * <p>刷新周期与首轮延迟**刻意不在这里绑定**——它们只被 {@code @Scheduled} 的属性占位符读取
+     * （{@code campuslink.hot.refresh-interval-ms} / {@code initial-delay-ms}），再绑一份就成了两个事实源，
+     * 改了一处另一处静默不动。默认值见 {@code application.yml} 与 {@code HotScoreRefreshScheduler} 的占位符。
+     */
+    @Data
+    public static class Hot {
+        /** 回复权重最高：它是论坛的核心互动且成本最高（要读、要想、要写） */
+        private double replyWeight = 3d;
+        private double likeWeight = 1d;
+        /** 收藏介于两者之间：成本高于点赞（要回访），但互动性弱于回复 */
+        private double favoriteWeight = 2d;
+        /** 每小时衰减率 λ（ADR-006 原文值）：20 小时衰减到 e^-1 ≈ 37% */
+        private double decayPerHour = 0.05d;
+        /** 刷新窗口（天）：只重算窗口内的帖子，窗口外置 0——指数衰减只降不消，不归零则老帖永久霸榜 */
+        private int windowDays = 30;
+        /** 单批读取条数：分批读—算—写回，避免一次把整窗候选读进内存 */
+        private int batchSize = 500;
+        /** 锁 TTL（秒）：advisory 锁不显式释放、靠 TTL 兜底，故须略大于单轮预期耗时 */
+        private long lockTtlSeconds = 300L;
     }
 }

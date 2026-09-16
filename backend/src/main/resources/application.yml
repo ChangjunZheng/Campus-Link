@@ -81,7 +81,8 @@ campuslink:
     # ⚠️ 等同于取消验证码防线——非本机环境必须留空（CAPTCHA_FIXED_CODE=），上线检查清单项。
     fixed-code: ${CAPTCHA_FIXED_CODE:123456}
   verify:
-    ip-hourly-limit: 10
+    # 默认 10 次/小时/IP 不变；仅开发期批量灌账号（scripts/data/D001，一次 45 次核验）时临时抬高
+    ip-hourly-limit: ${VERIFY_IP_HOURLY_LIMIT:10}
     ticket-ttl-minutes: 5
   roster:
     # 学籍核验旁路（内置测试名册）：仅限开发联调；生产必须为 false（上线检查清单项）
@@ -91,3 +92,17 @@ campuslink:
     mode: ${CODE_SENDER_MODE:log}
   cors:
     allowed-origins: ${CORS_ORIGINS:http://localhost:5173}
+  hot:
+    # 热榜（ADR-006，CR-058）。互动分 = reply-weight×回复 + like-weight×赞 + favorite-weight×收藏，
+    # hot_score = 互动分 × exp(-decay-per-hour × 小时龄)。
+    # 权重与 λ 是**待试点数据调优**的参数（PRD Q6），不是结论——调参只改这里，不改代码。
+    reply-weight: 3.0          # 回复权重最高：论坛的核心互动且成本最高
+    like-weight: 1.0
+    favorite-weight: 2.0       # 收藏成本高于点赞（要回访），互动性弱于回复
+    decay-per-hour: 0.05       # ADR-006 原文值：20 小时衰减到 e^-1 ≈ 37%
+    window-days: 30            # 只重算窗口内的帖子；窗口外置 0（指数衰减只降不消，不归零则老帖永久霸榜）
+    batch-size: 500            # 游标分批读—算—写回，避免一次把整窗候选读进内存
+    lock-ttl-seconds: 300      # ⚠️ 须 ≤ 刷新周期：锁不显式释放、靠 TTL 兜底，TTL 比周期长会把实际刷新周期变成 TTL
+    # 下面两项只被 HotScoreRefreshScheduler 的 @Scheduled 占位符消费，**不绑定到 AppProperties**（避免两个事实源）
+    refresh-interval-ms: ${HOT_REFRESH_INTERVAL_MS:600000}   # ADR-006 原文 10 分钟
+    initial-delay-ms: ${HOT_INITIAL_DELAY_MS:15000}          # 新部署不必等一个完整周期才有分数

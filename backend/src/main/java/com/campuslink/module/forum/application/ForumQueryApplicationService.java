@@ -20,6 +20,7 @@ import com.campuslink.module.forum.domain.gateway.ReplyRepository;
 import com.campuslink.module.forum.domain.model.Board;
 import com.campuslink.module.forum.domain.model.LikeTargetType;
 import com.campuslink.module.forum.domain.model.Post;
+import com.campuslink.module.forum.domain.model.PostSortOrder;
 import com.campuslink.module.forum.domain.model.Reply;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -65,12 +66,20 @@ public class ForumQueryApplicationService {
         return boardRepository.findAllEnabled();
     }
 
-    /** 帖子列表：boardCode 缺省为全站最新；不存在的版块按资源不存在处理（设计 §3.2） */
-    public PageResult<PostSummary> listPosts(String boardCode, int page, int size) {
+    /**
+     * 帖子列表：boardCode 缺省为全站；sort 缺省 {@code latest}（= 引入热榜之前完全一致的行为），
+     * {@code hot} 走 hot_score 倒序（F-FORUM-003）；不存在的版块按资源不存在处理（设计 §3.2）。
+     *
+     * <p>sort 非法值 / 空串 → 1001，**不静默归一到 latest**——与同端点族 {@code days} 只受理 7/30/90 的口径一致：
+     * 静默降级会让调用方以为拿到了热榜、实际拿到的是最新序，这种错法查不出来。
+     */
+    public PageResult<PostSummary> listPosts(String boardCode, String sort, int page, int size) {
+        PostSortOrder sortOrder = PostSortOrder.fromCode(sort)
+                .orElseThrow(() -> new ApiException(ResultCode.INVALID_PARAM));
         int currentPage = normalizePage(page);
         int pageSize = normalizeSize(size);
         Long boardId = boardIdOf(boardCode);
-        PageResult<Post> found = postRepository.findPage(boardId, currentPage, pageSize);
+        PageResult<Post> found = postRepository.findPage(boardId, sortOrder, currentPage, pageSize);
         return new PageResult<>(toSummaries(found.items()), found.total(), currentPage, pageSize);
     }
 

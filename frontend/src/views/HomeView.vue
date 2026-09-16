@@ -1,18 +1,19 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { EditPen, QuestionFilled, Search, ArrowRight } from '@element-plus/icons-vue'
+import type { IconName } from '../assets/icons'
 import { listPosts, type PostSummaryVo } from '../api/forum'
 import { BOARDS } from '../constants/boards'
 import { useAuthStore } from '../stores/auth'
 import PostListItem from '../components/PostListItem.vue'
+import SvgIcon from '../components/SvgIcon.vue'
 
 const auth = useAuthStore()
 
-/** hero 右侧「快速开始」入口（CR-052 品牌化） */
-const quickEntries = [
-  { label: '我要提问 / 发帖', to: '/publish', icon: EditPen },
-  { label: '逛技术问答版块', to: '/board/qna', icon: QuestionFilled },
-  { label: '搜索全站内容', to: '/search', icon: Search },
+/** hero 右侧「快速开始」入口（CR-052 品牌化）；icon 显式标注类型，否则推成 string 传不进 SvgIcon */
+const quickEntries: { label: string; to: string; icon: IconName }[] = [
+  { label: '我要提问 / 发帖', to: '/publish', icon: 'pencil' },
+  { label: '逛技术问答版块', to: '/board/qna', icon: 'message-circle' },
+  { label: '搜索全站内容', to: '/search', icon: 'search' },
 ]
 
 const latest = ref<PostSummaryVo[]>([])
@@ -75,15 +76,14 @@ onMounted(loadLatest)
             class="group flex items-center gap-2.5 rounded-md border-[0.5px] border-line bg-card px-3 py-2.5 transition-colors duration-fast ease-standard hover:border-primary"
           >
             <span class="inline-flex h-7 w-7 flex-none items-center justify-center rounded-sm bg-primary-soft text-primary">
-              <el-icon :size="15"><component :is="quick.icon" /></el-icon>
+              <SvgIcon :name="quick.icon" :size="15" />
             </span>
             <span class="flex-1 text-note text-ink-regular">{{ quick.label }}</span>
-            <el-icon
+            <SvgIcon
+              name="chevron-right"
               :size="14"
               class="text-ink-meta transition-transform duration-fast ease-standard group-hover:translate-x-0.5"
-            >
-              <ArrowRight />
-            </el-icon>
+            />
           </RouterLink>
         </div>
       </div>
@@ -96,7 +96,7 @@ onMounted(loadLatest)
           <el-card shadow="never" class="cl-board-card mb-4" :body-style="{ padding: 'var(--cl-space-4)' }">
             <div class="flex items-start gap-3">
               <span :class="['cl-board-icon', `cl-board-icon--${b.code}`]">
-                <el-icon :size="20"><component :is="b.icon" /></el-icon>
+                <SvgIcon :name="b.icon" :size="20" />
               </span>
               <div class="min-w-0">
                 <h3 class="text-title-sm font-medium text-ink">{{ b.name }}</h3>

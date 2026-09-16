@@ -9,7 +9,8 @@
 import type { PostSummaryVo } from '../api/forum'
 import { boardNameOf } from '../constants/boards'
 import { formatRelativeTime } from '../utils/time'
-import { ChatDotRound } from '@element-plus/icons-vue'
+import SvgIcon from './SvgIcon.vue'
+import UserAvatar from './UserAvatar.vue'
 
 withDefaults(
   defineProps<{
@@ -41,7 +42,7 @@ withDefaults(
         class="flex flex-none items-center gap-0.5 rounded-sm bg-code px-1.5 py-px text-caption text-ink-meta"
         :title="`${post.replyCount} 条回复`"
       >
-        <el-icon :size="12"><ChatDotRound /></el-icon>
+        <SvgIcon name="message-2" :size="12" />
         {{ post.replyCount }}
       </span>
     </div>
@@ -60,6 +61,7 @@ withDefaults(
         </RouterLink>
         <span aria-hidden="true">·</span>
       </template>
+      <UserAvatar :name="post.authorNickname" :size="20" />
       <span>{{ post.authorNickname }}</span>
       <span aria-hidden="true">·</span>
       <span>{{ formatRelativeTime(post.createdAt) }}</span>

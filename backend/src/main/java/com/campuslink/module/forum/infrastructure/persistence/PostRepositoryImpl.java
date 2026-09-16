@@ -6,12 +6,15 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.campuslink.module.forum.domain.gateway.PageResult;
 import com.campuslink.module.forum.domain.gateway.PostRepository;
+import com.campuslink.module.forum.domain.model.HotScoreInput;
 import com.campuslink.module.forum.domain.model.Post;
+import com.campuslink.module.forum.domain.model.PostSortOrder;
 import com.campuslink.module.forum.domain.model.PostStatus;
 import com.campuslink.module.forum.infrastructure.persistence.mapper.PostMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -24,14 +27,17 @@ public class PostRepositoryImpl implements PostRepository {
     private final PostMapper postMapper;
 
     @Override
-    public PageResult<Post> findPage(Long boardId, int page, int size) {
+    public PageResult<Post> findPage(Long boardId, PostSortOrder sort, int page, int size) {
         LambdaQueryWrapper<PostDO> query = new LambdaQueryWrapper<>();
         if (boardId != null) {
             query.eq(PostDO::getBoardId, boardId);
         }
         query.eq(PostDO::getStatus, PostStatus.PUBLISHED.name())
-                .eq(PostDO::getIsDeleted, false)
-                .orderByDesc(PostDO::getCreatedAt)
+                .eq(PostDO::getIsDeleted, false);
+        if (sort == PostSortOrder.HOT) {
+            query.orderByDesc(PostDO::getHotScore);
+        }
+        query.orderByDesc(PostDO::getCreatedAt)
                 .orderByDesc(PostDO::getId);
         IPage<PostDO> result = postMapper.selectPage(new Page<>(page, size), query);
         return new PageResult<>(result.getRecords().stream().map(PostConverter::toDomain).toList(),
@@ -104,5 +110,44 @@ public class PostRepositoryImpl implements PostRepository {
                 .setSql("favorite_count = favorite_count + " + delta)
                 .eq(PostDO::getId, postId));
         return postMapper.selectById(postId).getFavoriteCount();
+    }
+
+    @Override
+    public List<HotScoreInput> findHotCandidates(Instant since, int limit, Long afterId) {
+        LambdaQueryWrapper<PostDO> query = new LambdaQueryWrapper<PostDO>()
+                .select(PostDO::getId, PostDO::getReplyCount, PostDO::getLikeCount,
+                        PostDO::getFavoriteCount, PostDO::getCreatedAt)
+                .eq(PostDO::getStatus, PostStatus.PUBLISHED.name())
+                .eq(PostDO::getIsDeleted, false)
+                .ge(PostDO::getCreatedAt, since)
+                .orderByAsc(PostDO::getId);
+        if (afterId != null) {
+            query.gt(PostDO::getId, afterId);
+        }
+        // searchCount=false：游标分批只需要这一批的数据，总数由调用方按"取满即继续"推进
+        return postMapper.selectPage(new Page<>(1, limit, false), query).getRecords().stream()
+                .map(d -> new HotScoreInput(d.getId(), d.getReplyCount(), d.getLikeCount(),
+                        d.getFavoriteCount(), d.getCreatedAt()))
+                .toList();
+    }
+
+    @Override
+    public void updateHotScore(Long postId, double score) {
+        // 定向单列 UPDATE：绝不整行回写，否则会覆盖刷新期间并发变化的三个互动计数
+        postMapper.update(null, new LambdaUpdateWrapper<PostDO>()
+                .set(PostDO::getHotScore, score)
+                .eq(PostDO::getId, postId));
+    }
+
+    @Override
+    public int resetHotScoresBefore(Instant since) {
+        // 只碰"已经不是候选"且分数非 0 的行：窗口外的老帖、已删除、非 PUBLISHED
+        return postMapper.update(null, new LambdaUpdateWrapper<PostDO>()
+                .set(PostDO::getHotScore, 0d)
+                .ne(PostDO::getHotScore, 0d)
+                .and(notCandidate -> notCandidate
+                        .eq(PostDO::getIsDeleted, true)
+                        .or().ne(PostDO::getStatus, PostStatus.PUBLISHED.name())
+                        .or().lt(PostDO::getCreatedAt, since)));
     }
 }

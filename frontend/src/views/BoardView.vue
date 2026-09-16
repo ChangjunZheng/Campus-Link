@@ -1,15 +1,18 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { QuestionFilled } from '@element-plus/icons-vue'
+import type { IconName } from '../assets/icons'
 import { listBoards, listPosts, type BoardVo, type PostSummaryVo } from '../api/forum'
 import { BOARD_MAP, type BoardCode } from '../constants/boards'
 import PostListItem from '../components/PostListItem.vue'
+import SvgIcon from '../components/SvgIcon.vue'
 
 const route = useRoute()
 const code = computed(() => String(route.params.code || ''))
-/** 版块图标取本地固定 6 版块常量（接口 BoardVo 不含图标），非法 code 兜底问号 */
-const boardIcon = computed(() => BOARD_MAP[code.value as BoardCode]?.icon ?? QuestionFilled)
+/** 版块图标取本地固定 6 版块常量（接口 BoardVo 不含图标），非法 code 兜底问号气泡 */
+const boardIcon = computed<IconName>(
+  () => BOARD_MAP[code.value as BoardCode]?.icon ?? 'message-circle',
+)
 
 const board = ref<BoardVo | undefined>()
 const posts = ref<PostSummaryVo[]>([])
@@ -71,7 +74,7 @@ watch(
     <div class="flex items-center justify-between gap-3">
       <div class="flex min-w-0 items-center gap-3.5">
         <span :class="['cl-board-icon', `cl-board-icon--${code}`]">
-          <el-icon :size="22"><component :is="boardIcon" /></el-icon>
+          <SvgIcon :name="boardIcon" :size="22" />
         </span>
         <div class="min-w-0">
           <h2 class="mb-0.5 text-title-lg font-medium text-ink">{{ board?.name || code }}</h2>

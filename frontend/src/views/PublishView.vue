@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { nextTick, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Link, List, Picture } from '@element-plus/icons-vue'
 import { listBoards, publishPost, type BoardVo } from '../api/forum'
 import { useNarrowScreen } from '../composables/useNarrowScreen'
+import SvgIcon from '../components/SvgIcon.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -106,10 +106,10 @@ async function submit() {
             &lt;/&gt;
           </button>
           <button type="button" class="cl-md-tool" title="无序列表" aria-label="无序列表" @click="wrap('- ', '', '列表项')">
-            <el-icon :size="15"><List /></el-icon>
+            <SvgIcon name="list" :size="15" />
           </button>
           <button type="button" class="cl-md-tool" title="插入链接" aria-label="插入链接" @click="wrap('[', '](https://)', '链接文字')">
-            <el-icon :size="15"><Link /></el-icon>
+            <SvgIcon name="link" :size="15" />
           </button>
           <button
             type="button"
@@ -118,7 +118,7 @@ async function submit() {
             title="图片上传即将开放（暂无上传接口）"
             aria-label="图片（暂未开放）"
           >
-            <el-icon :size="15"><Picture /></el-icon>
+            <SvgIcon name="photo" :size="15" />
           </button>
         </div>
 

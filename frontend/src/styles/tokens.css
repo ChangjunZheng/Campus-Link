@@ -68,8 +68,15 @@
   --cl-reading: 760px;
   --cl-header-h: 60px;
 
-  --cl-font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB',
-    'Microsoft YaHei', '微软雅黑', Arial, sans-serif;
+  /* 中文字体（CR-055 批次 4）：自托管 webfont 前置，既有系统栈原样保留为回退
+     （分片未下完 / 缺字时回落，`font-display: swap` 由包内 CSS 提供）。
+     族名 `Noto Sans SC Variable` 来自 `@fontsource-variable/noto-sans-sc/index.css`；
+     该包以**可变字重轴 100-900 的单一 @font-face** 覆盖，故本项目用到的 400 / 500
+     都是真字形、且不因多一个字重而多下载文件。
+     `--el-font-family` 在下方桥接本令牌，EP 组件随之生效；
+     代码块用的是 `.markdown-body code` 里另一份等宽栈，不受本令牌影响。 */
+  --cl-font-family: 'Noto Sans SC Variable', 'Helvetica Neue', Helvetica, 'PingFang SC',
+    'Hiragino Sans GB', 'Microsoft YaHei', '微软雅黑', Arial, sans-serif;
 
   /* ---- 动效（CR-052：时长 / 缓动令牌，过渡只消费这两个，不手写魔法值） ---- */
   --cl-duration-fast: 0.15s;
@@ -97,6 +104,44 @@
   --cl-board-contest: #c04d8f; /* 竞赛交流 */
   --cl-board-course: #7a5af0; /* 课程交流 */
   --cl-board-chat: #0ea5b7; /* 闲聊灌水 */
+
+  /* ---- 代码高亮令牌（CR-055 批次 1） ----
+     取值来源：highlight.js 自带 github 主题（BSD-3-Clause）。上游 CSS 含字面色值，直接引入会破
+     "颜色只来自令牌"这条硬约定，故只把色板抄到这里，映射写在 styles/hljs.css。
+     三处用 color-mix() 派生深色是对上游的**主动修正**（手法同 CR-023 的 D-2）：原色在本项目
+     --cl-bg-code(#f6f8fa) 上不达 AA 4.5:1——脚本实测 keyword #d73a49 = 4.30、built_in #e36209 = 3.28、
+     name #22863a = 4.35，派生后为 4.70 / 4.83 / 4.75。comment #6a737d = 4.52:1 属临界通过，保留原色。 */
+  --cl-code-base: #24292e; /* 13.78:1 */
+  --cl-code-keyword: color-mix(in srgb, #d73a49 95%, #000); /* 原 4.30 → 4.70:1 */
+  --cl-code-title: #6f42c1; /* 6.12:1 */
+  --cl-code-literal: #005cc5; /* 5.91:1 */
+  --cl-code-string: #032f62; /* 12.43:1 */
+  --cl-code-builtin: color-mix(in srgb, #e36209 80%, #000); /* 原 3.28 → 4.83:1 */
+  --cl-code-comment: #6a737d; /* 4.52:1（临界通过，未派生） */
+  --cl-code-name: color-mix(in srgb, #22863a 95%, #000); /* 原 4.35 → 4.75:1；diff 增行底色上 4.48 → 4.89 */
+  --cl-code-bullet: #735c0f; /* 6.04:1 */
+  --cl-code-addition-bg: #f0fff4;
+  --cl-code-deletion: #b31d28; /* 在其底色上 6.00:1 */
+  --cl-code-deletion-bg: #ffeef0;
+
+  /* ---- 头像底色 8 档（CR-055 批次 2） ----
+     色值取自本地素材 04-头像占位/：**DiceBear「Initials」风格，CC0 1.0**
+     （https://github.com/dicebear/dicebear）。**只取底色、不取素材本体**，两条实测依据：
+     ① 素材自带白字，在这 8 个浅色底上仅 1.27~2.03:1，连大字 3:1 门槛都不到，首字母实际不可读；
+     ② 素材字母由 DiceBear 按种子生成、与用户名无关（zhangsan.svg 显示 "DF"）。
+     故头像本体由 components/UserAvatar.vue 按昵称派生（首字 = 昵称真实首字）。
+     字色固定 --cl-avatar-ink：实测 --cl-text-primary(#303133) 在 8 档上为 6.42~10.27:1，全过 AA；
+     而 --cl-color-link(#1a6fc4) 只有 2.52~4.02:1，**不可用作头像字色**。
+     ⚠️ 8 档全是浅色，这是"字色只需一档"的前提；将来若加入深色档，必须同时给出配对字色令牌。 */
+  --cl-avatar-1: #f4d8d8;
+  --cl-avatar-2: #c0aede;
+  --cl-avatar-3: #e0e0ff;
+  --cl-avatar-4: #b6e3f4;
+  --cl-avatar-5: #c1f0c1;
+  --cl-avatar-6: #ffdfbf;
+  --cl-avatar-7: #d1d4f9;
+  --cl-avatar-8: #ffd5dc;
+  --cl-avatar-ink: var(--cl-text-primary);
 }
 
 /* ---- Element Plus 变量桥接：主色 / 文本 / 圆角 / 字号 / 边框宽度 ---- */
@@ -141,6 +186,22 @@
     --el-header-height: auto;
     --el-header-padding: 0 var(--cl-space-4);
   }
+}
+
+/* el-avatar 变量桥接（CR-055 批次 2）：与 `.el-header` 同一类坑——EP 把 `--el-avatar-*`
+   全部声明在 `.el-avatar` 自身（不是 `:root`），故 `:root` 级覆写会被影子掉，
+   必须用 `.el-avatar.el-avatar` 抬到 (0,2,0) 才压得过组件规则。
+   不设 `--el-avatar-border-radius`：EP 默认 shape=circle 走 `border-radius: 50%`，
+   该变量只在 shape=square 时生效，全站头像都是圆形，设了是死变量。
+   这里是**兜底默认值**；每个实例的底色由 components/UserAvatar.vue 以内联
+   `--el-avatar-bg-color` 覆写（内联优先级高于本规则），字色统一走 --cl-avatar-ink。 */
+.el-avatar.el-avatar {
+  --el-avatar-bg-color: var(--cl-color-primary-soft);
+  --el-avatar-text-color: var(--cl-avatar-ink);
+  --el-avatar-text-size: var(--cl-font-body);
+  font-weight: 500;
+  /* 头像总坐在会截断的昵称旁边，不该被 flex 压缩（原为 App.vue 的内联样式，CR-055 批次 2 收编到此处） */
+  flex-shrink: 0;
 }
 
 /* sticky 全局顶栏（CR-052）：滚动后吸附并转半透明毛玻璃——定点偏离④，毛玻璃全站仅此一处。
@@ -366,6 +427,27 @@
 
   .route-fade-leave-to {
     opacity: 0;
+  }
+
+  /* 图标容器（CR-055 批次 3）：SvgIcon.vue 用，尺寸由组件内联 width/height 给。
+     不复用 `el-icon`——EP 给它加了 `fill: currentColor`，CSS 规则压过 SVG 自身的
+     `fill="none"` presentation attribute，Tabler 的描边图标会被灌成实心块。
+     这里在子 svg 上再写一次 `fill: none` 兜底：`stroke="currentColor"` 已在素材里，
+     颜色随调用点文字色令牌走，本体不含任何色值。
+     `flex: none` 是必需的——图标总坐在会 truncate 的文本旁边，不该被压缩。 */
+  .cl-icon {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+
+  .cl-icon > svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    fill: none;
   }
 
   /* hero 品牌横幅背景（CR-052 定点偏离①：全站唯一渐变，仅首页 hero 消费） */

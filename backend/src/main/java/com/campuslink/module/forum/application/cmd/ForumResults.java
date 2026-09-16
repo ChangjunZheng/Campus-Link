@@ -55,4 +55,11 @@ public final class ForumResults {
     /** 楼层只读摘要（同上）：postId 与 floorNo 供通知条目跳转定位 */
     public record ReplyBrief(Long postId, int floorNo) {
     }
+
+    /**
+     * 热榜刷新一轮的统计（ADR-006）：refreshed 为写回分数的帖子数、reset 为被置 0 的非候选帖子数。
+     * 只供定时触发器记 1 行 INFO 摘要——定时任务没有请求可返回，日志是它唯一的可观测出口；**不进对外契约**。
+     */
+    public record HotRefreshResult(int refreshed, int reset, long elapsedMillis) {
+    }
 }

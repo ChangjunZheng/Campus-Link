@@ -14,11 +14,11 @@
 ## 命名规范
 
 ```
-D<序号>__<描述>.py        例：D001__backfill_user_grade.py
+D<序号>__<描述>.py        例：D0xx__backfill_user_grade.py（假想示例，勿真建）
 ```
 
 - `D` 前缀 + 三位递增序号 + 双下划线 + 小写英文描述，与 Flyway 的 `V/R/U` 风格一致、一眼看出先后顺序。
-- 序号**递增且不可复用**；已删除的编号不回收。
+- 序号**递增且不可复用**；已删除的编号不回收。**下一个可用序号看下方「执行记录」与 `data/` 目录实际文件**——`D001` 已由 [CR-054](../../docs/变更日志/变更台账.md#cr-054) 的 `D001__seed_dev_roster_45.py` 占用（本文件早期示例里的 `D001__backfill_user_grade.py` 是建档期的假想名，从未存在）。
 - `_template.py` 是模板，不是迁移，新建脚本请复制它改名。
 
 ## 硬性约定
@@ -51,18 +51,21 @@ python -m venv .venv
 
 ```bash
 # 1. 先干跑（默认），确认影响范围
-.venv/Scripts/python data/D001__backfill_user_grade.py
+.venv/Scripts/python data/D001__seed_dev_roster_45.py
 
 # 2. 确认无误后真正执行
-.venv/Scripts/python data/D001__backfill_user_grade.py --apply
+.venv/Scripts/python data/D001__seed_dev_roster_45.py --apply
 ```
 
 连远程 / 非默认库时用环境变量覆盖，例如：
 
 ```bash
 DB_PORT=33061 DB_NAME=campuslink_staging \
-  .venv/Scripts/python data/D001__backfill_user_grade.py --apply
+  .venv/Scripts/python data/D001__seed_dev_roster_45.py --apply
 ```
+
+> ⚠️ **`D001` 与常规模板不同：它对数据库只读，写入靠编排既有 HTTP 接口完成**（名册走 `POST /api/v1/admin/roster/import`、账号走 `verify-student → captcha → register`），目的是复用生产代码的 HMAC / AES-GCM 加密与审计日志，不在 Python 里复刻密码学。因此执行它还需要：① 后端已启动且 `API_BASE` 指得到；② 该实例为 `APP_ROSTER_BYPASS=false`（否则学籍核验走内置名册、库里的名册行不可见）；③ `VERIFY_IP_HOURLY_LIMIT` 抬到 ≥ 45（默认 10 次/小时/IP 会在第 11 次核验返回 `2103`）。细节与账号清单见 [docs/开发/开发测试账号清单.md](../../docs/开发/开发测试账号清单.md)。
+> **后续脚本若只写 SQL，仍照 `_template.py` 来，不要模仿这条的 HTTP 编排。**
 
 ## 执行记录（手工维护）
 
@@ -71,3 +74,5 @@ DB_PORT=33061 DB_NAME=campuslink_staging \
 | 脚本 | 环境 | 执行时间 | 操作人 | 影响行数 | 备注 |
 |------|------|---------|--------|---------|------|
 | — | — | — | — | — | 尚无生产 / 共享环境的数据变更；开发期数据随 Flyway 重建 |
+| `D001__seed_dev_roster_45.py` | **本机开发库** `127.0.0.1:3306/campuslink`（经 8089 临时实例，`APP_ROSTER_BYPASS=false` + `VERIFY_IP_HOURLY_LIMIT=60`） | 2026-09-15 22:24~22:26 | AI 会话（[CR-054](../../docs/变更日志/变更台账.md#cr-054)） | **SQL 直写 0 行**；经接口产生 `student_roster` +45 行（批次 `dev-sim-45`）、`users` +45 个、`audit_logs` +1 条 `ROSTER_IMPORT` | 首灌。导入 `inserted=45 skipped=0 failed=0`；注册 45/45；抽 3 个账号登录 + `/users/me` 昵称复核**当次失败**（验证码重发间隔 60s 内重发被 `2002` 拒、旧码已被注册消耗 ⇒ `2005`），已修脚本为重发被拒时等待重试 |
+| `D001__seed_dev_roster_45.py` | 同上 | 2026-09-15 22:27 | AI 会话（同上） | **0 新增**（`inserted=0 skipped=45`、新注册 0） | 幂等复核 + 登录复核重跑：`3/3` 通过（`nickname=模拟学生01~03`）。复核后 `student_roster(dev-sim-45)=45` 行、`used_user_id` 全非空 45、`users(nickname LIKE '模拟学生%')=45` |

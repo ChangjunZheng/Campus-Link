@@ -97,7 +97,7 @@
         "tags": [
           "post"
         ],
-        "summary": "帖子列表（公开）：boardCode 缺省为全站最新，排序固定 created_at DESC",
+        "summary": "帖子列表（公开）：boardCode 缺省为全站；sort=latest（缺省，created_at DESC）或 hot（hot_score DESC，热榜），非法值 400",
         "operationId": "list",
         "parameters": [
           {
@@ -106,6 +106,15 @@
             "required": false,
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "latest"
             }
           },
           {

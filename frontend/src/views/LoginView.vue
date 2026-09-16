@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Briefcase, ChatLineRound, Collection } from '@element-plus/icons-vue'
+import type { IconName } from '../assets/icons'
 import { useAuthStore } from '../stores/auth'
 import { sendCaptcha, verifyStudent } from '../api/auth'
 import { useCountdown } from '../composables/useCountdown'
+import SvgIcon from '../components/SvgIcon.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -12,11 +13,11 @@ const auth = useAuthStore()
 
 const tab = ref<'login' | 'register'>('login')
 
-/** 左侧品牌区价值主张（CR-052 品牌化） */
-const values = [
-  { icon: ChatLineRound, title: '问有所答', desc: '技术问题有人接，最佳答案可采纳' },
-  { icon: Collection, title: '学有同伴', desc: '课件资源共享，课程竞赛一起讨论' },
-  { icon: Briefcase, title: '求职有路', desc: '面经、实习与校招信息不再迷路' },
+/** 左侧品牌区价值主张（CR-052 品牌化）；icon 显式标注类型，否则推成 string 传不进 SvgIcon */
+const values: { icon: IconName; title: string; desc: string }[] = [
+  { icon: 'message-2', title: '问有所答', desc: '技术问题有人接，最佳答案可采纳' },
+  { icon: 'book-2', title: '学有同伴', desc: '课件资源共享，课程竞赛一起讨论' },
+  { icon: 'briefcase', title: '求职有路', desc: '面经、实习与校招信息不再迷路' },
 ]
 
 const loginForm = reactive({ email: '', code: '' })
@@ -80,7 +81,7 @@ async function doRegister() {
     >
       <div class="flex items-center gap-2.5">
         <span class="inline-flex h-9 w-9 flex-none items-center justify-center rounded-md bg-primary text-white">
-          <el-icon :size="20"><ChatLineRound /></el-icon>
+          <SvgIcon name="message-2" :size="20" />
         </span>
         <span class="text-title font-medium text-ink">Campus-Link</span>
       </div>
@@ -92,9 +93,7 @@ async function doRegister() {
       </p>
       <ul class="mt-6 flex flex-col gap-3.5">
         <li v-for="v in values" :key="v.title" class="flex items-start gap-2.5 text-note text-ink-regular">
-          <el-icon class="mt-0.5 flex-none text-primary" :size="16">
-            <component :is="v.icon" />
-          </el-icon>
+          <SvgIcon :name="v.icon" :size="16" class="mt-0.5 text-primary" />
           <span><span class="font-medium text-ink">{{ v.title }}</span>——{{ v.desc }}</span>
         </li>
       </ul>

@@ -1,7 +1,10 @@
 package com.campuslink.module.forum.domain.gateway;
 
+import com.campuslink.module.forum.domain.model.HotScoreInput;
 import com.campuslink.module.forum.domain.model.Post;
+import com.campuslink.module.forum.domain.model.PostSortOrder;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -10,13 +13,14 @@ import java.util.Optional;
 public interface PostRepository {
 
     /**
-     * 可见帖子分页：{@code boardId} 为 null 表示全站最新；固定 {@code status='PUBLISHED' AND is_deleted=0}，
-     * 按 created_at DESC（id 兜底，避免同秒创建时翻页错位）。
+     * 可见帖子分页：{@code boardId} 为 null 表示全站；固定 {@code status='PUBLISHED' AND is_deleted=0}，
+     * 排序由 {@code sort} 决定（{@link PostSortOrder#LATEST} = created_at DESC，即引入热榜之前的行为；
+     * {@link PostSortOrder#HOT} = hot_score DESC），两者都以 id DESC 兜底，避免同值时翻页错位。
      *
      * <p>与 {@link #findById} 不同，这里在 SQL 侧一并过滤 status——列表的 total 必须与查询条件同源，
      * 不能在内存里剔除后再算页数。
      */
-    PageResult<Post> findPage(Long boardId, int page, int size);
+    PageResult<Post> findPage(Long boardId, PostSortOrder sort, int page, int size);
 
     /**
      * 站内搜索（F-FORUM-008）：标题全文（ngram）+ tags 冗余列 LIKE 兜底，只搜 PUBLISHED 且未删除，
@@ -60,4 +64,29 @@ public interface PostRepository {
 
     /** 收藏计数增减（F-FORUM-005，delta 为 ±1）；返回增减后的 favorite_count */
     int adjustFavoriteCount(Long postId, int delta);
+
+    /**
+     * 热榜候选分批读（ADR-006）：{@code status='PUBLISHED' AND is_deleted=0 AND created_at >= since}，
+     * 按 id ASC 游标推进（{@code afterId} 为 null 表示从头开始），只取算分需要的 5 列，**不装配聚合**。
+     *
+     * <p>用游标而非 OFFSET：刷新窗口内的帖子每轮全量扫过，OFFSET 会随页数加深而放大扫描量。
+     */
+    List<HotScoreInput> findHotCandidates(Instant since, int limit, Long afterId);
+
+    /**
+     * 定向写回单帖热度分：{@code UPDATE posts SET hot_score=?}。
+     *
+     * <p>与 {@link #adjustLikeCount} 同理**绝不整行回写**——刷新是异步的，整行回写会把读取那一刻的
+     * {@code reply_count} / {@code like_count} / {@code favorite_count} 覆盖回去，抹掉期间发生的互动。
+     */
+    void updateHotScore(Long postId, double score);
+
+    /**
+     * 把**不再是候选**的帖子热度分一次性置 0（窗口外的老帖、已删除、非 PUBLISHED），返回受影响行数。
+     *
+     * <p>为什么必须做：指数衰减只降不消，不置零则历史高分帖会永久留在热榜前列；
+     * 已删除 / 下架的帖子更不该带着分数出现在 {@code sort=hot} 的排序依据里。
+     * 实现只更新 {@code hot_score <> 0} 的行，避免每轮空写全表。
+     */
+    int resetHotScoresBefore(Instant since);
 }

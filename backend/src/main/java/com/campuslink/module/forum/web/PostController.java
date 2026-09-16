@@ -50,14 +50,15 @@ public class PostController {
     private final PostApplicationService postApplicationService;
     private final InteractionApplicationService interactionApplicationService;
 
-    @Operation(summary = "帖子列表（公开）：boardCode 缺省为全站最新，排序固定 created_at DESC")
+    @Operation(summary = "帖子列表（公开）：boardCode 缺省为全站；sort=latest（缺省，created_at DESC）或 hot（hot_score DESC，热榜），非法值 400")
     @ErrorCodes({ResultCode.NOT_FOUND})
     @PublicEndpoint
     @GetMapping
     public ApiResponse<PageVo<PostSummaryVo>> list(@RequestParam(required = false) String boardCode,
+                                                   @RequestParam(defaultValue = "latest") String sort,
                                                    @RequestParam(defaultValue = "1") int page,
                                                    @RequestParam(defaultValue = "20") int size) {
-        PageResult<PostSummary> result = forumQueryService.listPosts(boardCode, page, size);
+        PageResult<PostSummary> result = forumQueryService.listPosts(boardCode, sort, page, size);
         return ApiResponse.ok(new PageVo<>(result.items().stream().map(PostSummaryVo::from).toList(),
                 result.total(), result.page(), result.size()));
     }

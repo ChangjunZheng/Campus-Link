@@ -1,0 +1,116 @@
+/* 代码高亮配色映射（CR-055 批次 1）
+ *
+ * 事实源：highlight.js 自带 github 主题（BSD-3-Clause，本地副本
+ * D:\Workspace\TechResources\前端素材\03-代码高亮主题\github.min.css）。
+ * 上游 CSS 含字面色值，直接 @import 会破「颜色只来自令牌」这条硬约定，
+ * 故这里只搬「类名 → 令牌」的映射关系，色值全部落在 tokens.css 的 --cl-code-*。
+ *
+ * 三处与上游的主动偏离（实测依据见 tokens.css 注释）：
+ * ① 不设 background —— 代码块底色由 .markdown-body pre 的 --cl-bg-code 决定，
+ *    上游的 #fff 与本项目底色不一致，搬过来会盖掉令牌；
+ * ② 不搬 padding / overflow —— 同上，已由 .markdown-body pre / pre code 负责，
+ *    重复声明只会让两处口径各自漂移；
+ * ③ 上游 .hljs-section / .hljs-strong 的 font-weight:700 降为 500 ——
+ *    本项目字重只有 400 / 500 两档（界面规范 §2）。
+ */
+
+@layer components {
+  .hljs {
+    color: var(--cl-code-base);
+  }
+
+  /* 关键字 / 类型 / 模板标签 */
+  .hljs-doctag,
+  .hljs-keyword,
+  .hljs-meta .hljs-keyword,
+  .hljs-template-tag,
+  .hljs-template-variable,
+  .hljs-type,
+  .hljs-variable.language_ {
+    color: var(--cl-code-keyword);
+  }
+
+  /* 函数名 / 类名 */
+  .hljs-title,
+  .hljs-title.class_,
+  .hljs-title.class_.inherited__,
+  .hljs-title.function_ {
+    color: var(--cl-code-title);
+  }
+
+  /* 属性 / 数字 / 运算符 / 选择器 */
+  .hljs-attr,
+  .hljs-attribute,
+  .hljs-literal,
+  .hljs-meta,
+  .hljs-number,
+  .hljs-operator,
+  .hljs-selector-attr,
+  .hljs-selector-class,
+  .hljs-selector-id,
+  .hljs-variable {
+    color: var(--cl-code-literal);
+  }
+
+  /* 字符串 / 正则 */
+  .hljs-meta .hljs-string,
+  .hljs-regexp,
+  .hljs-string {
+    color: var(--cl-code-string);
+  }
+
+  /* 内建函数 / 符号 */
+  .hljs-built_in,
+  .hljs-symbol {
+    color: var(--cl-code-builtin);
+  }
+
+  /* 注释 / 公式 */
+  .hljs-code,
+  .hljs-comment,
+  .hljs-formula {
+    color: var(--cl-code-comment);
+  }
+
+  /* 标签名 / 伪类 / 引用 */
+  .hljs-name,
+  .hljs-quote,
+  .hljs-selector-pseudo,
+  .hljs-selector-tag {
+    color: var(--cl-code-name);
+  }
+
+  .hljs-subst {
+    color: var(--cl-code-base);
+  }
+
+  .hljs-section {
+    color: var(--cl-code-literal);
+    font-weight: 500;
+  }
+
+  .hljs-bullet {
+    color: var(--cl-code-bullet);
+  }
+
+  .hljs-emphasis {
+    color: var(--cl-code-base);
+    font-style: italic;
+  }
+
+  .hljs-strong {
+    color: var(--cl-code-base);
+    font-weight: 500;
+  }
+
+  /* diff 增删行（底色为上游原值，文字色走派生后的 --cl-code-name） */
+  .hljs-addition {
+    color: var(--cl-code-name);
+    background-color: var(--cl-code-addition-bg);
+  }
+
+  .hljs-deletion {
+    color: var(--cl-code-deletion);
+    background-color: var(--cl-code-deletion-bg);
+  }
+}

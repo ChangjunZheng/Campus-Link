@@ -12,11 +12,13 @@ import {
   type PostDetailVo,
   type ReplyVo,
 } from '../api/forum'
-import { CircleCheckFilled } from '@element-plus/icons-vue'
 import { ApiError } from '../api/client'
+import SvgIcon from '../components/SvgIcon.vue'
 import { useAuthStore } from '../stores/auth'
 import { useNarrowScreen } from '../composables/useNarrowScreen'
 import { formatTime } from '../utils/time'
+import { vHighlight } from '../utils/highlight'
+import UserAvatar from '../components/UserAvatar.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -250,6 +252,7 @@ watch(
           </div>
           <h1 class="my-2 text-h1 font-medium text-ink">{{ post.title }}</h1>
           <div class="flex flex-wrap items-center gap-1.5 text-caption text-ink-meta">
+            <UserAvatar :name="post.authorNickname" :size="20" />
             <span>{{ post.authorNickname }}</span>
             <span>·</span>
             <span>发布于 {{ formatTime(post.createdAt) }}</span>
@@ -257,7 +260,7 @@ watch(
             <span>{{ post.replyCount }} 回复</span>
           </div>
           <el-divider />
-          <div class="markdown-body" v-html="post.contentHtml" />
+          <div class="markdown-body" v-highlight v-html="post.contentHtml" />
           <!-- 互动操作行（F-FORUM-005）：toggle 后用响应 {active, count} 回填本地状态 -->
           <div class="mt-4 flex items-center gap-2">
             <el-button
@@ -336,6 +339,7 @@ watch(
                   <span class="inline-flex items-center rounded-sm bg-code px-1.5 py-px text-ink-regular">
                     #{{ r.floorNo }} 楼
                   </span>
+                  <UserAvatar :name="r.authorNickname" :size="20" />
                   <span class="text-ink">{{ r.authorNickname }}</span>
                   <el-tag
                     v-if="post.authorId === r.authorId"
@@ -348,7 +352,7 @@ watch(
                   <span aria-hidden="true">·</span>
                   <span>{{ formatTime(r.createdAt) }}</span>
                   <el-tag v-if="r.accepted" type="success" effect="light" size="small">
-                    <el-icon class="mr-0.5" :size="12"><CircleCheckFilled /></el-icon>最佳答案
+                    <SvgIcon name="circle-check" :size="12" class="mr-0.5" />最佳答案
                   </el-tag>
                   <el-button
                     link
@@ -372,7 +376,7 @@ watch(
                     采纳
                   </el-button>
                 </div>
-                <div class="markdown-body" v-html="r.contentHtml" />
+                <div class="markdown-body" v-highlight v-html="r.contentHtml" />
               </div>
             </li>
           </ul>

@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowDown, ArrowLeft, Bell, Search } from '@element-plus/icons-vue'
 import { useAuthStore } from './stores/auth'
 import { useUnreadNotifications } from './composables/useUnreadNotifications'
 import { BOARDS } from './constants/boards'
+import UserAvatar from './components/UserAvatar.vue'
+import SvgIcon from './components/SvgIcon.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -12,7 +13,6 @@ const auth = useAuthStore()
 const { unreadCount } = useUnreadNotifications()
 
 const nickname = computed(() => auth.user?.nickname || '')
-const avatarText = computed(() => (nickname.value ? nickname.value.slice(0, 1) : ''))
 const isLoggedIn = computed(() => auth.isLoggedIn)
 /** 登录页用独立极简页头（设计稿 page-05），不渲染全局顶栏与页脚 */
 const bare = computed(() => Boolean(route.meta.bare))
@@ -57,7 +57,7 @@ function onSearchSubmit() {
           <img src="/wordmark.png" alt="Campus-Link" class="h-[20px] w-auto" height="20" />
         </RouterLink>
         <RouterLink to="/" class="flex items-center gap-1 text-body">
-          <el-icon><ArrowLeft /></el-icon>
+          <SvgIcon name="arrow-left" :size="14" />
           返回首页
         </RouterLink>
       </div>
@@ -85,7 +85,7 @@ function onSearchSubmit() {
               @keyup.enter="onSearchSubmit"
             >
               <template #prefix>
-                <el-icon><Search /></el-icon>
+                <SvgIcon name="search" :size="14" />
               </template>
             </el-input>
           </div>
@@ -96,30 +96,18 @@ function onSearchSubmit() {
             aria-label="搜索"
             @click="onSearchSubmit"
           >
-            <el-icon :size="18"><Search /></el-icon>
+            <SvgIcon name="search" :size="18" />
           </button>
           <RouterLink to="/notifications" class="text-ink-regular hover:text-link" aria-label="通知中心">
             <el-badge :value="unreadCount" :max="99" :hidden="!unreadCount">
-              <el-icon :size="18"><Bell /></el-icon>
+              <SvgIcon name="bell" :size="18" />
             </el-badge>
           </RouterLink>
           <el-dropdown v-if="isLoggedIn">
             <span class="flex cursor-pointer items-center gap-1.5">
-              <!-- el-avatar 底色/文字色写在内联样式：EP 组件样式无 @layer，工具类压不过 -->
-              <el-avatar
-                :size="28"
-                :style="{
-                  background: 'var(--cl-color-primary-soft)',
-                  color: 'var(--cl-color-link)',
-                  flexShrink: 0,
-                  fontSize: 'var(--cl-font-body)',
-                  fontWeight: 500,
-                }"
-              >
-                {{ avatarText }}
-              </el-avatar>
+              <UserAvatar :src="auth.user?.avatarUrl" :name="nickname" :size="28" />
               <span class="hidden max-w-[100px] truncate text-body text-ink md:inline">{{ nickname }}</span>
-              <el-icon :size="12" class="text-ink-meta"><ArrowDown /></el-icon>
+              <SvgIcon name="chevron-down" :size="12" class="text-ink-meta" />
             </span>
             <template #dropdown>
               <el-dropdown-menu>

@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Search } from '@element-plus/icons-vue'
 import { searchPosts, type PostSummaryVo } from '../api/forum'
 import { BOARDS } from '../constants/boards'
 import PostListItem from '../components/PostListItem.vue'
+import SvgIcon from '../components/SvgIcon.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -116,7 +116,7 @@ onMounted(async () => {
         @keyup.enter="onSubmit"
       >
         <template #prefix>
-          <el-icon><Search /></el-icon>
+          <SvgIcon name="search" :size="14" />
         </template>
       </el-input>
       <div class="flex shrink-0 items-center gap-2">

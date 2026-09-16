@@ -16,6 +16,7 @@ import com.campuslink.module.forum.domain.gateway.ReplyRepository;
 import com.campuslink.module.forum.domain.model.Board;
 import com.campuslink.module.forum.domain.model.BoardType;
 import com.campuslink.module.forum.domain.model.Post;
+import com.campuslink.module.forum.domain.model.PostSortOrder;
 import com.campuslink.module.forum.domain.model.PostStatus;
 import com.campuslink.module.forum.domain.model.Reply;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,6 +27,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -72,12 +74,12 @@ class ForumQueryApplicationServiceTest {
     @Test
     @DisplayName("帖子列表：昵称一页一次批量查，版块名随项带出，查不到的昵称回落「已注销用户」")
     void listPostsResolvesBoardAndNicknamesInBatch() {
-        when(postRepository.findPage(null, 1, 20))
+        when(postRepository.findPage(null, PostSortOrder.LATEST, 1, 20))
                 .thenReturn(new PageResult<>(List.of(post(1L, 100L), post(2L, 200L)), 2, 1, 20));
         when(boardRepository.findAllEnabled()).thenReturn(List.of(board(1L, "qna", "技术问答")));
         when(accountApplicationService.nicknamesOf(List.of(100L, 200L))).thenReturn(Map.of(100L, "张三"));
 
-        PageResult<PostSummary> page = service.listPosts(null, 1, 20);
+        PageResult<PostSummary> page = service.listPosts(null, "latest", 1, 20);
 
         assertThat(page.total()).isEqualTo(2);
         assertThat(page.items()).extracting(PostSummary::authorNickname)
@@ -90,14 +92,14 @@ class ForumQueryApplicationServiceTest {
     @Test
     @DisplayName("分页归一：page<1 → 1、size>100 → 100，响应回显生效值")
     void pagingIsNormalized() {
-        when(postRepository.findPage(null, 1, 100)).thenReturn(new PageResult<>(List.of(), 0, 1, 100));
+        when(postRepository.findPage(null, PostSortOrder.LATEST, 1, 100)).thenReturn(new PageResult<>(List.of(), 0, 1, 100));
         when(boardRepository.findAllEnabled()).thenReturn(List.of());
 
-        PageResult<PostSummary> page = service.listPosts(null, 0, 500);
+        PageResult<PostSummary> page = service.listPosts(null, "latest", 0, 500);
 
         assertThat(page.page()).isEqualTo(1);
         assertThat(page.size()).isEqualTo(100);
-        verify(postRepository).findPage(null, 1, 100);
+        verify(postRepository).findPage(null, PostSortOrder.LATEST, 1, 100);
     }
 
     @Test
@@ -105,25 +107,55 @@ class ForumQueryApplicationServiceTest {
     void unknownBoardCodeIsNotFound() {
         when(boardRepository.findByCode("nope")).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.listPosts("nope", 1, 20))
+        assertThatThrownBy(() -> service.listPosts("nope", "latest", 1, 20))
                 .isInstanceOfSatisfying(ApiException.class,
                         e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_FOUND));
 
-        verify(postRepository, never()).findPage(any(), anyInt(), anyInt());
+        verify(postRepository, never()).findPage(any(), any(), anyInt(), anyInt());
     }
 
     @Test
     @DisplayName("摘要：去 Markdown 记号后截断到 120 字（服务端截断，前端不兜底）")
     void summaryIsStrippedAndTruncated() {
         String longMarkdown = "# 标题\n\n" + "正文".repeat(70);
-        when(postRepository.findPage(null, 1, 20))
+        when(postRepository.findPage(null, PostSortOrder.LATEST, 1, 20))
                 .thenReturn(new PageResult<>(List.of(post(1L, 100L, longMarkdown)), 1, 1, 20));
         when(boardRepository.findAllEnabled()).thenReturn(List.of());
         when(accountApplicationService.nicknamesOf(any())).thenReturn(Map.of(100L, "张三"));
 
-        String summary = service.listPosts(null, 1, 20).items().get(0).summary();
+        String summary = service.listPosts(null, "latest", 1, 20).items().get(0).summary();
 
         assertThat(summary).doesNotContain("#").hasSize(120);
+    }
+
+    @Test
+    @DisplayName("sort：hot（含大写与前后空白）按热榜查；latest 与缺省走同一路径（回归保护）")
+    void sortAcceptsHotAndLatest() {
+        when(postRepository.findPage(any(), any(), anyInt(), anyInt()))
+                .thenReturn(new PageResult<>(List.of(), 0, 1, 20));
+        when(boardRepository.findAllEnabled()).thenReturn(List.of());
+
+        service.listPosts(null, "hot", 1, 20);
+        service.listPosts(null, "HOT", 1, 20);
+        service.listPosts(null, "  hot  ", 1, 20);
+        verify(postRepository, times(3)).findPage(null, PostSortOrder.HOT, 1, 20);
+
+        service.listPosts(null, "latest", 1, 20);
+        service.listPosts(null, "LATEST", 1, 20);
+        verify(postRepository, times(2)).findPage(null, PostSortOrder.LATEST, 1, 20);
+    }
+
+    @Test
+    @DisplayName("sort：非法值 / 空串 / null → 1001，且不查仓储（不静默归一到最新序）")
+    void sortRejectsUnknownValue() {
+        for (String bad : Arrays.asList("foo", "new", "", "   ", null)) {
+            assertThatThrownBy(() -> service.listPosts(null, bad, 1, 20))
+                    .as("sort=%s 应被拒绝", bad)
+                    .isInstanceOfSatisfying(ApiException.class,
+                            e -> assertThat(e.getCode()).isEqualTo(ResultCode.INVALID_PARAM));
+        }
+
+        verify(postRepository, never()).findPage(any(), any(), anyInt(), anyInt());
     }
 
     @Test
