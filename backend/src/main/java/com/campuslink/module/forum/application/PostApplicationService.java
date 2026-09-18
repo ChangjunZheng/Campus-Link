@@ -1,5 +1,6 @@
 package com.campuslink.module.forum.application;
 
+import com.campuslink.common.audit.AuditService;
 import com.campuslink.common.exception.ApiException;
 import com.campuslink.common.markdown.MarkdownRenderer;
 import com.campuslink.common.result.ResultCode;
@@ -18,16 +19,20 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 论坛写用例：发帖、采纳最佳答案 */
+/** 论坛写用例：发帖、采纳最佳答案、作者删除自己的帖子 */
 @Service
 @RequiredArgsConstructor
 public class PostApplicationService {
+
+    /** 审计 detail 里的标题截断长度：审计要能看出"删了哪篇"，但不必复制整篇标题 */
+    private static final int AUDIT_TITLE_MAX_CHARS = 100;
 
     private final BoardRepository boardRepository;
     private final PostRepository postRepository;
     private final ReplyRepository replyRepository;
     private final MarkdownRenderer markdownRenderer;
     private final NotificationApplicationService notificationService;
+    private final AuditService auditService;
 
     /**
      * 发帖：{@code contentHtml} 在**发布时**渲染后随帖子一起落库，请求时零渲染（ADR-005）；
@@ -65,5 +70,40 @@ public class PostApplicationService {
         replyRepository.updateAcceptedFlags(postId, replyId);
         // 采纳通知发给被采纳楼层的作者（F-SOC-001）；"不能采纳自己回复"已由领域规则拦下，此处不需再判自触发
         notificationService.replyAccepted(askerId, replyId, reply.getAuthorId());
+    }
+
+    /**
+     * 作者删除自己的帖子（F-FORUM-006）：写 {@code is_deleted=1} 墓碑，**不物理删、不级联**。
+     *
+     * <p>可见性核验复用与读侧同一条门槛（不存在 / 已删除 / 非 PUBLISHED → 3001，不区分原因、防按 id 探测）；
+     * 非作者 → 4002。墓碑行以下，前台所有位置自动不可见：列表 / 搜索 / 热榜候选在 SQL 侧过滤 {@code is_deleted}，
+     * 详情 / 楼层 / 回帖 / 点赞 / 收藏都以 {@code requireVisiblePost} 开头，通知摘要查不到标题时回落
+     * "内容已删除"——故本用例不碰 {@code replies} / {@code likes} / {@code favorites}（它们是删除后的独立事实，
+     * 处置台与统计要用）。
+     *
+     * <p>删除与审计同事务：PRD 明写"删除操作留后台审计日志"，二者必须同生同灭。
+     */
+    @Transactional
+    public void deletePost(Long operatorId, long postId) {
+        Post post = postRepository.findById(postId)
+                .filter(Post::isVisible)
+                .orElseThrow(PostNotFoundException::new);
+        if (!post.getAuthorId().equals(operatorId)) {
+            // 资源级授权归业务代码：框架只判"有没有登录"，判不了"是不是作者的帖子"（CR-031 口径）
+            throw new ApiException(ResultCode.FORBIDDEN);
+        }
+        if (!postRepository.markDeleted(postId)) {
+            throw new PostNotFoundException();
+        }
+        auditService.record(operatorId, "POST_DELETE", "posts", postId, auditDetail(post));
+    }
+
+    /** 审计 detail 只带版块与截断标题：正文已随墓碑行留在库里，不在审计表再存一份长文本 */
+    private static String auditDetail(Post post) {
+        String title = post.getTitle();
+        if (title != null && title.length() > AUDIT_TITLE_MAX_CHARS) {
+            title = title.substring(0, AUDIT_TITLE_MAX_CHARS) + "…";
+        }
+        return "boardId=%s title=%s".formatted(post.getBoardId(), title);
     }
 }

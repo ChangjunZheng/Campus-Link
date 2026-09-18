@@ -1,5 +1,6 @@
 package com.campuslink.module.forum.application;
 
+import com.campuslink.common.audit.AuditService;
 import com.campuslink.common.exception.ApiException;
 import com.campuslink.common.markdown.MarkdownRenderer;
 import com.campuslink.common.result.ResultCode;
@@ -27,12 +28,17 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-/** 发帖用例：渲染时机（发布时落库，ADR-005）、type 随版块、未知版块按资源不存在处理 */
+/**
+ * 发帖 / 采纳 / 删除三条写用例。发帖守的是渲染时机（发布时落库，ADR-005）、type 随版块、未知版块按资源不存在处理；
+ * 采纳与删除守的是**归属授权与零副作用**——被拒时必须一条写操作都不落地（含审计），
+ * 否则"403 了但数据变了"这种错法只能靠真机发现。
+ */
 @ExtendWith(MockitoExtension.class)
 class PostApplicationServiceTest {
 
@@ -44,6 +50,8 @@ class PostApplicationServiceTest {
     private ReplyRepository replyRepository;
     @Mock
     private NotificationApplicationService notificationService;
+    @Mock
+    private AuditService auditService;
 
     private PostApplicationService service;
 
@@ -51,7 +59,7 @@ class PostApplicationServiceTest {
     void setUp() {
         // MarkdownRenderer 是纯组件（无 I/O），直接 new，不必走 Spring 上下文
         service = new PostApplicationService(boardRepository, postRepository, replyRepository,
-                new MarkdownRenderer(), notificationService);
+                new MarkdownRenderer(), notificationService, auditService);
     }
 
     @Test
@@ -152,9 +160,80 @@ class PostApplicationServiceTest {
         verifyNoInteractions(notificationService);
     }
 
+    @Test
+    @DisplayName("删除：作者本人 → 写墓碑 + 同事务记审计（detail 只带版块与截断标题）")
+    void deleteByAuthorMarksTombstoneAndAudits() {
+        when(postRepository.findById(123L)).thenReturn(Optional.of(questionPost(42L)));
+        when(postRepository.markDeleted(123L)).thenReturn(true);
+
+        service.deletePost(42L, 123L);
+
+        verify(postRepository).markDeleted(123L);
+        ArgumentCaptor<String> detail = ArgumentCaptor.forClass(String.class);
+        verify(auditService).record(eq(42L), eq("POST_DELETE"), eq("posts"), eq(123L), detail.capture());
+        assertThat(detail.getValue()).isEqualTo("boardId=1 title=标题");
+    }
+
+    @Test
+    @DisplayName("删除：非作者 → 4002，墓碑与审计一条都不写")
+    void deleteByNonAuthorIsForbidden() {
+        when(postRepository.findById(123L)).thenReturn(Optional.of(questionPost(42L)));
+
+        assertThatThrownBy(() -> service.deletePost(777L, 123L))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.FORBIDDEN));
+
+        verify(postRepository, never()).markDeleted(any());
+        verifyNoInteractions(auditService);
+    }
+
+    @Test
+    @DisplayName("删除：不存在 / 已是墓碑 → 3001（与「不可读统一 404、不区分原因」同口径），不写墓碑与审计")
+    void deleteMissingPostIsNotFound() {
+        when(postRepository.findById(123L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.deletePost(42L, 123L))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_FOUND));
+
+        verify(postRepository, never()).markDeleted(any());
+        verifyNoInteractions(auditService);
+    }
+
+    @Test
+    @DisplayName("删除：已下架（status=REMOVED）但未删除的帖子 → 3001，作者也不能借此绕过处置")
+    void deleteRemovedPostIsNotFound() {
+        when(postRepository.findById(123L)).thenReturn(Optional.of(post(PostStatus.REMOVED, 42L)));
+
+        assertThatThrownBy(() -> service.deletePost(42L, 123L))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_FOUND));
+
+        verify(postRepository, never()).markDeleted(any());
+        verifyNoInteractions(auditService);
+    }
+
+    @Test
+    @DisplayName("删除：并发下墓碑已被他人写入（0 行受影响）→ 3001 且不记第二条审计")
+    void concurrentLosingDeleteDoesNotAudit() {
+        when(postRepository.findById(123L)).thenReturn(Optional.of(questionPost(42L)));
+        when(postRepository.markDeleted(123L)).thenReturn(false);
+
+        assertThatThrownBy(() -> service.deletePost(42L, 123L))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_FOUND));
+
+        verifyNoInteractions(auditService);
+    }
+
     private static Post questionPost(Long authorId) {
         return Post.rehydrate(123L, 1L, authorId, BoardType.QUESTION, "标题", "正文", "<p>正文</p>",
                 PostStatus.PUBLISHED, 1, 0, false, null, null, null);
+    }
+
+    private static Post post(PostStatus status, Long authorId) {
+        return Post.rehydrate(123L, 1L, authorId, BoardType.QUESTION, "标题", "正文", "<p>正文</p>",
+                status, 1, 0, false, null, null, null);
     }
 
     private static Reply reply(Long id, Long authorId, Long postId) {

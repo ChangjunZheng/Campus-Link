@@ -97,6 +97,15 @@ public class PostRepositoryImpl implements PostRepository {
     }
 
     @Override
+    public boolean markDeleted(Long postId) {
+        // 条件带 is_deleted=0：受影响行数即"这次是否真的删掉了它"，并发二次删除拿到 false 而不重复记审计
+        return postMapper.update(null, new LambdaUpdateWrapper<PostDO>()
+                .set(PostDO::getIsDeleted, true)
+                .eq(PostDO::getId, postId)
+                .eq(PostDO::getIsDeleted, false)) > 0;
+    }
+
+    @Override
     public int adjustLikeCount(Long postId, int delta) {
         postMapper.update(null, new LambdaUpdateWrapper<PostDO>()
                 .setSql("like_count = like_count + " + delta)

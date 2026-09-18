@@ -12,7 +12,7 @@ import java.util.Optional;
 
 /**
  * 策略实现（生产）：MySQL 名册表核验与占用。
- * 装配条件 app.roster.bypass=false；生产环境必须为 false（上线检查清单项）。
+ * 装配条件 campuslink.roster.bypass=false；生产环境必须为 false（上线检查清单项）。
  */
 @Repository
 @RequiredArgsConstructor

@@ -102,6 +102,25 @@ class PostControllerAuthTest {
         verify(postApplicationService).acceptReply(eq(42L), eq(123L), eq(456L));
     }
 
+    @Test
+    @DisplayName("匿名删除 → 4001，且不触达删除用例")
+    void anonymousDeleteIsUnauthorized() {
+        assertThatThrownBy(() -> controller.delete(123L, null))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_LOGGED_IN));
+
+        verify(postApplicationService, never()).deletePost(anyLong(), anyLong());
+    }
+
+    @Test
+    @DisplayName("已登录删除 → 放行，操作人与目标帖子从参数透传")
+    void deletePassesPrincipalAndPostId() {
+        var response = controller.delete(123L, user());
+
+        assertThat(response.code()).isEqualTo(0);
+        verify(postApplicationService).deletePost(eq(42L), eq(123L));
+    }
+
     private static Authentication user() {
         return new UsernamePasswordAuthenticationToken(
                 42L, null, List.of(new SimpleGrantedAuthority("ROLE_USER")));

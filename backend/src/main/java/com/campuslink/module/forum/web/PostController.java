@@ -25,6 +25,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -105,6 +106,16 @@ public class PostController {
                                     Authentication authentication) {
         long userId = CurrentUser.requireId(authentication);
         postApplicationService.acceptReply(userId, id, command.replyId());
+        return ApiResponse.ok();
+    }
+
+    @Operation(summary = "删除自己的帖子（需登录，仅作者）：写行级墓碑，前台所有位置随之不可见；不级联删楼层与互动行")
+    @SecurityRequirement(name = ApiDocs.BEARER_AUTH)
+    @ErrorCodes({ResultCode.NOT_LOGGED_IN, ResultCode.FORBIDDEN, ResultCode.NOT_FOUND})
+    @DeleteMapping("/{id}")
+    public ApiResponse<Void> delete(@PathVariable("id") Long id, Authentication authentication) {
+        long userId = CurrentUser.requireId(authentication);
+        postApplicationService.deletePost(userId, id);
         return ApiResponse.ok();
     }
 

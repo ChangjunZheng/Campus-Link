@@ -24,11 +24,11 @@ description: 重庆工程学院计算机专业学生交流论坛（Spring Boot 4
 - **架构**：模块化单体 + DDD 四层（ADR-012），限界上下文 `module/{account,forum,...}`；
 - **流程**：企业七阶段流程（BRD → PRD → 设计 → 开发 → …），基线级变更走 CR 台账；单人项目 + AI 协作，流程偏离已由发起人签署（W-01 ~ W-07）。
 
-## 项目状态速览（快照 2026-09-16；每次收尾更新，细节看驾驶舱）
+## 项目状态速览（快照 2026-09-18；每次收尾更新，细节看驾驶舱）
 
-- **阶段四开发中**：Sprint 1 ✅（账号链路，T1~T9）；Sprint 2 ✅（论坛最小 MVP，M1~M6、A1~A5 真机验收通过）；**Sprint 3 五项功能已全部交付**（[CR-043](docs/变更日志/变更台账.md) 采纳最佳答案 · [CR-048](docs/变更日志/变更台账.md) 点赞收藏 · [CR-049](docs/变更日志/变更台账.md) 站内搜索 · [CR-050](docs/变更日志/变更台账.md) 通知中心 · [CR-058](docs/变更日志/变更台账.md) 热榜定时任务 + `sort=hot`）；⚠️ **CR-058 只是 F-FORUM-003 双排序的后端一半**——前端首页「最新 / 热门」切换 UI **尚未做**（该轮前端由并发会话占用），不得声称双排序已上线；**无 `Sprint3计划.md`**——Sprint 3 以各 CR 的[实施方案](docs/开发/实施方案/说明与模板.md)为执行依据；
+- **阶段四开发中**：Sprint 1 ✅（账号链路，T1~T9）；Sprint 2 ✅（论坛最小 MVP，M1~M6、A1~A5 真机验收通过）；**Sprint 3 五项功能已全部交付**（[CR-043](docs/变更日志/变更台账.md) 采纳最佳答案 · [CR-048](docs/变更日志/变更台账.md) 点赞收藏 · [CR-049](docs/变更日志/变更台账.md) 站内搜索 · [CR-050](docs/变更日志/变更台账.md) 通知中心 · [CR-058](docs/变更日志/变更台账.md) 热榜定时任务 + `sort=hot`）；⚠️ **CR-058 只是 F-FORUM-003 双排序的后端一半**——前端首页「最新 / 热门」切换 UI **尚未做**（该轮前端由并发会话占用），不得声称双排序已上线；**无 `Sprint3计划.md`**——Sprint 3 以各 CR 的[实施方案](docs/开发/实施方案/说明与模板.md)为执行依据。**Sprint 3 之后的第一项：[CR-065](docs/变更日志/变更台账.md#cr-065) 帖子删除（PRD F-FORUM-006）后端已交付**——`DELETE /api/v1/posts/{id}`（**仅作者**、软删走既有墓碑 `posts.is_deleted=1`、**零迁移**、同事务记 `POST_DELETE` 审计、二次删除幂等 `404 / 3001`）；⚠️ **只有 API、页面上没有删除入口**（该轮 `frontend/` 由并发会话占用），故 **F-FORUM-006 的用户可见验收不签、[问题清单](docs/项目现有问题清单.md) F-004 只到 🟡「后端已交付」**；PRD 该条的"计数回收"在现库**没有作用对象**（`boards` / `users` 均无 `*_count` 列），按落码偏差登记、未静默放过；**不挂任何 Sprint 号**（`Sprint4计划.md` 尚未编写）；
 - **B4 / B5（= A3-9 / A3-10）已于 2026-09-12 由 [CR-028](docs/变更日志/变更台账.md) 完成**：ArchUnit `ArchitectureGuardTest`（初版 10 用例，[CR-031](docs/变更日志/变更台账.md) 增至 11）把 ADR-012 四层规则**首次变为机器强制**（规则吸收复评 R-1 / R-2 / R-3；R-1 裁决：禁止 web 注入 domain 端口，`UserController` 已改经 application）；**N-4 闭环**（每个映射方法必须显式 `@PublicEndpoint` 或 `@SecurityRequirement`，受保护者必须调用 `CurrentUser` 统一入口）；F-1 / F-3 / F-4 与 N-5 / N-6 同批处置；单测 87 → **107** 全绿。**同日 [CR-031](docs/变更日志/变更台账.md) 补上框架级路径鉴权**（消除当时登记的"`SecurityConfig` 仍 `permitAll()`、路径级拦截未做"残留）：`EndpointAuthorizationManager` 在过滤器链按端点注解裁决（`module` 端点未声明即 fail-closed），401 / 403 出口沿用 `ApiError` 外壳，单测 **107 → 117** 全绿、真机 4 个受保护端点匿名 / 非法 token 一律 401；**W-02 / W-07 的关闭前置已成立，状态为"可关闭、待发起人签署"（任何文档不代签）**；
-- **CR-032 之后（2026-09-13 ~ 09-16）的收敛概述**（逐条见 [台账](docs/变更日志/变更台账.md) §1，本文不重复）：设计门 **A3-5（ER 图与量级预估）/ A3-7（检查清单）已闭环**，**开放项只剩 A3-6（UI 走查，仅剩补偿③ 逐页走查）与 A3-8（部署与机审选型，须发起人决策）**；除 Sprint 3 五个功能外，另有全库时间戳时区口径修复（[CR-051](docs/变更日志/变更台账.md)，闭环台账外问题 L-6）、前端界面美化与优化（[CR-052](docs/变更日志/变更台账.md) / [CR-055](docs/变更日志/变更台账.md)）、移动端验证暂缓（[CR-053](docs/变更日志/变更台账.md)）、学籍名册模拟数据 45 名 + 开发测试账号清单（[CR-054](docs/变更日志/变更台账.md)）、**[CR-058](docs/变更日志/变更台账.md) 热榜定时任务（ADR-006）——本仓首次引入 `@Scheduled` / `@EnableScheduling`**。**单测基线已由 117 升至 185**（[CR-058](docs/变更日志/变更台账.md) 新增 21 例：算分策略 8 / 热榜用例 6 / 触发器 3 / Redis 锁 2 / `sort` 校验 2），**2026-09-18 由 [CR-060](docs/变更日志/变更台账.md) 升至 192**（楼层可见性守卫：适配器 3 例 + 应用层 2 例零副作用断言），**同日由 [CR-063](docs/变更日志/变更台账.md#cr-063) 升至 208**（生产安全配置启动即校验：`ProductionSafetyGuardTest` 16 例，**本仓首次出现 `@Profile` 与 profile 配置文件** `application-prod.yml`）；契约快照仍为 **21 端点 / 40 schema**，最近一次再生成为 [CR-058](docs/变更日志/变更台账.md) 的 v1.10（**规模零变化**，只给 `GET /api/v1/posts` 加了一个 `sort` 查询参数；上一次规模变化是 [CR-050](docs/变更日志/变更台账.md) 的 v1.9）；
+- **CR-032 之后（2026-09-13 ~ 09-16）的收敛概述**（逐条见 [台账](docs/变更日志/变更台账.md) §1，本文不重复）：设计门 **A3-5（ER 图与量级预估）/ A3-7（检查清单）已闭环**，**开放项只剩 A3-6（UI 走查，仅剩补偿③ 逐页走查）与 A3-8（部署与机审选型，须发起人决策）**；除 Sprint 3 五个功能外，另有全库时间戳时区口径修复（[CR-051](docs/变更日志/变更台账.md)，闭环台账外问题 L-6）、前端界面美化与优化（[CR-052](docs/变更日志/变更台账.md) / [CR-055](docs/变更日志/变更台账.md)）、移动端验证暂缓（[CR-053](docs/变更日志/变更台账.md)）、学籍名册模拟数据 45 名 + 开发测试账号清单（[CR-054](docs/变更日志/变更台账.md)）、**[CR-058](docs/变更日志/变更台账.md) 热榜定时任务（ADR-006）——本仓首次引入 `@Scheduled` / `@EnableScheduling`**。**单测基线已由 117 升至 185**（[CR-058](docs/变更日志/变更台账.md) 新增 21 例：算分策略 8 / 热榜用例 6 / 触发器 3 / Redis 锁 2 / `sort` 校验 2），**2026-09-18 由 [CR-060](docs/变更日志/变更台账.md) 升至 192**（楼层可见性守卫：适配器 3 例 + 应用层 2 例零副作用断言），**同日由 [CR-063](docs/变更日志/变更台账.md#cr-063) 升至 208**（生产安全配置启动即校验：`ProductionSafetyGuardTest` 16 例，**本仓首次出现 `@Profile` 与 profile 配置文件** `application-prod.yml`），**再由 [CR-065](docs/变更日志/变更台账.md#cr-065) 升至 220**（帖子删除：墓碑 UPDATE 3 + **收藏读侧 2** + 应用层 5 + 控制器 2）；〔**契约快照 2026-09-18 起为 22 端点 / 19 路径 / 40 schema / 13 受保护**，最近一次再生成是 CR-065 的 v1.11（diff **+85 / −0 纯新增**，新增受保护 operation `DELETE /api/v1/posts/{id}`）——原句"仍为 21 端点、最近一次为 CR-058 的 v1.10（规模零变化）"保留为当时的快照。⚠️ 该快照来源**仍是未提交的工作区**（CR-064 + CR-065 的代码都在其中），**「提交后核对」待提交后补做**〕；
 - **流程已降密度（[CR-029](docs/变更日志/变更台账.md)）**：CR 自 CR-030 起改一行式登记；**项目状态只维护 change-log §1 + 进度驾驶舱两处**；取消凭证回填仪式（凭证 = commit message 写 CR 号）；AI 遵守下方「汇报约定」；
 - **唯一外部依赖**：B1 / B2 学籍名册——**真实名册仍未到位，但自 [CR-054](docs/变更日志/变更台账.md)（2026-09-15）起已不再阻塞开发**：库内已有 45 名全合成学生（批次 `dev-sim-45`）+ 45 个开发测试账号，`bypass=false` 下的注册链路可实测可复现（清单见「常用命令」段）；**正式导入路径与生产红线一条未放宽**（`bypass` 生产必须 `false`、dev 固定验证码生产必须留空；**自 [CR-063](docs/变更日志/变更台账.md#cr-063) 起这三条以 `prod` profile 启动即校验强制**，见「常用命令」与「红线」两段）；
 - **提测准入门 7 项中 4 项未满足**（单测覆盖率不可测 / **CI 缺静态扫描环节** / Code Review 未闭环 / 静态扫描未接入——7 项清单见 [`Sprint1计划.md`](docs/开发/Sprint1计划.md) §出口自查）；让步放行 W-01 ~ W-07 中**仅 W-06 已关闭**，**W-02 / W-07 关闭前置已成立（[CR-028](docs/变更日志/变更台账.md)）但待发起人签署、不得代签**；⚠️ **UI 走查不在这 7 项内**——它属设计门 **A3-6**（[W-03](docs/流程偏离记录.md) 补偿③），两笔欠账不要混算；
@@ -74,7 +74,7 @@ description: 重庆工程学院计算机专业学生交流论坛（Spring Boot 4
 # 仅首次需要：库必须先存在，Flyway 才能连上（建库属基础设施引导，不归 Flyway 管）
 mysql -h127.0.0.1 -uroot -p -e "CREATE DATABASE IF NOT EXISTS campuslink DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;"
 
-mvn verify            # 编译 + 单测（合码前必须全绿，当前基线 208 个（CR-063 后）；含架构守护测试）
+mvn verify            # 编译 + 单测（合码前必须全绿，当前基线 220 个（CR-065 后）；含架构守护测试）
 mvn spring-boot:run   # 启动：8088（SERVER_PORT 可覆盖）；健康检查 /actuator/health，OpenAPI /api/docs
 
 # 生产 profile（CR-063 起，本仓唯一的环境判定入口；下面三轮取证跑在临时端口 8098）：
@@ -98,9 +98,10 @@ npm run build
 **联调冒烟（账号链路）**：浏览器打开 `http://localhost:5173/login`，注册 Tab：学籍核验 → 邮箱验证码 → 注册 → 登录 → 顶栏出现昵称。
 **联调冒烟（论坛主链路）**：登录后走 首页版块列表 → 进版块 → 发帖（Markdown + 代码块）→ 帖子详情 → 楼层回帖，刷新后数据仍在；**匿名访问 `POST /api/v1/posts` 必须 401**。
 **联调冒烟（Sprint 3 四条链路）**：① **采纳最佳答案**——发帖 / 回帖后由**楼主**在详情页点「采纳」（`POST /api/v1/posts/{id}/accept`），最佳答案楼层置顶、列表出「已采纳」标识；② **点赞收藏**——列表 / 详情页点赞与收藏 toggle，收藏页 `/favorites/mine` 可见；③ **站内搜索**——顶栏搜索框 → `/search`（`keyword` 2~50 字，`days` 取 7 / 30 / 90）；④ **通知中心**——`/notifications` 页 + 顶栏铃铛角标，`unread` 可筛选。
+**帖子删除（[CR-065](docs/变更日志/变更台账.md#cr-065)，F-FORUM-006 后端一半）**：**只能走 API 冒烟**——作者 `DELETE /api/v1/posts/{id}` → `200`，随后全站列表 / 版块列表 / `sort=hot` / 搜索 / 详情 / 楼层列表 / 回帖 / 点赞 / 收藏 / 采纳**十一处**一律读不到或 `404 / 3001`，"我的收藏"里也不再出现（这条读侧过滤是本轮真机抓出的缺陷后补的），二次删除幂等 `404 / 3001` 且 `audit_logs` **不新增行**；匿名 → `401 / 4001`、他人 → `403 / 4002`。**⚠️ 页面上没有删除按钮**（该轮 `frontend/` 由并发会话占用），**F-FORUM-006 的用户可见验收不签**，"前端删不掉"不是缺陷、是未做的入口。
 **热榜（[CR-058](docs/变更日志/变更台账.md#cr-058)，本仓首个定时任务）**：`posts.hot_score` 由 `@Scheduled` 定时刷新（公式 `互动分 × exp(-λ × 小时龄)`，ADR-006），读取走 `GET /api/v1/posts?sort=hot`（缺省 `latest`，非法值 `400 / 1001`）。**调参只改 `application.yml` 的 `campuslink.hot.*`，不改代码**：权重 `reply-weight=3 / like-weight=1 / favorite-weight=2`、`decay-per-hour=0.05`、`window-days=30`（窗口外置 0）、`batch-size=500`、`lock-ttl-seconds=300`（⚠️ **须 ≤ 刷新周期**——锁靠 TTL 兜底不显式释放，TTL 比周期长会把实际周期变成 TTL）。**验证时用 `HOT_REFRESH_INTERVAL_MS=20000` / `HOT_INITIAL_DELAY_MS=5000` 临时缩短周期**（默认 600000 / 15000；这两项只被 `@Scheduled` 占位符消费，**刻意不绑定到 `AppProperties`**，避免两个事实源），看 1 行 INFO「热榜刷新完成：写回 N 条、置零 M 条、耗时 X ms」；Redis 侧只应出现 `campuslink:hot:refresh:lock` 一个键。⚠️ **目前只有后端能力，前端首页「最新 / 热门」切换 UI 尚未做**（F-FORUM-003 的后端一半），页面上看不到热榜不是缺陷。
 **验证码**：默认固定 `123456`（`campuslink.captcha.fixed-code`，启动打 WARN）；留空恢复随机 6 位（`CODE_SENDER_MODE=log` 下只打日志，行格式 `[DEV] captcha for <邮箱> => <6位码>`）。
-**测试名册**（仅 `app.roster.bypass=true` 生效，学号须 **9 位数字**）：`249971346/张三`、`249971347/李四`、`249971348/王五`、`249971349/赵六`。
+**测试名册**（仅 `campuslink.roster.bypass=true` 生效，学号须 **9 位数字**）：`249971346/张三`、`249971347/李四`、`249971348/王五`、`249971349/赵六`。
 **开发测试账号（45 个，[CR-054](docs/变更日志/变更台账.md#cr-054) 已灌入本机开发库）**：清单见 [`docs/开发/开发测试账号清单.md`](docs/开发/开发测试账号清单.md)——学号保留段 `888800001`~`888800045`、邮箱 `dev-stu-01@dev.campuslink.local`~`dev-stu-45@…`、昵称 `模拟学生01`~`模拟学生45`，**全合成身份、仅限本机开发库**；登录 = **邮箱 + 验证码 `123456`**（**本系统没有密码字段**）。重建走数据轨脚本 `backend/scripts/data/D001__seed_dev_roster_45.py`（默认 dry-run，须指向 `APP_ROSTER_BYPASS=false` 的实例）；批量核验时把 `campuslink.verify.ip-hourly-limit` 用 **`VERIFY_IP_HOURLY_LIMIT=<n>`** 临时抬高（**默认仍 10 次/小时/IP、对外行为不变**）。**这不等于 B1 / B2 真实名册已到位**，后者仍是未闭环的外部依赖。
 **管理员账号**（dev-only 种子，与 bypass 同门控）：`admin@campuslink.local`，任意邮箱方式 + 验证码 `123456`，角色 `SUPERADMIN`，可调用 `/api/v1/admin/roster/import`；**无学号、不走学籍核验**。
 **入参格式**：学号 `^\d{9}$`；姓名限中文名（2~16 汉字，可含 `·`）或外文名（字母起头，可含空格 / `-` / `'` / `.`）；`nickname` 2~32 自由文本。
@@ -130,7 +131,7 @@ npm run build
 ### 安全
 
 - **敏感信息**（邮箱 / 手机号 / 学号）：明文一律 AES-GCM 加密存 `*_enc`，等值查询用 HMAC 哈希 `*_hash`；任何接口不得返回 `*_enc` / `*_hash`；密钥只从环境变量读取（`APP_HASH_KEY` / `APP_CRYPT_KEY`），**源码、示例、测试不得写入可用凭据字面量**；
-- **学籍核验**：三种失败（学号不存在 / 姓名不匹配 / 已注册）统一提示，防名册枚举；`app.roster.bypass` 仅限开发联调，**生产必须为 false**（上线检查清单项）；
+- **学籍核验**：三种失败（学号不存在 / 姓名不匹配 / 已注册）统一提示，防名册枚举；`campuslink.roster.bypass` 仅限开发联调，**生产必须为 false**（上线检查清单项）；
 - **Markdown 渲染唯一出口** `common/markdown/MarkdownRenderer`（flexmark + jsoup 白名单）；flexmark 扩展须**同时注册到 Parser 与 HtmlRenderer**，否则解析成功渲染为空；代码高亮由前端 `highlight.js` 完成（**已于 [CR-055](docs/变更日志/变更台账.md) 批次① 落地**：`frontend/src/utils/highlight.ts` + `src/styles/hljs.css`；**只对服务端已渲染的 `pre code` 的 `textContent` 着色，不二次渲染 Markdown、不拼接 HTML、不做前端净化兜底**——ADR-005 与此项欠账就此闭环）；任何渲染改动必须保持 `MarkdownRendererTest` 全绿；
 - **Redis 键命名**：所有键必须带 `campuslink:` 前缀（走 `common/redis/RedisKeys.of(...)`）；**前缀只在 infrastructure 适配器补**，应用层只传逻辑键；新增适配器须走 `RedisKeys`（`RedisKeyNamespaceTest` 有 3 个适配器断言，无编译期强制）。
 
@@ -144,7 +145,7 @@ npm run build
 
 ## 测试约定
 
-- **单测**：`mvn verify` 必须全绿（**当前基线 208 个**（CR-063 后，192 → 208），含 `ArchitectureGuardTest` 架构守护测试与 `EndpointAuthorizationManagerTest` 路径级鉴权矩阵）；`MarkdownRendererTest` 的 6 个 XSS 回归用例是论坛安全生命线，渲染 / 白名单改动**先补用例再改实现**；
+- **单测**：`mvn verify` 必须全绿（**当前基线 220 个**（[CR-065](docs/变更日志/变更台账.md#cr-065) 后，208 → 220），含 `ArchitectureGuardTest` 架构守护测试与 `EndpointAuthorizationManagerTest` 路径级鉴权矩阵）；`MarkdownRendererTest` 的 6 个 XSS 回归用例是论坛安全生命线，渲染 / 白名单改动**先补用例再改实现**；
 - **生产配置红线由 `ProductionSafetyGuard` 机器强制（[CR-063](docs/变更日志/变更台账.md#cr-063)）**：`ProductionSafetyGuardTest` 16 例里有 2 例是**防漂移守护**——(a) guard 内 `DEV_VALUES` 清单必须与 `application.yml` 的占位符默认值**逐字相等**，(b) `application-prod.yml` 的凭据声明必须仍**不含** `:default`、三个开发开关必须仍写死为 `""` / `false` / `mail`。**改 yml 默认值而不同步 guard 清单，测试即红**（这条比对读原文，不需要启上下文）；
 - **受保护端点必须真的校验鉴权（N-4 已闭环，[CR-028](docs/变更日志/变更台账.md)；路径级拦截自 [CR-031](docs/变更日志/变更台账.md) 起落地）**：**每个 HTTP 映射方法必须显式标 `@PublicEndpoint` 或 `@SecurityRequirement`，且标后者者必须真的调用 `common/web/CurrentUser`（`requireId` / `requireRole`）**——`ArchitectureGuardTest` G7 会拦（漏写即测试失败）；**新增需登录的端点仍须补一个「匿名 → 401」单测**（真机 401 也要验）。⚠️ 运行时是**两层**：`security/EndpointAuthorizationManager` 在过滤器链按注解拒绝匿名（401 / 4001，框架直接产出），`CurrentUser` 在业务侧承担角色与资源级授权（403 / 4002）——**框架只区分"登录 / 未登录"，别指望它做角色判定**；
 - **联调冒烟**：新链路合入前必须真实起栈（本机 MySQL / Redis + 后端 + 前端）并**浏览器实测**，不能只依赖单测；
@@ -215,5 +216,5 @@ npm run build
 
 - **不自动 git commit / push**；提交前先展示变更摘要；**commit message 用中文**（保留 `feat` / `docs` / `fix` 等类型前缀，作用域与描述用中文；标题末尾写 CR 号；正文写清**「做了什么、解决了什么」**，让人不点开代码就能看懂）；monorepo 统一根目录操作；
 - 删除文件 / 目录、修改 `.env` / 密钥 / 证书、`git push` / `rebase` / `reset --hard`、公开发布：**必须先征得用户同意**；
-- **生产环境红线**：`app.roster.bypass=false`、`campuslink.captcha.fixed-code` 必须留空（固定验证码等同取消验证码防线）、JWT 与加密密钥全部覆盖默认值、名册导入与内容处置必须写审计日志、机审降级开关（fail-closed）不得改为跳过审核。
+- **生产环境红线**：`campuslink.roster.bypass=false`、`campuslink.captcha.fixed-code` 必须留空（固定验证码等同取消验证码防线）、JWT 与加密密钥全部覆盖默认值、名册导入与内容处置必须写审计日志、机审降级开关（fail-closed）不得改为跳过审核。
   - ✅ **前三项自 [CR-063](docs/变更日志/变更台账.md#cr-063) 起由代码强制**（不再只是"上线检查清单项"）：`config/ProductionSafetyGuard` 在 `prod` profile 下抢在数据源之前校验，漏配即启动失败。开发开关三项在 `application-prod.yml` 里**写死**为合规值——⚠️ 这只消灭"默认值可回退"，**不消灭覆盖本身**（环境变量 / 命令行参数仍能盖过 yml），真正的兜底是守卫断言而非 yml 写法。**后两项未机器化**——审计日志覆盖面与机审开关仍靠人工，见问题清单（F-SAFE-001 / F-SAFE-003 未实现）。

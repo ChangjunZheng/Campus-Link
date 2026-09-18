@@ -6,7 +6,7 @@ import java.util.Optional;
 
 /**
  * 出站端口：学籍名册核验查询与占用（技术方案 4.3）。
- * 双策略实现（策略模式，按 app.roster.bypass 条件装配）：
+ * 双策略实现（策略模式，按 campuslink.roster.bypass 条件装配）：
  * bypass=true → 内置测试名册（开发联调）；false → MySQL 名册表（生产）。
  */
 public interface RosterGateway {

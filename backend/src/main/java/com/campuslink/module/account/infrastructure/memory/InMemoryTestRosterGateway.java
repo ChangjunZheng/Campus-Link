@@ -11,7 +11,7 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * 策略实现（开发联调）：内置测试名册（app.roster.bypass=true 时装配，缺省生效）。
+ * 策略实现（开发联调）：内置测试名册（campuslink.roster.bypass=true 时装配，缺省生效）。
  * 与生产名册表实现互斥（策略模式），占用不做持久化（仅联调语义，允许重复核验）；
  * 生产环境 bypass 必须 false（上线检查清单项，见 AGENTS.md 红线）。
  */

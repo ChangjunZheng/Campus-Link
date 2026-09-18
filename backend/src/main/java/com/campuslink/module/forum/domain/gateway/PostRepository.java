@@ -59,6 +59,19 @@ public interface PostRepository {
      */
     void updateAcceptedReply(Long postId, Long replyId);
 
+    /**
+     * 作者自助删除（F-FORUM-006）：定向 UPDATE {@code posts.is_deleted=1}，**条件带 {@code is_deleted=0}**。
+     *
+     * <p>返回是否有行被改：0 行只可能是并发下别人已删——调用方据此返回 3001 而不是再记一条审计
+     * （同一次删除留两条 {@code POST_DELETE} 会让审计变成噪音）。
+     *
+     * <p>为什么改 {@code is_deleted} 而不是把 {@code status} 置为某个"已删除"值：本仓储的读侧约定是
+     * "软删是行级墓碑、不进入聚合"（见 {@link #findById}），列表 / 搜索 / 热榜候选 / 通知摘要等读路径
+     * 全部过滤该列；而 {@code status=REMOVED} 预留的语义是**平台处置**（机审 / 管理员下架），
+     * 与作者自助删除是两件事，合并后将来无法区分"谁删的"。
+     */
+    boolean markDeleted(Long postId);
+
     /** 点赞计数增减（F-FORUM-005，delta 为 ±1）；返回增减后的 like_count，供响应回显 */
     int adjustLikeCount(Long postId, int delta);
 

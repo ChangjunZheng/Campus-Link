@@ -55,9 +55,15 @@ public class FavoriteRepositoryImpl implements FavoriteRepository {
         if (postIds.isEmpty()) {
             return new PageResult<>(List.of(), 0, page, size);
         }
-        Map<Long, PostDO> postsById = postMapper.selectBatchIds(postIds).stream()
+        // ⚠️ 不能用 selectBatchIds：它按主键读、不排墓碑，作者已删的帖子会照样出现在"我的收藏"里
+        // （F-FORUM-006 真机抓到的缺陷——`Post::isVisible` 只看 status，看不了 is_deleted）。
+        // 这里显式补 is_deleted=0，与 PostRepository#findById / #findByIds 的读侧约定同源。
+        Map<Long, PostDO> postsById = postMapper.selectList(new LambdaQueryWrapper<PostDO>()
+                        .in(PostDO::getId, postIds)
+                        .eq(PostDO::getIsDeleted, false)).stream()
                 .collect(Collectors.toMap(PostDO::getId, Function.identity()));
-        // 按收藏时间序回填帖子；已删 / 不可见帖从页内剔除（favorites 行保留，total 为收藏行数——已删帖会使该页可能少项，属可接受取舍）
+        // 按收藏时间序回填帖子；不可见帖（已下架）从页内剔除（favorites 行保留，total 为收藏行数——
+        // 被剔除的帖子会使该页可能少项，属已登记取舍，见 CR-048）
         List<Post> items = postIds.stream()
                 .map(postsById::get)
                 .filter(java.util.Objects::nonNull)
