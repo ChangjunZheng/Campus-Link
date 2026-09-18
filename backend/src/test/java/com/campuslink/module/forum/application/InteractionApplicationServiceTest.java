@@ -108,7 +108,7 @@ class InteractionApplicationServiceTest {
     @DisplayName("点赞楼层：校验父帖归属后 toggle；楼层不存在 → 3001")
     void toggleReplyLike() {
         when(postRepository.findById(9L)).thenReturn(Optional.of(post()));
-        when(replyRepository.findById(11L)).thenReturn(Optional.of(reply()));
+        when(replyRepository.findVisibleById(11L)).thenReturn(Optional.of(reply()));
         when(likeRepository.toggle(42L, LikeTargetType.REPLY, 11L)).thenReturn(true);
         when(replyRepository.adjustLikeCount(11L, 1)).thenReturn(3);
 
@@ -117,7 +117,7 @@ class InteractionApplicationServiceTest {
         assertThat(result.active()).isTrue();
         assertThat(result.count()).isEqualTo(3);
 
-        when(replyRepository.findById(99L)).thenReturn(Optional.empty());
+        when(replyRepository.findVisibleById(99L)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.toggleReplyLike(42L, 9L, 99L))
                 .isInstanceOfSatisfying(ApiException.class,
                         e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_FOUND));
@@ -127,7 +127,7 @@ class InteractionApplicationServiceTest {
     @DisplayName("跨帖子点赞楼层 → 3001，且不触达 toggle / 计数 / 通知")
     void crossPostReplyLikeIsNotFound() {
         when(postRepository.findById(9L)).thenReturn(Optional.of(post()));
-        when(replyRepository.findById(11L)).thenReturn(Optional.of(
+        when(replyRepository.findVisibleById(11L)).thenReturn(Optional.of(
                 Reply.rehydrate(11L, 8L, 100L, 1, "内容", "<p>内容</p>", false, 0, CREATED_AT)));
 
         assertThatThrownBy(() -> service.toggleReplyLike(42L, 9L, 11L))
@@ -148,8 +148,25 @@ class InteractionApplicationServiceTest {
                 .isInstanceOfSatisfying(ApiException.class,
                         e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_FOUND));
 
-        verify(replyRepository, never()).findById(anyLong());
+        verify(replyRepository, never()).findVisibleById(anyLong());
         verify(likeRepository, never()).toggle(anyLong(), any(), anyLong());
+    }
+
+    @Test
+    @DisplayName("点赞楼层：不可见（已下架 / 已删除）回复 → 3001，零副作用")
+    void replyLikeGoesThroughVisibleRead() {
+        when(postRepository.findById(9L)).thenReturn(Optional.of(post()));
+        when(replyRepository.findVisibleById(11L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.toggleReplyLike(42L, 9L, 11L))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_FOUND));
+
+        // 守卫只在读侧这一处：用例必须走带 status 过滤的读法，而不是另在计数更新上补条件
+        verify(replyRepository).findVisibleById(11L);
+        verify(likeRepository, never()).toggle(anyLong(), any(), anyLong());
+        verify(replyRepository, never()).adjustLikeCount(anyLong(), anyInt());
+        verifyNoInteractions(notificationService);
     }
 
     @Test
@@ -170,7 +187,7 @@ class InteractionApplicationServiceTest {
     @DisplayName("互动生效 → 通知发给目标作者（帖子类发给帖子作者，楼层类发给楼层作者）")
     void activeInteractionNotifiesTargetAuthor() {
         when(postRepository.findById(9L)).thenReturn(Optional.of(post()));
-        when(replyRepository.findById(11L)).thenReturn(Optional.of(reply()));
+        when(replyRepository.findVisibleById(11L)).thenReturn(Optional.of(reply()));
         when(likeRepository.toggle(42L, LikeTargetType.POST, 9L)).thenReturn(true);
         when(postRepository.adjustLikeCount(9L, 1)).thenReturn(5);
         when(likeRepository.toggle(42L, LikeTargetType.REPLY, 11L)).thenReturn(true);

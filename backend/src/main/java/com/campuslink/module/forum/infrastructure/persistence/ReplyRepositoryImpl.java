@@ -39,9 +39,11 @@ public class ReplyRepositoryImpl implements ReplyRepository {
     }
 
     @Override
-    public Optional<Reply> findById(Long id) {
+    public Optional<Reply> findVisibleById(Long id) {
+        // 与 findPageByPostId 同源的双条件：已下架（status=REMOVED）与已删除都不应对写用例暴露（CR-060 / BUG-002）
         return Optional.ofNullable(replyMapper.selectOne(new LambdaQueryWrapper<ReplyDO>()
                         .eq(ReplyDO::getId, id)
+                        .eq(ReplyDO::getStatus, STATUS_PUBLISHED)
                         .eq(ReplyDO::getIsDeleted, false)))
                 .map(ReplyConverter::toDomain);
     }

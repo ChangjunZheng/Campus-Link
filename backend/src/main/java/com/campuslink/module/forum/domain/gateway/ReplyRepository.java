@@ -12,12 +12,22 @@ public interface ReplyRepository {
     /** 某帖的楼层分页：固定 {@code status='PUBLISHED' AND is_deleted=0}，按 is_accepted DESC、floor_no ASC（F-QA-001 最佳答案置顶，设计 §3.5） */
     PageResult<Reply> findPageByPostId(Long postId, int page, int size);
 
-    /** 按 id 查**未删除**的回复（读侧约定与 PostRepository.findById 相同）；采纳用例用它核验回复存在且属于该帖 */
-    Optional<Reply> findById(Long id);
+    /**
+     * 按 id 查**可见**的回复（{@code status='PUBLISHED' AND is_deleted=0}，与 {@link #findPageByPostId}
+     * 的列表过滤**同源**）；不可见（已下架 / 已删除）一律按"不存在"处理。
+     *
+     * <p>供两条楼层写用例核验目标存在且可见：楼层点赞与采纳最佳答案（F-FORUM-005 / F-QA-001）。
+     * 可见性守卫**只放在读侧这一处**，计数更新（{@link #adjustLikeCount}）不再重复表达同一条件；
+     * {@code Reply} 聚合刻意不带 {@code status}（无业务规则消费它），故过滤条件下推至 SQL 适配器。
+     */
+    Optional<Reply> findVisibleById(Long id);
 
     /**
-     * 批量按 id 查**未删除**的回复（读侧约定同 {@link #findById}）；通知读时组装用（F-SOC-001），
+     * 批量按 id 查**未删除**的回复（只过滤 {@code is_deleted=0}，**不过滤 status**）；通知读时组装用（F-SOC-001），
      * 一页一次取齐所属帖与楼层号，不做 N+1。
+     *
+     * <p>与 {@link #findVisibleById} 的差别是刻意的：通知要能指出一条已下架楼层"在第几楼"，
+     * 在此过滤 status 会让引用失去落点；写用例一律走 {@link #findVisibleById}。
      */
     List<Reply> findByIds(Collection<Long> ids);
 

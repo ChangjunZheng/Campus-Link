@@ -97,7 +97,7 @@ class PostApplicationServiceTest {
     @DisplayName("采纳：提问者采纳他人回复 → posts 定向更新 + replies 旧标志清理/新标志置位")
     void acceptUpdatesPostAndReplyFlags() {
         when(postRepository.findById(123L)).thenReturn(Optional.of(questionPost(42L)));
-        when(replyRepository.findById(456L)).thenReturn(Optional.of(reply(456L, 999L)));
+        when(replyRepository.findVisibleById(456L)).thenReturn(Optional.of(reply(456L, 999L)));
 
         service.acceptReply(42L, 123L, 456L);
 
@@ -125,7 +125,7 @@ class PostApplicationServiceTest {
     @DisplayName("采纳：回复不存在或不属于该帖 → 3001（防按 id 探测），不触达写操作")
     void acceptForeignReplyIsNotFound() {
         when(postRepository.findById(123L)).thenReturn(Optional.of(questionPost(42L)));
-        when(replyRepository.findById(456L)).thenReturn(Optional.of(reply(456L, 999L, 999L)));
+        when(replyRepository.findVisibleById(456L)).thenReturn(Optional.of(reply(456L, 999L, 999L)));
 
         assertThatThrownBy(() -> service.acceptReply(42L, 123L, 456L))
                 .isInstanceOfSatisfying(ApiException.class,
@@ -133,6 +133,23 @@ class PostApplicationServiceTest {
 
         verify(postRepository, never()).updateAcceptedReply(any(), any());
         verify(replyRepository, never()).updateAcceptedFlags(any(), any());
+    }
+
+    @Test
+    @DisplayName("采纳：不可见（已下架 / 已删除）回复 → 3001，且不触达写操作与通知")
+    void acceptInvisibleReplyIsNotFound() {
+        when(postRepository.findById(123L)).thenReturn(Optional.of(questionPost(42L)));
+        when(replyRepository.findVisibleById(456L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.acceptReply(42L, 123L, 456L))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_FOUND));
+
+        // 守卫只在读侧这一处：用例必须走带 status 过滤的读法，而不是另在写侧补条件
+        verify(replyRepository).findVisibleById(456L);
+        verify(postRepository, never()).updateAcceptedReply(any(), any());
+        verify(replyRepository, never()).updateAcceptedFlags(any(), any());
+        verifyNoInteractions(notificationService);
     }
 
     private static Post questionPost(Long authorId) {

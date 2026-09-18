@@ -57,7 +57,7 @@ public class PostApplicationService {
             // 资源级授权归业务代码（框架只区分登录 / 未登录，CR-031 口径）
             throw new ApiException(ResultCode.FORBIDDEN);
         }
-        Reply reply = replyRepository.findById(replyId)
+        Reply reply = replyRepository.findVisibleById(replyId)
                 .filter(r -> r.getPostId().equals(post.getId()))
                 .orElseThrow(PostNotFoundException::new);
         post.acceptReply(reply.getId(), reply.getAuthorId());

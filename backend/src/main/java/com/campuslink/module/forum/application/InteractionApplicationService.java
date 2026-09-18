@@ -47,8 +47,8 @@ public class InteractionApplicationService {
     @Transactional
     public InteractionResult toggleReplyLike(long userId, long postId, long replyId) {
         Post post = requireVisiblePost(postId);
-        // 回复不存在或不属于路径指定的帖子，统一 404，避免跨资源操作和按 id 探测。
-        Reply reply = replyRepository.findById(replyId)
+        // 回复不存在、不属于路径指定的帖子、或已下架 / 已删除，统一 404（CR-060：可见性与列表同源）
+        Reply reply = replyRepository.findVisibleById(replyId)
                 .filter(candidate -> candidate.getPostId().equals(post.getId()))
                 .orElseThrow(PostNotFoundException::new);
         boolean active = likeRepository.toggle(userId, LikeTargetType.REPLY, reply.getId());
