@@ -76,16 +76,17 @@ class InteractionControllerAuthTest {
         assertThatThrownBy(() -> replyController.like(1L, 11L, null))
                 .isInstanceOfSatisfying(ApiException.class,
                         e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_LOGGED_IN));
-        verify(interactionApplicationService, never()).toggleReplyLike(anyLong(), anyLong());
+        verify(interactionApplicationService, never()).toggleReplyLike(anyLong(), anyLong(), anyLong());
     }
 
     @Test
     @DisplayName("已登录点赞楼层 → 放行")
     void authenticatedReplyLikePassesThrough() {
-        when(interactionApplicationService.toggleReplyLike(42L, 11L)).thenReturn(new InteractionResult(true, 3));
+        when(interactionApplicationService.toggleReplyLike(42L, 1L, 11L))
+                .thenReturn(new InteractionResult(true, 3));
 
         assertThat(replyController.like(1L, 11L, user()).data().count()).isEqualTo(3);
-        verify(interactionApplicationService).toggleReplyLike(eq(42L), eq(11L));
+        verify(interactionApplicationService).toggleReplyLike(eq(42L), eq(1L), eq(11L));
     }
 
     @Test

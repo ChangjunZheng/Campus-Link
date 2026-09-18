@@ -105,21 +105,51 @@ class InteractionApplicationServiceTest {
     }
 
     @Test
-    @DisplayName("点赞楼层：target_type=REPLY；楼层不存在 → 3001")
+    @DisplayName("点赞楼层：校验父帖归属后 toggle；楼层不存在 → 3001")
     void toggleReplyLike() {
+        when(postRepository.findById(9L)).thenReturn(Optional.of(post()));
         when(replyRepository.findById(11L)).thenReturn(Optional.of(reply()));
         when(likeRepository.toggle(42L, LikeTargetType.REPLY, 11L)).thenReturn(true);
         when(replyRepository.adjustLikeCount(11L, 1)).thenReturn(3);
 
-        InteractionResult result = service.toggleReplyLike(42L, 11L);
+        InteractionResult result = service.toggleReplyLike(42L, 9L, 11L);
 
         assertThat(result.active()).isTrue();
         assertThat(result.count()).isEqualTo(3);
 
         when(replyRepository.findById(99L)).thenReturn(Optional.empty());
-        assertThatThrownBy(() -> service.toggleReplyLike(42L, 99L))
+        assertThatThrownBy(() -> service.toggleReplyLike(42L, 9L, 99L))
                 .isInstanceOfSatisfying(ApiException.class,
                         e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_FOUND));
+    }
+
+    @Test
+    @DisplayName("跨帖子点赞楼层 → 3001，且不触达 toggle / 计数 / 通知")
+    void crossPostReplyLikeIsNotFound() {
+        when(postRepository.findById(9L)).thenReturn(Optional.of(post()));
+        when(replyRepository.findById(11L)).thenReturn(Optional.of(
+                Reply.rehydrate(11L, 8L, 100L, 1, "内容", "<p>内容</p>", false, 0, CREATED_AT)));
+
+        assertThatThrownBy(() -> service.toggleReplyLike(42L, 9L, 11L))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_FOUND));
+
+        verify(likeRepository, never()).toggle(anyLong(), any(), anyLong());
+        verify(replyRepository, never()).adjustLikeCount(anyLong(), anyInt());
+        verifyNoInteractions(notificationService);
+    }
+
+    @Test
+    @DisplayName("父帖不可见 → 3001，且不查询回复")
+    void invisibleParentPostIsNotFound() {
+        when(postRepository.findById(9L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.toggleReplyLike(42L, 9L, 11L))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_FOUND));
+
+        verify(replyRepository, never()).findById(anyLong());
+        verify(likeRepository, never()).toggle(anyLong(), any(), anyLong());
     }
 
     @Test
@@ -149,7 +179,7 @@ class InteractionApplicationServiceTest {
         when(postRepository.adjustFavoriteCount(9L, 1)).thenReturn(2);
 
         service.togglePostLike(42L, 9L);
-        service.toggleReplyLike(42L, 11L);
+        service.toggleReplyLike(42L, 9L, 11L);
         service.togglePostFavorite(42L, 9L);
 
         verify(notificationService).postLiked(42L, 9L, 100L);

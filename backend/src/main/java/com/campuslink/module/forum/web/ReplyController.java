@@ -78,7 +78,7 @@ public class ReplyController {
                                                @PathVariable("replyId") Long replyId,
                                                Authentication authentication) {
         long userId = CurrentUser.requireId(authentication);
-        return ApiResponse.ok(interactionApplicationService.toggleReplyLike(userId, replyId));
+        return ApiResponse.ok(interactionApplicationService.toggleReplyLike(userId, postId, replyId));
     }
 
     /** 楼层列表端点保持公开；已登录时附带登录态回显（匿名 / principal 非 id 一律视为匿名，不抛 401） */

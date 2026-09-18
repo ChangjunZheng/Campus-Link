@@ -45,9 +45,12 @@ public class InteractionApplicationService {
     }
 
     @Transactional
-    public InteractionResult toggleReplyLike(long userId, long replyId) {
-        // 回复不存在 / 已删与帖子不存在同样 404 不区分（防按 id 探测，口径同 requireVisiblePost）
-        Reply reply = replyRepository.findById(replyId).orElseThrow(PostNotFoundException::new);
+    public InteractionResult toggleReplyLike(long userId, long postId, long replyId) {
+        Post post = requireVisiblePost(postId);
+        // 回复不存在或不属于路径指定的帖子，统一 404，避免跨资源操作和按 id 探测。
+        Reply reply = replyRepository.findById(replyId)
+                .filter(candidate -> candidate.getPostId().equals(post.getId()))
+                .orElseThrow(PostNotFoundException::new);
         boolean active = likeRepository.toggle(userId, LikeTargetType.REPLY, reply.getId());
         int count = replyRepository.adjustLikeCount(reply.getId(), active ? 1 : -1);
         if (active) {
