@@ -1,3 +1,8 @@
+# 本文件是「开发零配置可起」那一层：下面所有 ${VAR:dev-default} 的默认值都是**开发态取值**。
+# 生产必须叠加 profile：`--spring.profiles.active=prod`（见 application-prod.yml），
+# 由 config/ProductionSafetyGuard 在启动时机器拦截四条红线（旁路 / 固定验证码 / 密钥仍为开发值 / 默认库口令），
+# 漏配即启动失败——不再靠"启动后看一眼 WARN"。
+# ⚠️ 改了本文件任何一处占位符默认值，必须同步 ProductionSafetyGuard.DEV_VALUES，否则守护测试即红（两处即两个事实源）。
 server:
   # 默认 8088：本机 8080 已被另一项目的 Tomcat 占用（CR-011）；生产可用 SERVER_PORT 覆盖
   port: ${SERVER_PORT:8088}

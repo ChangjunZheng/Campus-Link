@@ -1,0 +1,35 @@
+# 生产 profile（CR-063，闭环问题清单 BUG-003）
+#
+# 本文件的存在理由：base `application.yml` 用 `${VAR:dev-default}` 写成"零配置就能跑"，
+# 这在开发期是便利、在生产是敞口——漏配一个变量，应用照常启动、只打一行 WARN。
+# 所以这里的原则是：**能写死的防线一律写死，必须外置的凭据一律不留默认值**。
+# 激活方式：`--spring.profiles.active=prod`（或环境变量 SPRING_PROFILES_ACTIVE=prod）。
+#
+# 剩下"给了值但给的是仓库里那份开发字面量"这一类，由 config/ProductionSafetyGuard 在启动时拦。
+
+spring:
+  datasource:
+    # 不留默认值。⚠️ 真机取证（round B）：这**不会**让启动在绑定阶段中止——绑定 @ConfigurationProperties
+    # 走的是非严格解析，解析不了就把字面量原样注入，于是报的是 MySQL 的 Access denied for user '${DB_USER}'。
+    # 真正拦下它的是 ProductionSafetyGuard（BFPP，排在数据源之前），这里不留默认值只是让值变得可疑。
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+
+campuslink:
+  jwt:
+    secret: ${JWT_SECRET}
+  crypto:
+    # 两把密钥各自独立、都无默认值；"是否互不相同"由启动守卫断言（占位符本身看不出两把抄成了同一把）
+    hash-key: ${APP_HASH_KEY}
+    crypt-key: ${APP_CRYPT_KEY}
+  captcha:
+    # 写成字面量空值而不是 ${CAPTCHA_FIXED_CODE:""}：固定验证码等同取消验证码防线，留占位符等于让
+    # "部署脚本没带这个变量"直接落到 123456。⚠️ 但字面量挡不住显式覆盖（CAPTCHA_FIXED_CODE=123456
+    # 这类环境变量 / 命令行参数仍会盖过本行），真正兜住的是 ProductionSafetyGuard 的非空断言。
+    fixed-code: ""
+  roster:
+    # 同理写死 false：学籍核验旁路一旦开着，名册身份就能被冒用注册（覆盖仍可能，见上一段 ⚠️，由守卫断言）
+    bypass: false
+  code-sender:
+    # 写死 mail：log 模式下验证码只进后端日志，用户收不到码，注册链路在生产上实际不可用
+    mode: mail
