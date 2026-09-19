@@ -1,4 +1,4 @@
-import { get, post } from './client'
+import { get, post, put } from './client'
 import type { UserInfo } from '../types'
 
 export interface AuthResponse {
@@ -19,3 +19,10 @@ export const register = (payload: { ticket: string; email: string; code: string;
 export const login = (email: string, code: string) => post<AuthResponse>('/auth/login', { email, code })
 
 export const fetchMe = () => get<UserInfo>('/users/me')
+
+/**
+ * 资料编辑（F-ACC-007a）：PUT 全量语义——传 `null` 的字段后端保持原值，传空串即清空（昵称除外）。
+ * 身份只从令牌取，请求体里没有 id；限流 10 次/小时，超限 `429 / 2008`（消息由后端给出，直接透出）。
+ */
+export const updateProfile = (payload: { nickname?: string | null; major?: string | null; bio?: string | null }) =>
+  put<UserInfo>('/users/me', payload)

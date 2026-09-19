@@ -45,6 +45,19 @@ public class PostRepositoryImpl implements PostRepository {
     }
 
     @Override
+    public PageResult<Post> findPageByAuthor(Long authorId, int page, int size) {
+        // 与 findPage 的唯一差别就是不写 status 条件：作者要能看到"我哪一帖被下架了"（F-ACC-007b）；
+        // 墓碑列照写——自删对作者本人也不出现。total 与这两个条件同源（不在内存里剔）。
+        IPage<PostDO> result = postMapper.selectPage(new Page<>(page, size), new LambdaQueryWrapper<PostDO>()
+                .eq(PostDO::getAuthorId, authorId)
+                .eq(PostDO::getIsDeleted, false)
+                .orderByDesc(PostDO::getCreatedAt)
+                .orderByDesc(PostDO::getId));
+        return new PageResult<>(result.getRecords().stream().map(PostConverter::toDomain).toList(),
+                result.getTotal(), page, size);
+    }
+
+    @Override
     public PageResult<Post> search(String keyword, Long boardId, Integer days, int page, int size) {
         IPage<PostDO> result = postMapper.search(new Page<>(page, size), keyword, boardId, days);
         return new PageResult<>(result.getRecords().stream().map(PostConverter::toDomain).toList(),

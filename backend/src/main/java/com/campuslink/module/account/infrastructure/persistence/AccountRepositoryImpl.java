@@ -1,10 +1,12 @@
 package com.campuslink.module.account.infrastructure.persistence;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.campuslink.module.account.domain.exception.AccountConflictException;
 import com.campuslink.module.account.domain.gateway.AccountRepository;
 import com.campuslink.module.account.domain.gateway.SensitiveCodec;
 import com.campuslink.module.account.domain.model.Account;
+import com.campuslink.module.account.domain.model.ProfileField;
 import com.campuslink.module.account.infrastructure.persistence.mapper.UserMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DuplicateKeyException;
@@ -13,6 +15,7 @@ import org.springframework.stereotype.Repository;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 /** 适配器：AccountRepository 端口的 MyBatis-Plus 实现（适配器模式） */
 @Repository
@@ -48,6 +51,27 @@ public class AccountRepositoryImpl implements AccountRepository {
         }
         // 未预期的约束冲突：不猜测业务语义，原样抛出按系统异常处理
         return e;
+    }
+
+    /** 资料编辑（F-ACC-007a）：只 SET 变化列，绝不整行回写（端口 javadoc 写明理由） */
+    @Override
+    public void updateProfile(Long accountId, Account account, Set<ProfileField> changed) {
+        if (changed == null || changed.isEmpty()) {
+            // 幂等提交：一条 SQL 都不发，updated_at 因此不会推进（ON UPDATE CURRENT_TIMESTAMP 只被真写触发）
+            return;
+        }
+        LambdaUpdateWrapper<UserDO> update = new LambdaUpdateWrapper<UserDO>().eq(UserDO::getId, accountId);
+        // 逐列判定：SET 列表恰好等于变化列，role / status / email_* / verified 永不出现在这里
+        if (changed.contains(ProfileField.NICKNAME)) {
+            update.set(UserDO::getNickname, account.getNickname());
+        }
+        if (changed.contains(ProfileField.MAJOR)) {
+            update.set(UserDO::getMajor, account.getMajor());
+        }
+        if (changed.contains(ProfileField.BIO)) {
+            update.set(UserDO::getBio, account.getBio());
+        }
+        userMapper.update(null, update);
     }
 
     @Override

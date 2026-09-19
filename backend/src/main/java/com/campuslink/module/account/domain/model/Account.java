@@ -1,8 +1,14 @@
 package com.campuslink.module.account.domain.model;
 
+import com.campuslink.common.exception.ApiException;
+import com.campuslink.common.result.ResultCode;
+import com.campuslink.common.validation.FieldRules;
 import lombok.Getter;
 
 import java.time.Instant;
+import java.util.EnumSet;
+import java.util.Objects;
+import java.util.Set;
 
 /**
  * 账号聚合根（DDD 充血模型）：账号生命周期规则收敛在聚合内。
@@ -15,7 +21,8 @@ public class Account {
     private Long id;
     private final EmailAddress email;
     private final StudentId studentId;
-    private final String nickname;
+    /** 注册后由资料编辑用例改写（F-ACC-007a），故不再是 final；写入只经 {@link #updateProfile}，无公开 setter */
+    private String nickname;
     private String avatarUrl;
     private String school;
     private String major;
@@ -77,5 +84,54 @@ public class Account {
 
     public boolean isActive() {
         return status == AccountStatus.ACTIVE;
+    }
+
+    /**
+     * 资料编辑（F-ACC-007a）：**PUT 全量语义**——传 {@code null} 的字段保持原值，传空串即清空（{@code major} /
+     * {@code bio}），昵称不允许清空。长度与字符集规则引用 {@link FieldRules}，与注册侧、web 侧注解同源一处定义。
+     *
+     * <p>返回值是**实际发生变化的字段集合**：调用方据此只 SET 这些列（定向 UPDATE，见
+     * {@code AccountRepository#updateProfile}），空集即幂等——不发 UPDATE、不推进 {@code updated_at}、不记审计。
+     * 差异在聚合内算而非在应用层比对，是为了让"空串归一为 NULL"这一条规则只有一份。
+     *
+     * <p>不加公开 setter：本聚合的既有口径是"生命周期规则收敛在聚合内"。
+     */
+    public Set<ProfileField> updateProfile(String nickname, String major, String bio) {
+        // 先全部校验、再统一赋值：一次提交里 nickname 合法而 bio 含尖括号时，聚合不该停在"改了一半"的状态
+        String nextNickname = nickname == null ? this.nickname : requireNickname(normalize(nickname, FieldRules.NICKNAME_MAX_CHARS));
+        String nextMajor = major == null ? this.major : normalize(major, FieldRules.MAJOR_MAX_CHARS);
+        String nextBio = bio == null ? this.bio : normalize(bio, FieldRules.BIO_MAX_CHARS);
+
+        Set<ProfileField> changed = EnumSet.noneOf(ProfileField.class);
+        if (!Objects.equals(nextNickname, this.nickname)) {
+            this.nickname = nextNickname;
+            changed.add(ProfileField.NICKNAME);
+        }
+        if (!Objects.equals(nextMajor, this.major)) {
+            this.major = nextMajor;
+            changed.add(ProfileField.MAJOR);
+        }
+        if (!Objects.equals(nextBio, this.bio)) {
+            this.bio = nextBio;
+            changed.add(ProfileField.BIO);
+        }
+        return changed;
+    }
+
+    /** 昵称是唯一不许清空的资料列（顶栏与帖子作者位靠它认人）；空串归一后为 null，即视为"想清空" → 拒 */
+    private static String requireNickname(String trimmed) {
+        if (trimmed == null || trimmed.length() < FieldRules.NICKNAME_MIN_CHARS) {
+            throw new ApiException(ResultCode.INVALID_PARAM);
+        }
+        return trimmed;
+    }
+
+    /** 去首尾空白（空串归一为 null）后校验长度与字符集；不合规即 1001，与 web 侧注解同一判据 */
+    private static String normalize(String raw, int maxChars) {
+        String trimmed = FieldRules.trimToNull(raw);
+        if (FieldRules.containsForbiddenChar(trimmed) || !FieldRules.isWithinLength(trimmed, maxChars)) {
+            throw new ApiException(ResultCode.INVALID_PARAM);
+        }
+        return trimmed;
     }
 }

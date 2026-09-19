@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.campuslink.module.forum.domain.gateway.PageResult;
 import com.campuslink.module.forum.domain.gateway.ReplyRepository;
+import com.campuslink.module.forum.domain.model.MyReplyRow;
 import com.campuslink.module.forum.domain.model.Reply;
 import com.campuslink.module.forum.domain.model.ReplyStatus;
 import com.campuslink.module.forum.infrastructure.persistence.mapper.ReplyMapper;
@@ -37,6 +38,17 @@ public class ReplyRepositoryImpl implements ReplyRepository {
                 .orderByAsc(ReplyDO::getFloorNo));
         return new PageResult<>(result.getRecords().stream().map(ReplyConverter::toDomain).toList(),
                 result.getTotal(), page, size);
+    }
+
+    @Override
+    public PageResult<MyReplyRow> findPageByAuthor(Long authorId, int page, int size) {
+        // 父帖可见性与父帖标题在同一条 SQL 里判定（ReplyMapper#findPageByAuthor）：
+        // 内存拼两次查询会让 total 与过滤条件不同源，翻页就会出现"少了但计数还在"
+        IPage<MyReplyDO> result = replyMapper.findPageByAuthor(new Page<>(page, size), authorId);
+        return new PageResult<>(result.getRecords().stream()
+                .map(d -> new MyReplyRow(d.getId(), d.getPostId(), d.getPostTitle(), d.getFloorNo(),
+                        d.getContentMd(), ReplyStatus.valueOf(d.getStatus()), d.getCreatedAt()))
+                .toList(), result.getTotal(), page, size);
     }
 
     @Override

@@ -1,5 +1,6 @@
 package com.campuslink.module.account.application.cmd;
 
+import com.campuslink.common.validation.FieldRules;
 import com.campuslink.module.account.domain.model.Account;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -34,7 +35,31 @@ public final class AccountCommands {
                         @NotBlank(message = "核验票据不能为空") String ticket,
                         @NotBlank @Email(message = "邮箱格式不正确") String email,
                         @NotBlank @Pattern(regexp = "\\d{6}", message = "验证码为 6 位数字") String code,
-                        @NotBlank @Size(min = 2, max = 32, message = "昵称长度 2~32") String nickname) {
+                        @NotBlank @Size(min = FieldRules.NICKNAME_MIN_CHARS, max = FieldRules.NICKNAME_MAX_CHARS,
+                                message = "昵称长度 2~32")
+                        @Pattern(regexp = FieldRules.TEXT_ALLOWED_PATTERN, message = "昵称含不允许的字符")
+                        String nickname) {
+        }
+
+        /**
+         * 资料编辑（F-ACC-007a）：**PUT 全量语义**——字段传 {@code null} 表示不改，传空串表示清空
+         * （仅 {@code major} / {@code bio}；昵称不允许清空，由聚合拦下）。
+         *
+         * <p>长度与字符集**不另写一份字面量**：三个注解的取值全部引自 {@link FieldRules}，与注册侧同源。
+         * 请求体里出现 id / email / role / status 等多余字段会被 Jackson 直接忽略，不构成越权面。
+         */
+        public record UpdateProfileCommand(
+                        @Size(min = FieldRules.NICKNAME_MIN_CHARS, max = FieldRules.NICKNAME_MAX_CHARS,
+                                message = "昵称长度 2~32")
+                        @Pattern(regexp = FieldRules.TEXT_ALLOWED_PATTERN, message = "昵称含不允许的字符")
+                        @Pattern(regexp = FieldRules.NON_BLANK_PATTERN, message = "昵称不能为空白")
+                        String nickname,
+                        @Size(max = FieldRules.MAJOR_MAX_CHARS, message = "专业长度不超过 64")
+                        @Pattern(regexp = FieldRules.TEXT_ALLOWED_PATTERN, message = "专业含不允许的字符")
+                        String major,
+                        @Size(max = FieldRules.BIO_MAX_CHARS, message = "签名长度不超过 200")
+                        @Pattern(regexp = FieldRules.TEXT_ALLOWED_PATTERN, message = "签名含不允许的字符")
+                        String bio) {
         }
 
         public record LoginCommand(

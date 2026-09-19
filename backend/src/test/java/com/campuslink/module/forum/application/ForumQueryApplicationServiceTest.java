@@ -4,6 +4,8 @@ import com.campuslink.common.exception.ApiException;
 import com.campuslink.common.markdown.MarkdownRenderer;
 import com.campuslink.common.result.ResultCode;
 import com.campuslink.module.account.application.AccountApplicationService;
+import com.campuslink.module.forum.application.cmd.ForumResults.MyPostSummary;
+import com.campuslink.module.forum.application.cmd.ForumResults.MyReplyItem;
 import com.campuslink.module.forum.application.cmd.ForumResults.PostBrief;
 import com.campuslink.module.forum.application.cmd.ForumResults.PostDetail;
 import com.campuslink.module.forum.application.cmd.ForumResults.PostSummary;
@@ -17,10 +19,12 @@ import com.campuslink.module.forum.domain.gateway.PostRepository;
 import com.campuslink.module.forum.domain.gateway.ReplyRepository;
 import com.campuslink.module.forum.domain.model.Board;
 import com.campuslink.module.forum.domain.model.BoardType;
+import com.campuslink.module.forum.domain.model.MyReplyRow;
 import com.campuslink.module.forum.domain.model.Post;
 import com.campuslink.module.forum.domain.model.PostSortOrder;
 import com.campuslink.module.forum.domain.model.PostStatus;
 import com.campuslink.module.forum.domain.model.Reply;
+import com.campuslink.module.forum.domain.model.ReplyStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -337,6 +341,64 @@ class ForumQueryApplicationServiceTest {
         assertThat(replyBriefs.get(11L).postId()).isEqualTo(9L);
         assertThat(replyBriefs.get(11L).floorNo()).isEqualTo(3);
         assertThat(postBriefs).isEmpty();
+    }
+
+    /**
+     * CR-071 / F-ACC-007b：「我的帖子」出参是**只面向作者**的 MyPostSummary（带 status），
+     * 且这条链路一次都不查昵称——作者就是调用者本人，跨上下文那一次批量取昵称在此是纯浪费。
+     */
+    @Test
+    @DisplayName("我的帖子：REMOVED 条目带着 status 出现、total 原样透传、不查昵称")
+    void listMyPostsKeepsStatusAndSkipsNicknameLookup() {
+        when(boardRepository.findAllEnabled()).thenReturn(List.of(board(1L, "qna", "技术问答")));
+        when(postRepository.findPageByAuthor(42L, 1, 20)).thenReturn(new PageResult<>(
+                List.of(post(1L, 42L), post(2L, 42L, PostStatus.REMOVED)), 45, 1, 20));
+
+        PageResult<MyPostSummary> page = service.listMyPosts(42L, 1, 20);
+
+        assertThat(page.total()).isEqualTo(45);
+        assertThat(page.items()).extracting(MyPostSummary::status).containsExactly("PUBLISHED", "REMOVED");
+        assertThat(page.items()).allSatisfy(item -> assertThat(item.boardCode()).isEqualTo("qna"));
+        verify(accountApplicationService, never()).nicknamesOf(any());
+    }
+
+    @Test
+    @DisplayName("我的帖子：分页归一沿用既有口径（size=999 → 100 且不报错，防被用来放大查询）")
+    void listMyPostsNormalizesPaging() {
+        when(boardRepository.findAllEnabled()).thenReturn(List.of());
+        when(postRepository.findPageByAuthor(42L, 1, 100)).thenReturn(new PageResult<>(List.of(), 0, 1, 100));
+
+        PageResult<MyPostSummary> page = service.listMyPosts(42L, 0, 999);
+
+        assertThat(page.page()).isEqualTo(1);
+        assertThat(page.size()).isEqualTo(100);
+        assertThat(page.items()).isEmpty();
+        verify(postRepository).findPageByAuthor(42L, 1, 100);
+    }
+
+    /**
+     * CR-071 / F-ACC-007c：父帖可见性在 SQL 里判（见 {@code ReplyRepositoryImplMyRepliesTest}），
+     * 本层只做载体转换——尤其**不下发 contentMd 原文**，只给 120 字摘要。
+     */
+    @Test
+    @DisplayName("我的回帖：父帖定位与 status 透传，正文只给摘要（超长被截断）")
+    void listMyRepliesMapsRowsToSummaries() {
+        when(replyRepository.findPageByAuthor(42L, 2, 20)).thenReturn(new PageResult<>(
+                List.of(myReplyRow("内".repeat(300))), 45, 2, 20));
+
+        PageResult<MyReplyItem> page = service.listMyReplies(42L, 2, 20);
+
+        MyReplyItem item = page.items().getFirst();
+        assertThat(page.total()).isEqualTo(45);
+        assertThat(item.postId()).isEqualTo(9L);
+        assertThat(item.postTitle()).isEqualTo("父帖标题");
+        assertThat(item.floorNo()).isEqualTo(3);
+        assertThat(item.status()).isEqualTo("REMOVED");
+        assertThat(item.summary()).hasSizeLessThan(300).hasSizeGreaterThan(100);
+    }
+
+    private static MyReplyRow myReplyRow(String contentMd) {
+        return new MyReplyRow(11L, 9L, "父帖标题", 3, contentMd, ReplyStatus.REMOVED, CREATED_AT);
     }
 
     private static Post post(Long id, Long authorId) {

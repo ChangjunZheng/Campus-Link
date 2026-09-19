@@ -17,6 +17,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -119,6 +120,28 @@ class PostControllerAuthTest {
 
         assertThat(response.code()).isEqualTo(0);
         verify(postApplicationService).deletePost(eq(42L), eq(123L));
+    }
+
+    @Test
+    @DisplayName("匿名取「我的帖子」→ 4001，且不触达查询用例（REMOVED 内容不能对匿名露出）")
+    void anonymousMyPostsIsUnauthorized() {
+        assertThatThrownBy(() -> controller.myPosts(null, 1, 20))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_LOGGED_IN));
+
+        verify(forumQueryService, never()).listMyPosts(anyLong(), anyInt(), anyInt());
+    }
+
+    @Test
+    @DisplayName("已登录取「我的帖子」→ 作者 id 只从 principal 来（签名里没有 authorId 形参）")
+    void myPostsTakesAuthorFromPrincipal() {
+        when(forumQueryService.listMyPosts(eq(42L), eq(1), eq(20)))
+                .thenReturn(new com.campuslink.module.forum.domain.gateway.PageResult<>(List.of(), 0, 1, 20));
+
+        var response = controller.myPosts(user(), 1, 20);
+
+        assertThat(response.data().list()).isEmpty();
+        verify(forumQueryService).listMyPosts(42L, 1, 20);
     }
 
     private static Authentication user() {

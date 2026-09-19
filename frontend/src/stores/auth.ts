@@ -23,8 +23,12 @@ export const useAuthStore = defineStore('auth', {
       this.setSession(res.token, res.user)
     },
     async fetchMe() {
-      this.user = await fetchMe()
-      localStorage.setItem(USER_KEY, JSON.stringify(this.user))
+      this.setUser(await fetchMe())
+    },
+    /** 资料编辑成功后由 PUT 的全量回显直接落库（F-ACC-007a：不必二次拉取 `GET /users/me`） */
+    setUser(user: UserInfo) {
+      this.user = user
+      localStorage.setItem(USER_KEY, JSON.stringify(user))
     },
     setSession(token: string, user: UserInfo) {
       this.token = token

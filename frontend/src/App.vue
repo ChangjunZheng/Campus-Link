@@ -112,7 +112,10 @@ function onSearchSubmit() {
             <template #dropdown>
               <el-dropdown-menu>
                 <el-dropdown-item @click="router.push('/notifications')">通知中心</el-dropdown-item>
+                <el-dropdown-item @click="router.push('/me/posts')">我的帖子</el-dropdown-item>
+                <el-dropdown-item @click="router.push('/me/replies')">我的回帖</el-dropdown-item>
                 <el-dropdown-item @click="router.push('/favorites')">我的收藏</el-dropdown-item>
+                <el-dropdown-item divided @click="router.push('/settings')">设置</el-dropdown-item>
                 <el-dropdown-item divided @click="logout">退出登录</el-dropdown-item>
               </el-dropdown-menu>
             </template>

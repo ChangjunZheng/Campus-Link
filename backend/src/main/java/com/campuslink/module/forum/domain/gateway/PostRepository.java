@@ -24,6 +24,20 @@ public interface PostRepository {
     PageResult<Post> findPage(Long boardId, PostSortOrder sort, int page, int size);
 
     /**
+     * "我的帖子"分页（F-ACC-007b）：本人发帖时间倒序，{@code author_id = ? AND is_deleted = 0}，
+     * 排序 {@code created_at DESC, id DESC}（同值兜底防翻页错位，同 {@link #findPage} 口径）。
+     *
+     * <p>与 {@link #findPage} 的差别是刻意的、且**只面向作者本人**：这里**不过滤 {@code status}**，
+     * 于是 {@code status=REMOVED}（平台下架）第一次在前台露出——作者不知道自己少了哪一帖，
+     * 就既无法等待恢复也无法申诉；自删（{@code is_deleted=1}）则对作者也不出现，与全站既有读路径
+     * 的墓碑约定一致（本仓没有恢复能力，列出已删行等于给一个死列表）。
+     *
+     * <p>因此本方法的调用方**必须**是"作者本人"（id 只能取自令牌，见控制器的无身份参数约束）；
+     * 把它接到任何带外部传入 authorId 的端点上，等于把下架内容公开。
+     */
+    PageResult<Post> findPageByAuthor(Long authorId, int page, int size);
+
+    /**
      * 站内搜索（F-FORUM-008）：标题全文（ngram）+ tags 冗余列 LIKE 兜底，只搜 PUBLISHED 且未删除，
      * 按相关度得分 DESC、created_at DESC 排序。{@code boardId} 为 null 表示全站；{@code days} 为 null 表示不限时间窗。
      */

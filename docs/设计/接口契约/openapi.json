@@ -50,6 +50,156 @@
     }
   ],
   "paths": {
+    "/api/v1/users/me": {
+      "get": {
+        "tags": [
+          "user"
+        ],
+        "summary": "我的主页（F-ACC-002 最小版；他人主页在后续 Sprint）",
+        "operationId": "me",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseUserVo"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未登录（4001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "用户不存在（2007）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "系统繁忙，请稍后再试（9999）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "user"
+        ],
+        "summary": "修改我的资料（需登录）：昵称 / 专业 / 签名；字段传 null 即不改、传空串即清空（昵称除外）；全量回显 UserVo",
+        "operationId": "updateProfile",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProfileCommand"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseUserVo"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数错误（1001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未登录（4001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "用户不存在（2007）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "账号已被封禁（2006）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "资料修改过于频繁，请稍后再试（2008）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "系统繁忙，请稍后再试（9999）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/v1/notifications/read-all": {
       "put": {
         "tags": [
@@ -1289,26 +1439,48 @@
         ]
       }
     },
-    "/api/v1/users/me": {
+    "/api/v1/replies/mine": {
       "get": {
         "tags": [
-          "user"
+          "reply"
         ],
-        "summary": "我的主页（F-ACC-002 最小版；他人主页与资料编辑在后续 Sprint）",
-        "operationId": "me",
+        "summary": "我的回帖（需登录）：时间倒序分页，条目带父帖定位；父帖不可见的楼层不出现，楼层自身被下架的带 status 标记",
+        "operationId": "myReplies",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 20
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK",
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseUserVo"
+                  "$ref": "#/components/schemas/ApiResponsePageVoMyReplyVo"
                 }
               }
             }
           },
-          "401": {
-            "description": "未登录（4001）",
+          "400": {
+            "description": "参数错误（1001）",
             "content": {
               "application/json": {
                 "schema": {
@@ -1317,8 +1489,8 @@
               }
             }
           },
-          "404": {
-            "description": "用户不存在（2007）",
+          "401": {
+            "description": "未登录（4001）",
             "content": {
               "application/json": {
                 "schema": {
@@ -1590,6 +1762,84 @@
         }
       }
     },
+    "/api/v1/posts/mine": {
+      "get": {
+        "tags": [
+          "post"
+        ],
+        "summary": "我的帖子（需登录）：时间倒序分页；含被平台下架的条目（status=REMOVED，前端不可点），不含自己删除的",
+        "operationId": "myPosts",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponsePageVoMyPostSummaryVo"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数错误（1001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未登录（4001）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "系统繁忙，请稍后再试（9999）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/v1/notifications": {
       "get": {
         "tags": [
@@ -1834,6 +2084,86 @@
   },
   "components": {
     "schemas": {
+      "UpdateProfileCommand": {
+        "type": "object",
+        "properties": {
+          "nickname": {
+            "type": "string",
+            "maxLength": 32,
+            "minLength": 2
+          },
+          "major": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 0,
+            "pattern": "^[^<>\\p{Cntrl}\\u200B\\u200C\\u200D\\u2060\\uFEFF]*$"
+          },
+          "bio": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 0,
+            "pattern": "^[^<>\\p{Cntrl}\\u200B\\u200C\\u200D\\u2060\\uFEFF]*$"
+          }
+        }
+      },
+      "ApiResponseUserVo": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/UserVo"
+          },
+          "traceId": {
+            "type": "string"
+          }
+        }
+      },
+      "UserVo": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "nickname": {
+            "type": "string"
+          },
+          "avatarUrl": {
+            "type": "string"
+          },
+          "school": {
+            "type": "string"
+          },
+          "major": {
+            "type": "string"
+          },
+          "grade": {
+            "type": "string"
+          },
+          "bio": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "verified": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "ApiResponseMarkAllReadResult": {
         "type": "object",
         "properties": {
@@ -2097,7 +2427,8 @@
           "nickname": {
             "type": "string",
             "maxLength": 32,
-            "minLength": 2
+            "minLength": 2,
+            "pattern": "^[^<>\\p{Cntrl}\\u200B\\u200C\\u200D\\u2060\\uFEFF]*$"
           }
         },
         "required": [
@@ -2137,43 +2468,6 @@
           },
           "user": {
             "$ref": "#/components/schemas/UserVo"
-          }
-        }
-      },
-      "UserVo": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "nickname": {
-            "type": "string"
-          },
-          "avatarUrl": {
-            "type": "string"
-          },
-          "school": {
-            "type": "string"
-          },
-          "major": {
-            "type": "string"
-          },
-          "grade": {
-            "type": "string"
-          },
-          "bio": {
-            "type": "string"
-          },
-          "role": {
-            "type": "string"
-          },
-          "verified": {
-            "type": "boolean"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
           }
         }
       },
@@ -2244,7 +2538,7 @@
           }
         }
       },
-      "ApiResponseUserVo": {
+      "ApiResponsePageVoMyReplyVo": {
         "type": "object",
         "properties": {
           "code": {
@@ -2255,10 +2549,63 @@
             "type": "string"
           },
           "data": {
-            "$ref": "#/components/schemas/UserVo"
+            "$ref": "#/components/schemas/PageVoMyReplyVo"
           },
           "traceId": {
             "type": "string"
+          }
+        }
+      },
+      "MyReplyVo": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "postId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "postTitle": {
+            "type": "string"
+          },
+          "floorNo": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "PageVoMyReplyVo": {
+        "type": "object",
+        "properties": {
+          "list": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MyReplyVo"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int32"
           }
         }
       },
@@ -2487,6 +2834,72 @@
           "createdAt": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "ApiResponsePageVoMyPostSummaryVo": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/PageVoMyPostSummaryVo"
+          },
+          "traceId": {
+            "type": "string"
+          }
+        }
+      },
+      "MyPostSummaryVo": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "boardCode": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "PageVoMyPostSummaryVo": {
+        "type": "object",
+        "properties": {
+          "list": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MyPostSummaryVo"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int32"
           }
         }
       },

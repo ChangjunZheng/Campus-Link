@@ -36,6 +36,26 @@ public final class ForumResults {
     public record PublishedPost(Long id) {
     }
 
+    /**
+     * "我的帖子"条目（F-ACC-007b）：**刻意不复用 {@link PostSummary}**——后者与全站列表 / 搜索共享，
+     * 往里加一个 {@code status} 等于把"这条被平台下架了"广播给所有读者，正是本条要守住的隐私面。
+     *
+     * <p>条目只有「标题 + status + 时间 + 摘要」：<b>不给正文原文、不给可点跳转、不给下架原因</b>
+     * （原因在 {@code audit_logs.detail}，属运营侧；给用户等于给申诉开无底洞）。
+     */
+    public record MyPostSummary(Long id, String boardCode, String title, String summary,
+                               String status, Instant createdAt) {
+    }
+
+    /**
+     * "我的回帖"条目（F-ACC-007c）：带父帖定位（{@code postId} + 标题）与**楼层自身**的 status；
+     * 父帖不可见的楼层在仓储层就整条不出现，故这里出现的每一条都保证可点。
+     * 不下发 {@code contentMd} 原文——本期无编辑能力，下发原文只是扩大出口。
+     */
+    public record MyReplyItem(Long id, Long postId, String postTitle, int floorNo, String summary,
+                             String status, Instant createdAt) {
+    }
+
     /** 回帖结果：floorNo 为本次分配的楼层号（设计 §3.6，口径见 sprint-2-design §4.1） */
     public record PublishedReply(Long id, int floorNo) {
     }

@@ -1,5 +1,6 @@
 package com.campuslink.module.forum.domain.gateway;
 
+import com.campuslink.module.forum.domain.model.MyReplyRow;
 import com.campuslink.module.forum.domain.model.Reply;
 import com.campuslink.module.forum.domain.model.ReplyStatus;
 
@@ -12,6 +13,19 @@ public interface ReplyRepository {
 
     /** 某帖的楼层分页：固定 {@code status='PUBLISHED' AND is_deleted=0}，按 is_accepted DESC、floor_no ASC（F-QA-001 最佳答案置顶，设计 §3.5） */
     PageResult<Reply> findPageByPostId(Long postId, int page, int size);
+
+    /**
+     * "我的回帖"分页（F-ACC-007c）：本人楼层时间倒序，**父帖不可见即整条不出现**
+     * （父帖 {@code is_deleted=1} 或 {@code status<>'PUBLISHED'} 都算不可见），
+     * 楼层自身的 {@code status} 不过滤、随载体返回（作者要能看到"我哪一层被下架"）。
+     *
+     * <p>返回 {@link MyReplyRow} 而非 {@link Reply}：聚合刻意不带 status，且父帖标题必须与父帖的
+     * 可见性判定在**同一条 SQL** 里完成——两次查询在内存拼使 {@code total} 与条件不同源。
+     * 实现见 {@code ReplyMapper#findPageByAuthor}。
+     *
+     * <p>调用方约束同 {@code PostRepository#findPageByAuthor}：id 只能取自令牌，不接受外部传入。
+     */
+    PageResult<MyReplyRow> findPageByAuthor(Long authorId, int page, int size);
 
     /**
      * 按 id 查**可见**的回复（{@code status='PUBLISHED' AND is_deleted=0}，与 {@link #findPageByPostId}

@@ -4,6 +4,8 @@ import com.campuslink.common.exception.ApiException;
 import com.campuslink.common.markdown.MarkdownRenderer;
 import com.campuslink.common.result.ResultCode;
 import com.campuslink.module.account.application.AccountApplicationService;
+import com.campuslink.module.forum.application.cmd.ForumResults.MyPostSummary;
+import com.campuslink.module.forum.application.cmd.ForumResults.MyReplyItem;
 import com.campuslink.module.forum.application.cmd.ForumResults.PostBrief;
 import com.campuslink.module.forum.application.cmd.ForumResults.PostDetail;
 import com.campuslink.module.forum.application.cmd.ForumResults.PostSummary;
@@ -19,6 +21,7 @@ import com.campuslink.module.forum.domain.gateway.PostRepository;
 import com.campuslink.module.forum.domain.gateway.ReplyRepository;
 import com.campuslink.module.forum.domain.model.Board;
 import com.campuslink.module.forum.domain.model.LikeTargetType;
+import com.campuslink.module.forum.domain.model.MyReplyRow;
 import com.campuslink.module.forum.domain.model.Post;
 import com.campuslink.module.forum.domain.model.PostSortOrder;
 import com.campuslink.module.forum.domain.model.Reply;
@@ -155,6 +158,50 @@ public class ForumQueryApplicationService {
         int pageSize = normalizeSize(size);
         PageResult<Post> found = favoriteRepository.findFavoritePosts(userId, currentPage, pageSize);
         return new PageResult<>(toSummaries(found.items()), found.total(), currentPage, pageSize);
+    }
+
+    /**
+     * 我的帖子（F-ACC-007b）：本人发帖时间倒序，出参是**只面向作者**的 {@link MyPostSummary}
+     * （带 status，故不复用与全站共享的 {@link PostSummary}）。
+     *
+     * <p>可见性口径写在仓储侧（{@code PostRepository#findPageByAuthor}：排墓碑、不过滤 status），
+     * 本方法不再二次过滤——{@code total} 与 SQL 条件同源是这条链路的硬判据。
+     * 与 {@link #listMyFavorites} 的区别也在这：收藏页的驱动分页行是 {@code favorites}，剔除必然致偏；
+     * 这里驱动分页的就是 {@code posts} 本身，没有理由不做同源。
+     *
+     * <p>不查作者昵称：条目本来就是本人的，跨上下文那一次批量取昵称在此是纯浪费。
+     */
+    public PageResult<MyPostSummary> listMyPosts(long userId, int page, int size) {
+        int currentPage = normalizePage(page);
+        int pageSize = normalizeSize(size);
+        PageResult<Post> found = postRepository.findPageByAuthor(userId, currentPage, pageSize);
+        Map<Long, Board> boardsById = boardsById();
+        List<MyPostSummary> items = found.items().stream()
+                .map(post -> {
+                    Board board = boardsById.get(post.getBoardId());
+                    return new MyPostSummary(post.getId(), board == null ? null : board.getCode(), post.getTitle(),
+                            markdownRenderer.toPlainSummary(post.getContentMd(), SUMMARY_MAX_CHARS),
+                            post.getStatus().name(), post.getCreatedAt());
+                })
+                .toList();
+        return new PageResult<>(items, found.total(), currentPage, pageSize);
+    }
+
+    /**
+     * 我的回帖（F-ACC-007c）：本人楼层时间倒序 + 父帖定位。父帖不可见的整条不出现——
+     * 该判定在 SQL 里与父帖标题一次做完（{@code ReplyRepository#findPageByAuthor}），
+     * 所以"列出来了却点不进"在这条链路上结构上不可能发生。
+     */
+    public PageResult<MyReplyItem> listMyReplies(long userId, int page, int size) {
+        int currentPage = normalizePage(page);
+        int pageSize = normalizeSize(size);
+        PageResult<MyReplyRow> found = replyRepository.findPageByAuthor(userId, currentPage, pageSize);
+        List<MyReplyItem> items = found.items().stream()
+                .map(row -> new MyReplyItem(row.id(), row.postId(), row.postTitle(), row.floorNo(),
+                        markdownRenderer.toPlainSummary(row.contentMd(), SUMMARY_MAX_CHARS),
+                        row.status().name(), row.createdAt()))
+                .toList();
+        return new PageResult<>(items, found.total(), currentPage, pageSize);
     }
 
     /**

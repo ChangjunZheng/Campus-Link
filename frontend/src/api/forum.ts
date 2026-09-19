@@ -109,6 +109,41 @@ export const listMyFavorites = (page = 1, size = 20) =>
   get<PageVo<PostSummaryVo>>(`/favorites/mine?page=${page}&size=${size}`)
 
 /**
+ * 「我的帖子」条目（F-ACC-007b）：与全站列表的 `PostSummaryVo` **不同形**——
+ * 多一个只面向作者的 `status`，没有互动计数与作者昵称，也**没有 `boardName`**（版块名在前端由 `boardCode` 查表）。
+ * `status=REMOVED` 的条目仍返回（作者要知道"少了哪一帖"），但点进详情是 `404 / 3001`，故渲染为不可点。
+ */
+export interface MyPostSummaryVo {
+  id: number
+  boardCode: string
+  title: string
+  summary: string
+  /** PUBLISHED / REMOVED（自己删除的不会出现在这里） */
+  status: string
+  createdAt: string
+}
+
+/** 「我的回帖」条目（F-ACC-007c）：父帖定位三件套缺一即"不知道自己答在哪"。父帖不可见的楼层后端已整条过滤 */
+export interface MyReplySummaryVo {
+  id: number
+  postId: number
+  postTitle: string
+  floorNo: number
+  summary: string
+  /** 楼层自身的处置状态；父帖状态不下发到这里 */
+  status: string
+  createdAt: string
+}
+
+/** 我的帖子（需登录）：时间倒序分页，含被平台下架的条目、不含自己删除的（F-ACC-007b） */
+export const listMyPosts = (page = 1, size = 20) =>
+  get<PageVo<MyPostSummaryVo>>(`/posts/mine?page=${page}&size=${size}`)
+
+/** 我的回帖（需登录）：时间倒序分页，父帖不可见的楼层整条不出现（F-ACC-007c） */
+export const listMyReplies = (page = 1, size = 20) =>
+  get<PageVo<MyReplySummaryVo>>(`/replies/mine?page=${page}&size=${size}`)
+
+/**
  * 站内搜索（公开，F-FORUM-008）：keyword 2~50 字（后端 ngram 分词，单字不受理 → 1001），
  * boardCode / days（仅 7、30、90）可选筛选，按相关度 + 时间排序。
  */

@@ -11,11 +11,13 @@ import com.campuslink.module.forum.application.InteractionApplicationService;
 import com.campuslink.module.forum.application.PostApplicationService;
 import com.campuslink.module.forum.application.cmd.AcceptReplyCommand;
 import com.campuslink.module.forum.application.cmd.ForumResults.InteractionResult;
+import com.campuslink.module.forum.application.cmd.ForumResults.MyPostSummary;
 import com.campuslink.module.forum.application.cmd.ForumResults.PostDetail;
 import com.campuslink.module.forum.application.cmd.ForumResults.PostSummary;
 import com.campuslink.module.forum.application.cmd.ForumResults.PublishedPost;
 import com.campuslink.module.forum.application.cmd.PublishPostCommand;
 import com.campuslink.module.forum.domain.gateway.PageResult;
+import com.campuslink.module.forum.web.vo.MyPostSummaryVo;
 import com.campuslink.module.forum.web.vo.PageVo;
 import com.campuslink.module.forum.web.vo.PostDetailVo;
 import com.campuslink.module.forum.web.vo.PostSummaryVo;
@@ -61,6 +63,27 @@ public class PostController {
                                                    @RequestParam(defaultValue = "20") int size) {
         PageResult<PostSummary> result = forumQueryService.listPosts(boardCode, sort, page, size);
         return ApiResponse.ok(new PageVo<>(result.items().stream().map(PostSummaryVo::from).toList(),
+                result.total(), result.page(), result.size()));
+    }
+
+    /**
+     * 我的帖子（F-ACC-007b，需登录）：本人发帖时间倒序，条目带 {@code status}——
+     * 平台下架的帖对作者本人可见并带标记，自删的帖对作者也不出现（口径写死在
+     * {@code PostRepository#findPageByAuthor}）。
+     *
+     * <p><b>无身份参数</b>是这条接口能成立的前提：作者 id 只从令牌取，所以"把下架内容只给作者看"
+     * 不依赖任何测试兜底（"仅本人"这类线没有机器强制，见问题清单 E-011 同类缺口）。
+     */
+    @Operation(summary = "我的帖子（需登录）：时间倒序分页；含被平台下架的条目（status=REMOVED，前端不可点），不含自己删除的")
+    @SecurityRequirement(name = ApiDocs.BEARER_AUTH)
+    @ErrorCodes({ResultCode.NOT_LOGGED_IN})
+    @GetMapping("/mine")
+    public ApiResponse<PageVo<MyPostSummaryVo>> myPosts(Authentication authentication,
+                                                        @RequestParam(defaultValue = "1") int page,
+                                                        @RequestParam(defaultValue = "20") int size) {
+        long userId = CurrentUser.requireId(authentication);
+        PageResult<MyPostSummary> result = forumQueryService.listMyPosts(userId, page, size);
+        return ApiResponse.ok(new PageVo<>(result.items().stream().map(MyPostSummaryVo::from).toList(),
                 result.total(), result.page(), result.size()));
     }
 
