@@ -2,6 +2,7 @@ package com.campuslink.architecture;
 
 import com.campuslink.CampusLinkApplication;
 import com.tngtech.archunit.core.domain.Dependency;
+import com.tngtech.archunit.core.domain.JavaAnnotation;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.domain.JavaCodeUnit;
@@ -33,6 +34,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  * <p>⚠️ 覆盖边界：本测试只强制**结构约束**，不校验语义（跨上下文调用是否合理、角色模型是否恰当仍靠评审）；
  * 路径级拦截自 CR-031 起由 {@code EndpointAuthorizationManager} 按端点注解执行（G8 守其接线），
  * 但框架**只区分"登录 / 未登录"**——角色与资源级授权（如"仅作者可删"）仍归业务代码。
+ * G9（CR-068，处置问题清单 E-011）因此把 {@code /api/v1/admin/**} 的"必须调 {@code requireRole}"补成机器强制，
+ * 它守的是**这一层有没有做**，不守**角色取值得当不当**（{@code requireRole(auth, "ROLE_USER")} 仍会通过，
+ * 该由端点自己的 403 用例负责——见 AGENTS.md「测试约定」）。
  */
 class ArchitectureGuardTest {
 
@@ -58,6 +62,11 @@ class ArchitectureGuardTest {
     private static final String BASE_MAPPER = "com.baomidou.mybatisplus.core.mapper.BaseMapper";
     private static final String SECURITY_CONFIG = "com.campuslink.config.SecurityConfig";
     private static final String ENDPOINT_AUTHORIZATION_MANAGER = "com.campuslink.security.EndpointAuthorizationManager";
+    private static final String REQUEST_MAPPING = "org.springframework.web.bind.annotation.RequestMapping";
+
+    /** G9（E-011）：管理端 URL 命名空间——框架层只判"登录 / 未登录"，落在这个前缀下的端点必须自己判角色 */
+    private static final String ADMIN_PATH_PREFIX = "/api/v1/admin";
+    private static final String REQUIRE_ROLE_METHOD = "requireRole";
 
     private static final Set<String> MAPPING_ANNOTATIONS = Set.of(
             "org.springframework.web.bind.annotation.GetMapping",
@@ -283,6 +292,95 @@ class ArchitectureGuardTest {
             }
         }
         assertNoViolations("G8 路径级鉴权", violations);
+    }
+
+    @Test
+    @DisplayName("G9 E-011：/api/v1/admin/** 的映射方法必须真的调用 CurrentUser.requireRole（角色线不得被静默摘除）")
+    void adminEndpointsMustEnforceRole() {
+        Set<String> adminEndpoints = new LinkedHashSet<>();
+        Set<String> violations = new LinkedHashSet<>();
+        for (JavaClass origin : classes) {
+            if (!"web".equals(layerOf(origin.getPackageName()))) {
+                continue;
+            }
+            List<String> classPaths = declaredPaths(origin.getAnnotations(), Set.of(REQUEST_MAPPING));
+            for (JavaMethod method : origin.getMethods()) {
+                if (!hasAnyAnnotation(method, MAPPING_ANNOTATIONS)) {
+                    continue;
+                }
+                boolean isAdmin = isAdminPath(classPaths, declaredPaths(method.getAnnotations(), MAPPING_ANNOTATIONS));
+                if (!isAdmin) {
+                    continue;
+                }
+                adminEndpoints.add(describe(method));
+                boolean callsRequireRole = method.getMethodCallsFromSelf().stream()
+                        .anyMatch(call -> CURRENT_USER.equals(call.getTargetOwner().getName())
+                                && REQUIRE_ROLE_METHOD.equals(call.getTarget().getName()));
+                if (!callsRequireRole) {
+                    violations.add("%s：位于 %s 之下却未调用 CurrentUser.requireRole——EndpointAuthorizationManager 只区分"
+                                    + "登录 / 未登录，任何已登录账号（含普通用户）都能调用它。摘掉 requireRole 曾能通过全部守护测试"
+                                    + "（问题清单 E-011 的反证实验），本规则即为其机器防线".formatted(describe(method), ADMIN_PATH_PREFIX + "/**"));
+                }
+            }
+        }
+        if (adminEndpoints.isEmpty()) {
+            violations.add("未扫到任何 %s 端点——本规则失去对象。换 URL 前缀、或把管理端点搬出 module/*/web，"
+                    .formatted(ADMIN_PATH_PREFIX + "/**") + "都会让角色线重新无人看守，须连同本规则一起改");
+        }
+        System.out.printf("[G9] 受角色强制的管理端点共 %d 个：%s%n", adminEndpoints.size(), adminEndpoints);
+        assertNoViolations("G9 管理端点的角色强制", violations);
+    }
+
+    /** 类级 + 方法级路径的笛卡尔组合里，是否存在落在 {@link #ADMIN_PATH_PREFIX} 命名空间下的有效路径 */
+    private static boolean isAdminPath(List<String> classPaths, List<String> methodPaths) {
+        for (String classPath : classPaths.isEmpty() ? List.of("") : classPaths) {
+            for (String methodPath : methodPaths.isEmpty() ? List.of("") : methodPaths) {
+                String head = classPath.endsWith("/") ? classPath.substring(0, classPath.length() - 1) : classPath;
+                String tail = methodPath.startsWith("/") ? methodPath : "/" + methodPath;
+                String effective = (head + tail).replaceAll("/+", "/");
+                if (effective.equals(ADMIN_PATH_PREFIX) || effective.startsWith(ADMIN_PATH_PREFIX + "/")) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 映射注解上显式声明的路径（Spring 的 {@code path} 与 {@code value} 是同义别名，取显式声明那一个即可）。
+     *
+     * <p>⚠️ 只读<b>显式声明</b>的属性：默认值是空数组，读它会把形态判断推给 ArchUnit 的内部表示。
+     * 实测 javac 把 {@code @PutMapping("/x")} 写成 {@code String[]{"/x"}}（数组而非集合），故数组与集合两种形态都要认；
+     * 遇到都认不出的形态时**抛异常让规则变红**，而不是静默放行——静默放行正是 E-011 的病灶。
+     */
+    private static List<String> declaredPaths(Collection<? extends JavaAnnotation<?>> annotations, Set<String> typeNames) {
+        List<String> paths = new ArrayList<>();
+        for (JavaAnnotation<?> annotation : annotations) {
+            if (!typeNames.contains(annotation.getRawType().getName())) {
+                continue;
+            }
+            for (String property : List.of("path", "value")) {
+                Object declared = annotation.tryGetExplicitlyDeclaredProperty(property).orElse(null);
+                if (declared == null) {
+                    continue;
+                }
+                List<Object> elements = switch (declared) {
+                    case String single -> List.of(single);
+                    case Object[] group -> List.of(group);
+                    case Collection<?> group -> List.copyOf(group);
+                    default -> throw new IllegalStateException("G9 无法解析路径声明形态：" + declared);
+                };
+                for (Object element : elements) {
+                    if (!(element instanceof String path)) {
+                        throw new IllegalStateException("G9 无法解析路径声明形态：" + element);
+                    }
+                    if (!path.isBlank()) {
+                        paths.add(path); // 显式写了空串等价于不写路径
+                    }
+                }
+            }
+        }
+        return paths;
     }
 
     /** module 四层内的全部 HTTP 映射方法（含 web 子包） */

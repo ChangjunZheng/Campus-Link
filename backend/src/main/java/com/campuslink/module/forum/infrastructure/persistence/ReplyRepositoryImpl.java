@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.campuslink.module.forum.domain.gateway.PageResult;
 import com.campuslink.module.forum.domain.gateway.ReplyRepository;
 import com.campuslink.module.forum.domain.model.Reply;
+import com.campuslink.module.forum.domain.model.ReplyStatus;
 import com.campuslink.module.forum.infrastructure.persistence.mapper.ReplyMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -20,8 +21,8 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class ReplyRepositoryImpl implements ReplyRepository {
 
-    /** replies.status 与 posts.status 同一词表；本 Sprint 不建 ReplyStatus 枚举，过滤条件下推至此 */
-    private static final String STATUS_PUBLISHED = "PUBLISHED";
+    /** replies.status 与 posts.status 同一词表；过滤条件取自 {@link ReplyStatus}，避免字面量存两份 */
+    private static final String STATUS_PUBLISHED = ReplyStatus.PUBLISHED.name();
 
     private final ReplyMapper replyMapper;
 
@@ -58,6 +59,26 @@ public class ReplyRepositoryImpl implements ReplyRepository {
                         .eq(ReplyDO::getIsDeleted, false)).stream()
                 .map(ReplyConverter::toDomain)
                 .toList();
+    }
+
+    @Override
+    public Optional<ReplyStatus> findStatusById(Long id) {
+        // 只读 status 一列：已删行按"不存在"处理（与 findById 的墓碑约定同源），已下架行**必须**能读到
+        ReplyDO row = replyMapper.selectOne(new LambdaQueryWrapper<ReplyDO>()
+                .select(ReplyDO::getStatus)
+                .eq(ReplyDO::getId, id)
+                .eq(ReplyDO::getIsDeleted, false));
+        return Optional.ofNullable(row).map(ReplyDO::getStatus).map(ReplyStatus::valueOf);
+    }
+
+    @Override
+    public boolean updateStatus(Long replyId, ReplyStatus target, ReplyStatus expectedCurrent) {
+        // 与帖子侧同款：条件带原状态，受影响行数即"这次是否真的改了"，并发后到方拿 false 而不重复记审计
+        return replyMapper.update(null, new LambdaUpdateWrapper<ReplyDO>()
+                .set(ReplyDO::getStatus, target.name())
+                .eq(ReplyDO::getId, replyId)
+                .eq(ReplyDO::getStatus, expectedCurrent.name())
+                .eq(ReplyDO::getIsDeleted, false)) > 0;
     }
 
     @Override

@@ -4,8 +4,10 @@ import com.campuslink.common.exception.ApiException;
 import com.campuslink.common.markdown.MarkdownRenderer;
 import com.campuslink.common.result.ResultCode;
 import com.campuslink.module.account.application.AccountApplicationService;
+import com.campuslink.module.forum.application.cmd.ForumResults.PostBrief;
 import com.campuslink.module.forum.application.cmd.ForumResults.PostDetail;
 import com.campuslink.module.forum.application.cmd.ForumResults.PostSummary;
+import com.campuslink.module.forum.application.cmd.ForumResults.ReplyBrief;
 import com.campuslink.module.forum.application.cmd.ForumResults.ReplyItem;
 import com.campuslink.module.forum.domain.gateway.BoardRepository;
 import com.campuslink.module.forum.domain.gateway.FavoriteRepository;
@@ -305,6 +307,38 @@ class ForumQueryApplicationServiceTest {
         verify(postRepository, never()).search(any(), any(), any(), anyInt(), anyInt());
     }
 
+    /**
+     * CR-066：通知读时组装的标题摘要必须与详情页同一套可见性判据。
+     * 改之前这里只靠 {@code findByIds} 排墓碑、不看 status，于是帖子被管理员下架后**标题仍留在别人的通知里**，
+     * 点进去才 404——标题属内容本身，内容不可见时不该继续外泄。
+     */
+    @Test
+    @DisplayName("通知摘要：已下架（REMOVED）帖子的标题不再返回，命中判定与详情页同源")
+    void postBriefsExcludeRemovedPosts() {
+        when(postRepository.findByIds(List.of(1L, 2L))).thenReturn(List.of(
+                post(1L, 100L), post(2L, 200L, PostStatus.REMOVED)));
+
+        Map<Long, PostBrief> briefs = service.postBriefsOf(List.of(1L, 2L));
+
+        assertThat(briefs).containsOnlyKeys(1L);
+        assertThat(briefs.get(1L).title()).isEqualTo("标题");
+    }
+
+    @Test
+    @DisplayName("通知摘要：楼层的所属帖与楼层号**刻意不看 status**——已下架帖里的楼层仍要有落点")
+    void replyBriefsKeepFloorInfoRegardlessOfPostVisibility() {
+        when(replyRepository.findByIds(List.of(11L))).thenReturn(List.of(reply(11L, 200L, 3)));
+        when(postRepository.findByIds(List.of(9L))).thenReturn(List.of(post(9L, 100L, PostStatus.REMOVED)));
+
+        Map<Long, ReplyBrief> replyBriefs = service.replyBriefsOf(List.of(11L));
+        Map<Long, PostBrief> postBriefs = service.postBriefsOf(List.of(9L));
+
+        // 楼层号在、标题不在 → 通知条目"不给跳转"的判定由帖子侧单独决定（见 NotificationApplicationService#toItem）
+        assertThat(replyBriefs.get(11L).postId()).isEqualTo(9L);
+        assertThat(replyBriefs.get(11L).floorNo()).isEqualTo(3);
+        assertThat(postBriefs).isEmpty();
+    }
+
     private static Post post(Long id, Long authorId) {
         return post(id, authorId, "正文");
     }
@@ -312,6 +346,11 @@ class ForumQueryApplicationServiceTest {
     private static Post post(Long id, Long authorId, String contentMd) {
         return Post.rehydrate(id, 1L, authorId, BoardType.QUESTION, "标题", contentMd, "<p>正文</p>",
                 PostStatus.PUBLISHED, 0, 0, false, null, CREATED_AT, CREATED_AT);
+    }
+
+    private static Post post(Long id, Long authorId, PostStatus status) {
+        return Post.rehydrate(id, 1L, authorId, BoardType.QUESTION, "标题", "正文", "<p>正文</p>",
+                status, 0, 0, false, null, CREATED_AT, CREATED_AT);
     }
 
     private static Board board(Long id, String code, String name) {

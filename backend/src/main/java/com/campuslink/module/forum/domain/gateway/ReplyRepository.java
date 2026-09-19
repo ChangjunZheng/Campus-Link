@@ -1,6 +1,7 @@
 package com.campuslink.module.forum.domain.gateway;
 
 import com.campuslink.module.forum.domain.model.Reply;
+import com.campuslink.module.forum.domain.model.ReplyStatus;
 
 import java.util.Collection;
 import java.util.List;
@@ -30,6 +31,24 @@ public interface ReplyRepository {
      * 在此过滤 status 会让引用失去落点；写用例一律走 {@link #findVisibleById}。
      */
     List<Reply> findByIds(Collection<Long> ids);
+
+    /**
+     * 处置用例专用的**窄读**：只回该行的 {@code status}，行不存在或已删（{@code is_deleted=1}）时回空。
+     *
+     * <p>为什么单开一个方法而不复用 {@link #findVisibleById}：后者把"已下架"与"不存在"合并成"不可见"，
+     * 而**恢复**一条已下架楼层必须先读出"它现在是 REMOVED"，否则无法与"这条根本不存在"区分。
+     * {@code Reply} 聚合刻意不带 status（无业务规则消费它，见 {@link #findVisibleById} 注释），
+     * 故本方法只回枚举值、不造半个聚合。
+     */
+    Optional<ReplyStatus> findStatusById(Long id);
+
+    /**
+     * 内容处置（F-SAFE-003 / CR-066）：定向 UPDATE {@code replies.status}，**条件带原状态**；
+     * 语义、幂等纪律与"为什么不写 is_deleted"的取舍同 {@code PostRepository#updateStatus}。
+     *
+     * <p>条件里另加 {@code is_deleted=0}：已删楼层不该被"恢复成可见"——那是删除用例的墓碑，处置不越界。
+     */
+    boolean updateStatus(Long replyId, ReplyStatus target, ReplyStatus expectedCurrent);
 
     /**
      * 采纳标志切换（F-QA-001）：先清该帖旧的已采纳楼层，再把指定回复标为已采纳——两条 UPDATE

@@ -106,6 +106,15 @@ public class PostRepositoryImpl implements PostRepository {
     }
 
     @Override
+    public boolean updateStatus(Long postId, PostStatus target, PostStatus expectedCurrent) {
+        // 条件带原状态：受影响行数即"这次是否真的改了状态"，并发下后到的一方拿 false 而不重复记审计
+        return postMapper.update(null, new LambdaUpdateWrapper<PostDO>()
+                .set(PostDO::getStatus, target.name())
+                .eq(PostDO::getId, postId)
+                .eq(PostDO::getStatus, expectedCurrent.name())) > 0;
+    }
+
+    @Override
     public int adjustLikeCount(Long postId, int delta) {
         postMapper.update(null, new LambdaUpdateWrapper<PostDO>()
                 .setSql("like_count = like_count + " + delta)

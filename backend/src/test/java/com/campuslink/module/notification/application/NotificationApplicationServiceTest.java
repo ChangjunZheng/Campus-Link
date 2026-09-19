@@ -134,6 +134,46 @@ class NotificationApplicationServiceTest {
         assertThat(item.targetId()).isEqualTo(11L);
     }
 
+    /**
+     * CR-066 补的真实缺陷回归：目标本身是帖子时，旧实现的 {@code postId} 只看 targetId、不看摘要是否命中，
+     * 于是"帖子被下架 / 被作者删除"后通知里仍下发可点链接，点进去 404 / 3001；而前端一直是按
+     * "服务端不下发 postId 就不给跳转"实现的（那句注释写了很久、服务端从未履行）。
+     * 现在标题回落与不给跳转是**同一个判定**的两个出口。
+     */
+    @Test
+    @DisplayName("帖子类通知指向已下架 / 已删帖子：摘要未命中时 postId 一并置 null（前端据此不给跳转）")
+    void postTargetNotificationDropsPostIdWhenBriefMissing() {
+        when(notificationRepository.findPage(RECIPIENT, null, 1, 20)).thenReturn(new PageResult<>(
+                List.of(notification(1L, NotificationType.LIKE, NotificationTargetType.POST, 9L, false)),
+                1, 1, 20));
+        when(accountApplicationService.nicknamesOf(anyCollection())).thenReturn(Map.of(7L, "小李"));
+        when(forumQueryService.replyBriefsOf(Set.of())).thenReturn(Map.of());
+        when(forumQueryService.postBriefsOf(Set.of(9L))).thenReturn(Map.of());
+
+        NotificationItem item = service.list(RECIPIENT, null, 1, 20).items().get(0);
+
+        assertThat(item.postTitle()).isEqualTo("内容已删除");
+        assertThat(item.postId()).isNull();
+        // targetId 仍在：条目本身可追溯，只是不给跳转目标
+        assertThat(item.targetId()).isEqualTo(9L);
+    }
+
+    @Test
+    @DisplayName("帖子类通知摘要命中时 postId 与标题照常下发（回落只在该条未命中时发生）")
+    void postTargetNotificationKeepsPostIdWhenBriefPresent() {
+        when(notificationRepository.findPage(RECIPIENT, null, 1, 20)).thenReturn(new PageResult<>(
+                List.of(notification(1L, NotificationType.LIKE, NotificationTargetType.POST, 9L, false)),
+                1, 1, 20));
+        when(accountApplicationService.nicknamesOf(anyCollection())).thenReturn(Map.of(7L, "小李"));
+        when(forumQueryService.replyBriefsOf(Set.of())).thenReturn(Map.of());
+        when(forumQueryService.postBriefsOf(Set.of(9L))).thenReturn(Map.of(9L, new PostBrief("在架帖子")));
+
+        NotificationItem item = service.list(RECIPIENT, null, 1, 20).items().get(0);
+
+        assertThat(item.postId()).isEqualTo(9L);
+        assertThat(item.postTitle()).isEqualTo("在架帖子");
+    }
+
     @Test
     @DisplayName("空页短路：没有通知就不去查 account 与 forum")
     void emptyPageSkipsCrossContextReads() {

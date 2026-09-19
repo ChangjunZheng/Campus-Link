@@ -127,17 +127,26 @@ public class NotificationApplicationService {
         return brief == null ? null : brief.postId();
     }
 
+    /**
+     * 组装单条通知。
+     *
+     * <p>⚠️ {@code postId} 在**帖子摘要未命中时也必须为 null**——CR-066 之前它只由 {@link #postIdOf} 决定，
+     * 于是指向"已删帖 / 已下架帖"的帖子类通知仍下发可点链接，点进去落 404 / 3001；而前端
+     * {@code NotificationsView.vue} 一直按"服务端不下发 postId 即不给跳转"实现（那句注释写了很久，
+     * 服务端却从未真的履行）。现在两侧对齐，标题回落与不可点击是**同一个判定**的两个出口。
+     */
     private static NotificationItem toItem(Notification notification, Map<Long, String> nicknames,
                                            Map<Long, ReplyBrief> replyBriefs, Map<Long, PostBrief> postBriefs) {
-        Long postId = postIdOf(notification, replyBriefs);
-        PostBrief post = postId == null ? null : postBriefs.get(postId);
+        Long resolvedPostId = postIdOf(notification, replyBriefs);
+        PostBrief post = resolvedPostId == null ? null : postBriefs.get(resolvedPostId);
         ReplyBrief reply = notification.getTargetType() == NotificationTargetType.REPLY
                 ? replyBriefs.get(notification.getTargetId()) : null;
         return new NotificationItem(notification.getId(), notification.getType().code(),
                 notification.getActorId(),
                 nicknames.getOrDefault(notification.getActorId(), NICKNAME_FALLBACK),
                 notification.getTargetType().name(), notification.getTargetId(),
-                postId, post == null ? CONTENT_FALLBACK : post.title(),
+                post == null ? null : resolvedPostId,
+                post == null ? CONTENT_FALLBACK : post.title(),
                 reply == null ? null : reply.floorNo(),
                 notification.isRead(), notification.getCreatedAt());
     }

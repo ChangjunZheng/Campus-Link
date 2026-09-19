@@ -158,17 +158,28 @@ public class ForumQueryApplicationService {
     }
 
     /**
-     * 帖子标题批量读（F-SOC-001 通知读时组装）：只回标题，已删除的 id 不出现在结果中。
+     * 帖子标题批量读（F-SOC-001 通知读时组装）：只回**可见**帖子的标题，读不到的 id 不出现在结果中。
+     *
+     * <p>过滤条件与 {@link #postDetail} 同源（{@link Post#isVisible()}）——CR-066 之前这里只排墓碑行
+     * （{@code findByIds} 的 {@code is_deleted}）不看 status，于是"帖子被管理员下架"后**标题仍留在
+     * 别人的通知里**、点进去才 404。标题属内容本身，内容不可见时不该继续外泄。
      *
      * <p>本方法与 {@link #replyBriefsOf} 是**只读摘要出口**，存在的理由是同一条架构规则：
      * notification 上下文不得引用 forum 的 domain 类型（守护测试 G4），跨上下文只能拿到 application 层的载体。
      */
     public Map<Long, PostBrief> postBriefsOf(Collection<Long> postIds) {
         return postRepository.findByIds(postIds).stream()
+                .filter(Post::isVisible)
                 .collect(Collectors.toMap(Post::getId, post -> new PostBrief(post.getTitle())));
     }
 
-    /** 楼层归属批量读（同上）：回所属帖子与楼层号，供通知条目跳转定位 */
+    /**
+     * 楼层归属批量读（同上）：回所属帖子与楼层号，供通知条目跳转定位。
+     *
+     * <p>与 {@link #postBriefsOf} 的差别是刻意的：这里**不看 status**（见
+     * {@code ReplyRepository#findByIds}），因为一条已下架楼层仍需要"在第几楼"这个落点；
+     * 而条目能否点击由帖子侧摘要是否命中决定（帖子下架 / 已删 → 整条不可点）。
+     */
     public Map<Long, ReplyBrief> replyBriefsOf(Collection<Long> replyIds) {
         return replyRepository.findByIds(replyIds).stream()
                 .collect(Collectors.toMap(Reply::getId, reply -> new ReplyBrief(reply.getPostId(), reply.getFloorNo())));

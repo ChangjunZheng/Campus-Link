@@ -3,6 +3,7 @@ package com.campuslink.module.forum.domain.gateway;
 import com.campuslink.module.forum.domain.model.HotScoreInput;
 import com.campuslink.module.forum.domain.model.Post;
 import com.campuslink.module.forum.domain.model.PostSortOrder;
+import com.campuslink.module.forum.domain.model.PostStatus;
 
 import java.time.Instant;
 import java.util.Collection;
@@ -71,6 +72,18 @@ public interface PostRepository {
      * 与作者自助删除是两件事，合并后将来无法区分"谁删的"。
      */
     boolean markDeleted(Long postId);
+
+    /**
+     * 内容处置（F-SAFE-003 / CR-066）：定向 UPDATE {@code posts.status}，**条件带原状态**。
+     *
+     * <p>返回是否有行被改：0 行只可能是并发下别人已把状态改成目标值——调用方据此**不再重复记审计**
+     * （同 {@link #markDeleted} 的纪律）。原状态由调用方从 {@link #findById} 的聚合读出，
+     * 因此"下架一个已下架的帖"与"恢复一个未下架的帖"都是幂等 200、零审计。
+     *
+     * <p>为什么写 {@code status} 而不是 {@code is_deleted}：前者是**平台处置**（可恢复、要留"谁删的"之分），
+     * 后者是**作者自助删除的行级墓碑**；两列语义一旦合并，事后无法拆分。
+     */
+    boolean updateStatus(Long postId, PostStatus target, PostStatus expectedCurrent);
 
     /** 点赞计数增减（F-FORUM-005，delta 为 ±1）；返回增减后的 like_count，供响应回显 */
     int adjustLikeCount(Long postId, int delta);
