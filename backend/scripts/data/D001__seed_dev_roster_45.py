@@ -112,6 +112,10 @@ def call(path, *, method="POST", json_body=None, text_body=None, token=None):
     if token:
         headers["Authorization"] = "Bearer " + token
 
+    # 本工具只允许打本机开发实例（安全扫描器对无守卫的 urlopen 按 SSRF 处理，此处显式收口）
+    if not API_BASE.startswith(("http://127.0.0.1", "http://localhost")):
+        raise SystemExit("refusing non-local API_BASE: %s" % API_BASE)
+
     req = urllib.request.Request(API_BASE + path, data=data, headers=headers, method=method)
     try:
         with urllib.request.urlopen(req, timeout=30) as resp:

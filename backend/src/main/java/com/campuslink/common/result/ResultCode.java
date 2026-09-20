@@ -25,6 +25,7 @@ public enum ResultCode {
     USER_NOT_FOUND(2007, 404, "用户不存在"),
     /** 资料编辑限流（F-ACC-007e）：不复用 2002 / 2103——二者文案绑死验证码与学籍，复用等于写脏语义字典 */
     PROFILE_UPDATE_TOO_FREQUENT(2008, 429, "资料修改过于频繁，请稍后再试"),
+    CANNOT_FOLLOW_SELF(2009, 400, "不能关注自己"),
 
     STUDENT_VERIFY_FAILED(2101, 400, "学籍信息校验未通过"),
     VERIFY_TICKET_INVALID(2102, 400, "核验票据无效或已过期，请重新核验"),

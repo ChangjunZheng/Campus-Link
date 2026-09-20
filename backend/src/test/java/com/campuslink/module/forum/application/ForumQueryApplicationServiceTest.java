@@ -68,13 +68,16 @@ class ForumQueryApplicationServiceTest {
     private FavoriteRepository favoriteRepository;
     @Mock
     private AccountApplicationService accountApplicationService;
+    @Mock
+    private com.campuslink.module.account.application.FollowApplicationService followApplicationService;
 
     private ForumQueryApplicationService service;
 
     @BeforeEach
     void setUp() {
         service = new ForumQueryApplicationService(boardRepository, postRepository, replyRepository,
-                likeRepository, favoriteRepository, accountApplicationService, new MarkdownRenderer());
+                likeRepository, favoriteRepository, accountApplicationService, followApplicationService,
+                new MarkdownRenderer());
     }
 
     @Test

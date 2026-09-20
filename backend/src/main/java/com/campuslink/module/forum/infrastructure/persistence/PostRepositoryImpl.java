@@ -58,6 +58,21 @@ public class PostRepositoryImpl implements PostRepository {
     }
 
     @Override
+    public PageResult<Post> findPageByAuthors(Collection<Long> authorIds, int page, int size) {
+        if (authorIds == null || authorIds.isEmpty()) {
+            return new PageResult<>(List.of(), 0, page, size);
+        }
+        IPage<PostDO> result = postMapper.selectPage(new Page<>(page, size), new LambdaQueryWrapper<PostDO>()
+                .in(PostDO::getAuthorId, authorIds)
+                .eq(PostDO::getStatus, PostStatus.PUBLISHED.name())
+                .eq(PostDO::getIsDeleted, false)
+                .orderByDesc(PostDO::getCreatedAt)
+                .orderByDesc(PostDO::getId));
+        return new PageResult<>(result.getRecords().stream().map(PostConverter::toDomain).toList(),
+                result.getTotal(), page, size);
+    }
+
+    @Override
     public PageResult<Post> search(String keyword, Long boardId, Integer days, int page, int size) {
         IPage<PostDO> result = postMapper.search(new Page<>(page, size), keyword, boardId, days);
         return new PageResult<>(result.getRecords().stream().map(PostConverter::toDomain).toList(),
@@ -89,6 +104,13 @@ public class PostRepositoryImpl implements PostRepository {
         PostDO d = PostConverter.toDo(post);
         postMapper.insert(d);
         return PostConverter.toDomain(d);
+    }
+
+    @Override
+    public void incrementViewCount(Long postId) {
+        postMapper.update(null, new LambdaUpdateWrapper<PostDO>()
+                .eq(PostDO::getId, postId)
+                .setSql("view_count = view_count + 1"));
     }
 
     @Override

@@ -4,6 +4,7 @@ import com.campuslink.common.exception.ApiException;
 import com.campuslink.common.markdown.MarkdownRenderer;
 import com.campuslink.common.result.ResultCode;
 import com.campuslink.module.account.application.AccountApplicationService;
+import com.campuslink.module.account.application.FollowApplicationService;
 import com.campuslink.module.forum.application.cmd.ForumResults.MyPostSummary;
 import com.campuslink.module.forum.application.cmd.ForumResults.MyReplyItem;
 import com.campuslink.module.forum.application.cmd.ForumResults.PostBrief;
@@ -56,6 +57,8 @@ public class ForumQueryApplicationService {
     private static final int KEYWORD_MAX_CHARS = 50;
     /** 搜索时间窗白名单（天）；不在白名单即 1001，不做静默归一 */
     private static final Set<Integer> SEARCH_TIME_WINDOWS = Set.of(7, 30, 90);
+    /** 「关注」Feed 的作者数上限（CR-074 R2）：单校规模无忧，超限截断并在产品侧引导取关（本期不做） */
+    private static final int FOLLOWING_FEED_AUTHOR_CAP = 500;
 
     private final BoardRepository boardRepository;
     private final PostRepository postRepository;
@@ -63,6 +66,7 @@ public class ForumQueryApplicationService {
     private final LikeRepository likeRepository;
     private final FavoriteRepository favoriteRepository;
     private final AccountApplicationService accountApplicationService;
+    private final FollowApplicationService followApplicationService;
     private final MarkdownRenderer markdownRenderer;
 
     public List<Board> listBoards() {
@@ -125,7 +129,7 @@ public class ForumQueryApplicationService {
                 board == null ? null : board.getName(),
                 board == null ? null : board.getType().name(),
                 post.getTitle(), post.getContentHtml(), post.getAuthorId(), nickname,
-                post.getReplyCount(), post.getLikeCount(), post.isAccepted(),
+                post.getReplyCount(), post.getLikeCount(), post.getViewCount(), post.isAccepted(),
                 likedByMe, favoritedByMe, post.getCreatedAt());
     }
 
@@ -205,6 +209,24 @@ public class ForumQueryApplicationService {
     }
 
     /**
+     * 「关注」Feed（F-SOC-002 提前 / CR-074）：本人关注作者的时间序帖子，出参与全站列表同口径。
+     * 未关注任何人 → 空页（前端给「去关注」空态）；作者数超上限截断（R2，实施方案 §7）。
+     * 跨上下文经 account 的 application 拿关注 id 列表（ADR-012，方向与昵称解析同路）。
+     */
+    public PageResult<PostSummary> listFollowingPosts(long userId, int page, int size) {
+        int currentPage = normalizePage(page);
+        int pageSize = normalizeSize(size);
+        List<Long> authorIds = followApplicationService.followingIds(userId);
+        if (authorIds.isEmpty()) {
+            return new PageResult<>(List.of(), 0, currentPage, pageSize);
+        }
+        PageResult<Post> found = postRepository.findPageByAuthors(
+                authorIds.size() > FOLLOWING_FEED_AUTHOR_CAP ? authorIds.subList(0, FOLLOWING_FEED_AUTHOR_CAP) : authorIds,
+                currentPage, pageSize);
+        return new PageResult<>(toSummaries(found.items()), found.total(), currentPage, pageSize);
+    }
+
+    /**
      * 帖子标题批量读（F-SOC-001 通知读时组装）：只回**可见**帖子的标题，读不到的 id 不出现在结果中。
      *
      * <p>过滤条件与 {@link #postDetail} 同源（{@link Post#isVisible()}）——CR-066 之前这里只排墓碑行
@@ -267,7 +289,7 @@ public class ForumQueryApplicationService {
                             board == null ? null : board.getName(),
                             post.getTitle(),
                             nicknames.getOrDefault(post.getAuthorId(), NICKNAME_FALLBACK),
-                            post.getReplyCount(), post.getLikeCount(),
+                            post.getReplyCount(), post.getLikeCount(), post.getViewCount(), post.getCoverUrl(),
                             markdownRenderer.toPlainSummary(post.getContentMd(), SUMMARY_MAX_CHARS),
                             post.getCreatedAt(), post.isAccepted());
                 })

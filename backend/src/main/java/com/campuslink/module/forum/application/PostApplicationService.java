@@ -14,6 +14,7 @@ import com.campuslink.module.forum.domain.gateway.ReplyRepository;
 import com.campuslink.module.forum.domain.model.Board;
 import com.campuslink.module.forum.domain.model.Post;
 import com.campuslink.module.forum.domain.model.Reply;
+import com.campuslink.module.forum.domain.service.CoverImages;
 import com.campuslink.module.notification.application.NotificationApplicationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -43,8 +44,10 @@ public class PostApplicationService {
     public PublishedPost publish(Long authorId, PublishPostCommand command) {
         Board board = boardRepository.findByCode(command.boardCode())
                 .orElseThrow(BoardNotFoundException::new);
+        // 封面（CR-074 外链方案）：发布时从正文提取首张 https 图一次落库，读时零成本；无图即 null
         Post post = Post.publish(board.getId(), authorId, board.getType(), command.title(),
-                command.contentMd(), markdownRenderer.render(command.contentMd()));
+                command.contentMd(), markdownRenderer.render(command.contentMd()),
+                CoverImages.firstHttpsImage(command.contentMd()));
         return new PublishedPost(postRepository.save(post).getId());
     }
 

@@ -129,4 +129,16 @@ public interface PostRepository {
      * 实现只更新 {@code hot_score <> 0} 的行，避免每轮空写全表。
      */
     int resetHotScoresBefore(Instant since);
+
+    /**
+     * 阅读数 +1（CR-074）：定向 UPDATE {@code view_count = view_count + 1}，与 like/favorite 计数同理
+     * 绝不整行回写。去重判定（每帖每账号每日一次）由应用层经 Redis 完成后才会调到这里。
+     */
+    void incrementViewCount(Long postId);
+
+    /**
+     * 「关注」Feed 分页（CR-074）：{@code author_id IN (?) AND status='PUBLISHED' AND is_deleted=0}，
+     * 时间序倒排（与 {@link #findPage} 的 LATEST 同序、id DESC 兜底）。空集合由实现短路，不发 {@code IN ()}。
+     */
+    PageResult<Post> findPageByAuthors(Collection<Long> authorIds, int page, int size);
 }

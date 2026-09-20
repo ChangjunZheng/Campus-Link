@@ -1,4 +1,4 @@
-import { get, post } from './client'
+import { del, get, post } from './client'
 
 /** 与后端 web/vo 一一对应（设计 §3），字段名即接口契约，勿改名 */
 export interface BoardVo {
@@ -24,6 +24,10 @@ export interface PostSummaryVo {
   authorNickname: string
   replyCount: number
   likeCount: number
+  /** 阅读数（CR-074）：详情读取去重计数（每帖每账号每日 +1），列表展示用 */
+  viewCount: number
+  /** 封面图（CR-074）：发布时从正文提取的首张 https 图；无图帖为空，前端不占位 */
+  coverUrl?: string
   /** 服务端已去 Markdown 并截断为 120 字（设计 §3.2），前端不再兜底截断 */
   summary: string
   createdAt: string
@@ -44,6 +48,8 @@ export interface PostDetailVo {
   authorNickname: string
   replyCount: number
   likeCount: number
+  /** 阅读数（CR-074） */
+  viewCount: number
   accepted: boolean
   /** 当前登录用户是否已点赞（F-FORUM-005）；匿名请求恒 false */
   likedByMe: boolean
@@ -68,9 +74,12 @@ export interface ReplyVo {
 
 export const listBoards = () => get<BoardVo[]>('/boards')
 
-/** boardCode 缺省即全站最新；分页 page 从 1 起、size 上限 100（设计 §3.2） */
-export const listPosts = (page = 1, size = 20, boardCode?: string) => {
-  const query = new URLSearchParams({ page: String(page), size: String(size) })
+/** 全站列表排序（F-FORUM-003）：latest = created_at DESC（缺省）；hot = hot_score DESC（热榜，CR-058） */
+export type PostSort = 'latest' | 'hot'
+
+/** boardCode 缺省即全站最新；分页 page 从 1 起、size 上限 100（设计 §3.2）；非法 sort 后端 400 / 1001 */
+export const listPosts = (page = 1, size = 20, boardCode?: string, sort: PostSort = 'latest') => {
+  const query = new URLSearchParams({ page: String(page), size: String(size), sort })
   if (boardCode) {
     query.set('boardCode', boardCode)
   }
@@ -84,6 +93,12 @@ export const listReplies = (postId: number | string, page = 1, size = 20) =>
 
 export const publishPost = (payload: { boardCode: string; title: string; contentMd: string }) =>
   post<{ id: number }>('/posts', payload)
+
+/**
+ * 删除自己的帖子（仅作者，软删，F-FORUM-006 / CR-065）：
+ * 成功 200；非作者 403 / 4002；未登录 401 / 4001；二次删除幂等 404 / 3001。
+ */
+export const deletePost = (id: number | string) => del<void>(`/posts/${id}`)
 
 export const publishReply = (postId: number | string, contentMd: string) =>
   post<{ id: number; floorNo: number }>(`/posts/${postId}/replies`, { contentMd })
@@ -142,6 +157,12 @@ export const listMyPosts = (page = 1, size = 20) =>
 /** 我的回帖（需登录）：时间倒序分页，父帖不可见的楼层整条不出现（F-ACC-007c） */
 export const listMyReplies = (page = 1, size = 20) =>
   get<PageVo<MyReplySummaryVo>>(`/replies/mine?page=${page}&size=${size}`)
+
+/**
+ * 「关注」Feed（CR-074，需登录）：本人关注作者的时间序帖子；未关注任何人时为空页。
+ */
+export const listFollowingPosts = (page = 1, size = 20) =>
+  get<PageVo<PostSummaryVo>>(`/posts/following?page=${page}&size=${size}`)
 
 /**
  * 站内搜索（公开，F-FORUM-008）：keyword 2~50 字（后端 ngram 分词，单字不受理 → 1001），

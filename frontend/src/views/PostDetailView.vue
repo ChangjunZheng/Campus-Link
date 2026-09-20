@@ -9,9 +9,11 @@ import {
   togglePostLike,
   togglePostFavorite,
   toggleReplyLike,
+  deletePost,
   type PostDetailVo,
   type ReplyVo,
 } from '../api/forum'
+import { followUser, getFollowState, unfollowUser } from '../api/follow'
 import { ApiError } from '../api/client'
 import SvgIcon from '../components/SvgIcon.vue'
 import { useAuthStore } from '../stores/auth'
@@ -98,6 +100,59 @@ const isAskerOfQuestion = computed(
   () => !!post.value && post.value.boardType === 'QUESTION' && auth.user?.id === post.value.authorId,
 )
 
+// 删除入口（F-FORUM-006 前端一半，CR-072）：仅作者可见；后端仍以 403 兜底非作者
+const isAuthor = computed(() => !!post.value && auth.user?.id === post.value.authorId)
+const deleting = ref(false)
+
+// 关注（CR-074 / F-SOC-002）：非作者且已登录时可见；状态随帖子加载拉取，切换失败静默（详情页非关注管理页）
+const following = ref(false)
+
+async function toggleFollow() {
+  if (!post.value || !requireLoginOrRedirect()) return
+  const targetId = post.value.authorId
+  try {
+    if (following.value) {
+      await unfollowUser(targetId)
+      following.value = false
+    } else {
+      await followUser(targetId)
+      following.value = true
+    }
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '关注操作失败')
+  }
+}
+
+async function onDelete() {
+  if (!post.value) return
+  const boardCode = post.value.boardCode
+  try {
+    await ElMessageBox.confirm('删除后前台将不可见，且无法恢复。确认删除该帖子？', '删除帖子', {
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+  } catch {
+    return
+  }
+  deleting.value = true
+  try {
+    await deletePost(post.value.id)
+    ElMessage.success('帖子已删除')
+    router.push(`/board/${boardCode}`)
+  } catch (e) {
+    // 幂等语义（CR-065）：已被删除（404 / 3001）也按"已删除"收尾，不留死链
+    if (e instanceof ApiError && e.code === 3001) {
+      ElMessage.success('帖子已删除')
+      router.push(`/board/${boardCode}`)
+    } else {
+      ElMessage.error(e instanceof Error ? e.message : '删除失败')
+    }
+  } finally {
+    deleting.value = false
+  }
+}
+
 function canAccept(r: ReplyVo): boolean {
   return isAskerOfQuestion.value && !r.accepted && auth.user?.id !== r.authorId
 }
@@ -130,6 +185,13 @@ async function loadPost() {
   post.value = null
   try {
     post.value = await getPost(postId.value)
+    // 关注状态随帖拉取（CR-074）：非作者 + 已登录才查；失败静默（按钮回落「＋ 关注」）
+    following.value = false
+    if (auth.isLoggedIn && auth.user?.id !== post.value.authorId) {
+      getFollowState(post.value.authorId)
+        .then((s) => (following.value = s.following))
+        .catch(() => {})
+    }
   } catch (e) {
     // 3001 = 帖子不存在 / 已删除 / 未发布（设计 §3.4），单独给「不存在」态而非通用报错
     if (e instanceof ApiError && e.code === 3001) {
@@ -258,6 +320,18 @@ watch(
             <span>发布于 {{ formatTime(post.createdAt) }}</span>
             <span>·</span>
             <span>{{ post.replyCount }} 回复</span>
+            <span>·</span>
+            <span title="阅读数（同一账号每天只计一次）">阅读 {{ post.viewCount }}</span>
+            <el-button
+              v-if="auth.isLoggedIn && auth.user?.id !== post.authorId"
+              link
+              size="small"
+              :type="following ? 'default' : 'primary'"
+              class="ml-1"
+              @click="toggleFollow"
+            >
+              {{ following ? '已关注' : '＋ 关注' }}
+            </el-button>
           </div>
           <el-divider />
           <div class="markdown-body" v-highlight v-html="post.contentHtml" />
@@ -280,6 +354,17 @@ watch(
               @click="toggleFavorite"
             >
               {{ post.favoritedByMe ? '已收藏' : '收藏' }}
+            </el-button>
+            <el-button
+              v-if="isAuthor"
+              link
+              type="danger"
+              size="small"
+              class="ml-auto"
+              :loading="deleting"
+              @click="onDelete"
+            >
+              删除
             </el-button>
           </div>
         </div>

@@ -26,6 +26,8 @@ public class PostDO {
     private Boolean isDeleted;
     private Integer replyCount;
     private Integer likeCount;
+    private Integer viewCount;
+    private String coverUrl;
     private Integer favoriteCount;
     private Boolean isAccepted;
     private Long acceptedReplyId;

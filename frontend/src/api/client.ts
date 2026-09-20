@@ -53,3 +53,5 @@ export const post = <T>(path: string, data?: unknown): Promise<T> =>
 
 export const put = <T>(path: string, data?: unknown): Promise<T> =>
   request<T>(path, { method: 'PUT', body: data === undefined ? undefined : JSON.stringify(data) })
+
+export const del = <T>(path: string): Promise<T> => request<T>(path, { method: 'DELETE' })

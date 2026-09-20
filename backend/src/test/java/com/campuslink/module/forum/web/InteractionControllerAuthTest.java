@@ -32,7 +32,7 @@ class InteractionControllerAuthTest {
     private final InteractionApplicationService interactionApplicationService =
             mock(InteractionApplicationService.class);
     private final PostController postController = new PostController(forumQueryService, null,
-            interactionApplicationService);
+            interactionApplicationService, null);
     private final ReplyController replyController = new ReplyController(forumQueryService, null,
             interactionApplicationService);
     private final FavoriteController favoriteController = new FavoriteController(forumQueryService);

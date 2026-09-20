@@ -5,10 +5,12 @@ import com.campuslink.common.result.ErrorCodes;
 import com.campuslink.common.result.ResultCode;
 import com.campuslink.common.web.ApiDocs;
 import com.campuslink.common.web.CurrentUser;
+import com.campuslink.common.web.IpUtil;
 import com.campuslink.common.web.PublicEndpoint;
 import com.campuslink.module.forum.application.ForumQueryApplicationService;
 import com.campuslink.module.forum.application.InteractionApplicationService;
 import com.campuslink.module.forum.application.PostApplicationService;
+import com.campuslink.module.forum.application.PostViewCounter;
 import com.campuslink.module.forum.application.cmd.AcceptReplyCommand;
 import com.campuslink.module.forum.application.cmd.ForumResults.InteractionResult;
 import com.campuslink.module.forum.application.cmd.ForumResults.MyPostSummary;
@@ -52,6 +54,7 @@ public class PostController {
     private final ForumQueryApplicationService forumQueryService;
     private final PostApplicationService postApplicationService;
     private final InteractionApplicationService interactionApplicationService;
+    private final PostViewCounter viewCounter;
 
     @Operation(summary = "帖子列表（公开）：boardCode 缺省为全站；sort=latest（缺省，created_at DESC）或 hot（hot_score DESC，热榜），非法值 400")
     @ErrorCodes({ResultCode.NOT_FOUND})
@@ -101,12 +104,29 @@ public class PostController {
                 result.total(), result.page(), result.size()));
     }
 
-    @Operation(summary = "帖子详情（公开）：返回服务端渲染好的 contentHtml；登录请求附带 likedByMe / favoritedByMe，匿名时恒 false")
+    @Operation(summary = "帖子详情（公开）：返回服务端渲染好的 contentHtml；登录请求附带 likedByMe / favoritedByMe，匿名时恒 false；阅读数按「每帖每账号每日一次」去重累加（CR-074）")
     @ErrorCodes({ResultCode.NOT_FOUND})
     @PublicEndpoint
     @GetMapping("/{id}")
-    public ApiResponse<PostDetailVo> detail(@PathVariable("id") Long id, Authentication authentication) {
-        return ApiResponse.ok(PostDetailVo.from(forumQueryService.postDetail(id, viewerIdOf(authentication))));
+    public ApiResponse<PostDetailVo> detail(@PathVariable("id") Long id,
+                                            Authentication authentication,
+                                            jakarta.servlet.http.HttpServletRequest request) {
+        Long viewerId = viewerIdOf(authentication);
+        viewCounter.record(id, viewerId, IpUtil.clientIp(request));
+        return ApiResponse.ok(PostDetailVo.from(forumQueryService.postDetail(id, viewerId)));
+    }
+
+    @Operation(summary = "「关注」Feed（需登录）：本人关注作者的时间序帖子；未关注任何人时为空页（CR-074）")
+    @SecurityRequirement(name = ApiDocs.BEARER_AUTH)
+    @ErrorCodes({ResultCode.NOT_LOGGED_IN})
+    @GetMapping("/following")
+    public ApiResponse<PageVo<PostSummaryVo>> following(@RequestParam(defaultValue = "1") int page,
+                                                        @RequestParam(defaultValue = "20") int size,
+                                                        Authentication authentication) {
+        long userId = CurrentUser.requireId(authentication);
+        PageResult<PostSummary> result = forumQueryService.listFollowingPosts(userId, page, size);
+        return ApiResponse.ok(new PageVo<>(result.items().stream().map(PostSummaryVo::from).toList(),
+                result.total(), result.page(), result.size()));
     }
 
     @Operation(summary = "发帖（需登录）：只返回 id，前端据此跳转详情")

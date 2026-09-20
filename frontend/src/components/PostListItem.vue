@@ -28,43 +28,57 @@ withDefaults(
   <li
     class="border-b-[0.5px] border-divider px-5 py-3 transition-colors duration-fast ease-standard last:border-b-0 hover:bg-bg-hover"
   >
-    <div class="flex items-center gap-2">
-      <el-tag v-if="post.accepted" type="success" effect="light" size="small" class="flex-none">
-        已采纳
-      </el-tag>
-      <RouterLink
-        :to="`/post/${post.id}`"
-        class="min-w-0 flex-1 truncate text-title-sm font-medium text-ink hover:text-link"
-      >
-        {{ post.title }}
-      </RouterLink>
-      <span
-        class="flex flex-none items-center gap-0.5 rounded-sm bg-code px-1.5 py-px text-caption text-ink-meta"
-        :title="`${post.replyCount} 条回复`"
-      >
-        <SvgIcon name="message-2" :size="12" />
-        {{ post.replyCount }}
-      </span>
-    </div>
+    <div class="flex gap-3">
+      <div class="min-w-0 flex-1">
+        <div class="flex items-center gap-2">
+          <el-tag v-if="post.accepted" type="success" effect="light" size="small" class="flex-none">
+            已采纳
+          </el-tag>
+          <RouterLink
+            :to="`/post/${post.id}`"
+            class="min-w-0 flex-1 truncate text-title-sm font-medium text-ink hover:text-link"
+          >
+            {{ post.title }}
+          </RouterLink>
+          <span
+            class="flex flex-none items-center gap-0.5 rounded-sm bg-code px-1.5 py-px text-caption text-ink-meta"
+            :title="`${post.replyCount} 条回复`"
+          >
+            <SvgIcon name="message-2" :size="12" />
+            {{ post.replyCount }}
+          </span>
+        </div>
 
-    <p
-      v-if="showSummary && post.summary"
-      class="mt-1 line-clamp-2 text-note leading-body text-ink-regular"
-    >
-      {{ post.summary }}
-    </p>
+        <p
+          v-if="showSummary && post.summary"
+          class="mt-1 line-clamp-2 text-note leading-body text-ink-regular"
+        >
+          {{ post.summary }}
+        </p>
 
-    <div class="mt-1.5 flex flex-wrap items-center gap-1.5 text-caption text-ink-meta">
-      <template v-if="showBoard">
-        <RouterLink :to="`/board/${post.boardCode}`" class="text-link hover:underline">
-          {{ post.boardName || boardNameOf(post.boardCode) }}
-        </RouterLink>
-        <span aria-hidden="true">·</span>
-      </template>
-      <UserAvatar :name="post.authorNickname" :size="20" />
-      <span>{{ post.authorNickname }}</span>
-      <span aria-hidden="true">·</span>
-      <span>{{ formatRelativeTime(post.createdAt) }}</span>
+        <div class="mt-1.5 flex flex-wrap items-center gap-1.5 text-caption text-ink-meta">
+          <template v-if="showBoard">
+            <RouterLink :to="`/board/${post.boardCode}`" class="text-link hover:underline">
+              {{ post.boardName || boardNameOf(post.boardCode) }}
+            </RouterLink>
+            <span aria-hidden="true">·</span>
+          </template>
+          <UserAvatar :name="post.authorNickname" :size="20" />
+          <span>{{ post.authorNickname }}</span>
+          <span aria-hidden="true">·</span>
+          <span>{{ formatRelativeTime(post.createdAt) }}</span>
+          <span aria-hidden="true">·</span>
+          <span title="阅读数">阅读 {{ post.viewCount }}</span>
+        </div>
+      </div>
+      <!-- 封面缩略图（CR-074）：无图帖不占位；仅 https 外链（服务端提取时已限定） -->
+      <img
+        v-if="post.coverUrl"
+        :src="post.coverUrl"
+        alt=""
+        loading="lazy"
+        class="h-16 w-24 flex-none rounded-md border-[0.5px] border-line object-cover max-md:hidden"
+      />
     </div>
   </li>
 </template>

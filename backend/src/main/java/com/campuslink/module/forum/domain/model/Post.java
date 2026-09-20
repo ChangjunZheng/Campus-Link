@@ -10,10 +10,9 @@ import java.time.Instant;
  * 帖子聚合根。contentHtml 在**发布时**由 application 调用 MarkdownRenderer 渲染后传入并落库，
  * 请求时零渲染（ADR-005）——聚合自身不感知 Markdown 实现。
  *
- * <p>本 Sprint 未建模 tags / hotScore / favoriteCount 等列：无用例读写它们，
- * 且除采纳用例外不存在整行 UPDATE（回复计数走 {@code PostRepository#incrementReplyCountAndGet} 的定向 SQL），
- * 因此不会因字段缺失而丢数据。采纳用例同样走定向 UPDATE（见 {@code PostRepository#updateAcceptedReply}），
- * {@link #acceptReply} 返回的新聚合只用于规则表达，不回写整行。
+ * <p>CR-074 增量：viewCount（详情读取去重计数，走 {@code PostRepository#incrementViewCount} 定向 SQL，
+ * 不进聚合写路径）与 coverUrl（发帖时从正文提取首张 https 图，一次性写入）进入聚合——
+ * 二者随 rehydrate 重建、随 acceptReply 拷贝保留；favoriteCount 等仍未建模（无用例整行回写）。
  */
 @Getter
 public class Post {
@@ -28,6 +27,8 @@ public class Post {
     private final PostStatus status;
     private final int replyCount;
     private final int likeCount;
+    private final int viewCount;
+    private final String coverUrl;
     private final boolean accepted;
     private final Long acceptedReplyId;
     private final Instant createdAt;
@@ -35,7 +36,8 @@ public class Post {
 
     private Post(Long id, Long boardId, Long authorId, BoardType type, String title,
                  String contentMd, String contentHtml, PostStatus status, int replyCount, int likeCount,
-                 boolean accepted, Long acceptedReplyId, Instant createdAt, Instant updatedAt) {
+                 int viewCount, String coverUrl, boolean accepted, Long acceptedReplyId,
+                 Instant createdAt, Instant updatedAt) {
         this.id = id;
         this.boardId = boardId;
         this.authorId = authorId;
@@ -46,26 +48,41 @@ public class Post {
         this.status = status;
         this.replyCount = replyCount;
         this.likeCount = likeCount;
+        this.viewCount = viewCount;
+        this.coverUrl = coverUrl;
         this.accepted = accepted;
         this.acceptedReplyId = acceptedReplyId;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
 
-    /** 发布新帖：type 随版块，status 恒为 PUBLISHED，计数归零（id / 时间戳由数据库生成）；标题去除首尾空白 */
+    /** 发布新帖：type 随版块，status 恒为 PUBLISHED，计数归零（id / 时间戳由数据库生成）；标题去除首尾空白；封面为发布时提取的首图（可为 null） */
     public static Post publish(Long boardId, Long authorId, BoardType type, String title,
-                               String contentMd, String contentHtml) {
+                               String contentMd, String contentHtml, String coverUrl) {
         return new Post(null, boardId, authorId, type, title.trim(), contentMd, contentHtml,
-                PostStatus.PUBLISHED, 0, 0, false, null, null, null);
+                PostStatus.PUBLISHED, 0, 0, 0, coverUrl, false, null, null, null);
     }
 
     /** 仓储重建入口（infrastructure 适配器调用）；已删除的行由仓储读侧过滤，不会到达这里 */
     public static Post rehydrate(Long id, Long boardId, Long authorId, BoardType type, String title,
                                  String contentMd, String contentHtml, PostStatus status, int replyCount,
-                                 int likeCount, boolean accepted, Long acceptedReplyId,
+                                 int likeCount, int viewCount, String coverUrl, boolean accepted, Long acceptedReplyId,
                                  Instant createdAt, Instant updatedAt) {
         return new Post(id, boardId, authorId, type, title, contentMd, contentHtml, status,
-                replyCount, likeCount, accepted, acceptedReplyId, createdAt, updatedAt);
+                replyCount, likeCount, viewCount, coverUrl, accepted, acceptedReplyId, createdAt, updatedAt);
+    }
+
+    /**
+     * @deprecated 测试夹具过渡重载（CR-074）：等价于 viewCount=0、coverUrl=null；
+     * 既有单测不关心这两个读侧展示字段，逐个改写 7 个夹具文件收益为零——新代码一律用 16 参签名。
+     */
+    @Deprecated
+    public static Post rehydrate(Long id, Long boardId, Long authorId, BoardType type, String title,
+                                 String contentMd, String contentHtml, PostStatus status, int replyCount,
+                                 int likeCount, boolean accepted, Long acceptedReplyId,
+                                 Instant createdAt, Instant updatedAt) {
+        return rehydrate(id, boardId, authorId, type, title, contentMd, contentHtml, status,
+                replyCount, likeCount, 0, null, accepted, acceptedReplyId, createdAt, updatedAt);
     }
 
     /** 对外可见性：仅 PUBLISHED 可读 / 可回帖（已删除属仓储读侧约定，见 PostRepository） */
@@ -85,6 +102,6 @@ public class Post {
             throw new CannotAcceptOwnReplyException();
         }
         return new Post(id, boardId, authorId, type, title, contentMd, contentHtml, status,
-                replyCount, likeCount, true, replyId, createdAt, updatedAt);
+                replyCount, likeCount, viewCount, coverUrl, true, replyId, createdAt, updatedAt);
     }
 }

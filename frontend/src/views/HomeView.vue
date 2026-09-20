@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import type { IconName } from '../assets/icons'
-import { listPosts, type PostSummaryVo } from '../api/forum'
+import { listFollowingPosts, listPosts, type PostSort, type PostSummaryVo } from '../api/forum'
 import { BOARDS } from '../constants/boards'
 import { useAuthStore } from '../stores/auth'
 import PostListItem from '../components/PostListItem.vue'
@@ -16,24 +16,29 @@ const quickEntries: { label: string; to: string; icon: IconName }[] = [
   { label: '搜索全站内容', to: '/search', icon: 'search' },
 ]
 
-const latest = ref<PostSummaryVo[]>([])
+/** 排序（F-FORUM-003 + CR-074）：latest = 最新，hot = 热榜（后端 sort=hot），following = 关注 Feed（仅登录可见） */
+const sort = ref<PostSort | 'following'>('latest')
+const posts = ref<PostSummaryVo[]>([])
 const total = ref(0)
 const page = ref(1)
 const size = 10
 const loading = ref(false)
 const loadError = ref('')
 
-async function loadLatest() {
+async function loadList() {
   loading.value = true
   loadError.value = ''
   try {
-    const res = await listPosts(page.value, size)
-    latest.value = res.list
+    const res =
+      sort.value === 'following'
+        ? await listFollowingPosts(page.value, size)
+        : await listPosts(page.value, size, undefined, sort.value)
+    posts.value = res.list
     total.value = res.total
   } catch (e) {
-    latest.value = []
+    posts.value = []
     total.value = 0
-    loadError.value = e instanceof Error ? e.message : '最新帖子加载失败'
+    loadError.value = e instanceof Error ? e.message : '帖子加载失败'
   } finally {
     loading.value = false
   }
@@ -41,10 +46,15 @@ async function loadLatest() {
 
 function onPageChange(next: number) {
   page.value = next
-  loadLatest()
+  loadList()
 }
 
-onMounted(loadLatest)
+watch(sort, () => {
+  page.value = 1
+  loadList()
+})
+
+onMounted(loadList)
 </script>
 
 <template>
@@ -110,7 +120,16 @@ onMounted(loadLatest)
 
     <el-card shadow="never" :body-style="{ padding: 0 }">
       <template #header>
-        <span class="font-medium">全站最新</span>
+        <div class="flex items-center justify-between">
+          <span class="font-medium">
+            {{ sort === 'hot' ? '全站热门' : sort === 'following' ? '我的关注' : '全站最新' }}
+          </span>
+          <el-radio-group v-model="sort" size="small" aria-label="帖子排序">
+            <el-radio-button value="latest">最新</el-radio-button>
+            <el-radio-button value="hot">热门</el-radio-button>
+            <el-radio-button v-if="auth.isLoggedIn" value="following">关注</el-radio-button>
+          </el-radio-group>
+        </div>
       </template>
 
       <el-skeleton v-if="loading" animated class="px-5 pt-4">
@@ -132,12 +151,14 @@ onMounted(loadLatest)
 
       <div v-else-if="loadError" class="p-5">
         <el-alert type="error" :closable="false" show-icon :title="loadError">
-          <el-button size="small" @click="loadLatest">重新加载</el-button>
+          <el-button size="small" @click="loadList">重新加载</el-button>
         </el-alert>
       </div>
 
-      <div v-else-if="!latest.length" class="py-10 text-center">
-        <p class="text-body text-ink-regular">还没有帖子，来发第一帖吧</p>
+      <div v-else-if="!posts.length" class="py-10 text-center">
+        <p class="text-body text-ink-regular">
+          {{ sort === 'following' ? '还没有关注任何作者，去帖子详情页点「＋ 关注」吧' : '还没有帖子，来发第一帖吧' }}
+        </p>
         <RouterLink to="/publish">
           <el-button type="primary" class="mt-4">去发第一帖</el-button>
         </RouterLink>
@@ -145,7 +166,7 @@ onMounted(loadLatest)
 
       <template v-else>
         <ul>
-          <PostListItem v-for="p in latest" :key="p.id" :post="p" show-board />
+          <PostListItem v-for="p in posts" :key="p.id" :post="p" show-board />
         </ul>
         <div class="flex justify-center px-5 py-4">
           <el-pagination
