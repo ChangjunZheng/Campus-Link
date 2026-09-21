@@ -18,13 +18,15 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 站内通知接口（web 层，F-SOC-001）：三个端点全部是**本人私有数据**，一律受保护。
+ * 站内通知接口（web 层，F-SOC-001）：四个端点全部是**本人私有数据**，一律受保护。
  *
  * <p>鉴权约定同 {@code PostController}（N-4 已闭环，CR-028）：声明 {@code @SecurityRequirement}
  * 且真的调用 {@link CurrentUser}，由 ArchitectureGuardTest G7 机器校验。
@@ -67,5 +69,15 @@ public class NotificationController {
     public ApiResponse<MarkAllReadResult> markAllRead(Authentication authentication) {
         long userId = CurrentUser.requireId(authentication);
         return ApiResponse.ok(notificationApplicationService.markAllRead(userId));
+    }
+
+    @Operation(summary = "单条标记已读（需登录，幂等）：不存在与非本人一律 404，已读再调仍 200")
+    @SecurityRequirement(name = ApiDocs.BEARER_AUTH)
+    @ErrorCodes({ResultCode.NOT_LOGGED_IN, ResultCode.NOT_FOUND})
+    @PostMapping("/{id}/read")
+    public ApiResponse<Void> markRead(@PathVariable("id") Long id, Authentication authentication) {
+        long userId = CurrentUser.requireId(authentication);
+        notificationApplicationService.markRead(id, userId);
+        return ApiResponse.ok();
     }
 }

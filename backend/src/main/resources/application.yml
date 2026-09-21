@@ -97,6 +97,11 @@ campuslink:
     mode: ${CODE_SENDER_MODE:log}
   cors:
     allowed-origins: ${CORS_ORIGINS:http://localhost:5173}
+  ai:
+    similar:
+      enabled: true
+      min-title-length: 6
+      max-results: 3
   hot:
     # 热榜（ADR-006，CR-058）。互动分 = reply-weight×回复 + like-weight×赞 + favorite-weight×收藏，
     # hot_score = 互动分 × exp(-decay-per-hour × 小时龄)。

@@ -4,6 +4,7 @@ import com.campuslink.module.forum.domain.model.HotScoreInput;
 import com.campuslink.module.forum.domain.model.Post;
 import com.campuslink.module.forum.domain.model.PostSortOrder;
 import com.campuslink.module.forum.domain.model.PostStatus;
+import com.campuslink.module.forum.domain.model.SimilarPostRow;
 
 import java.time.Instant;
 import java.util.Collection;
@@ -36,6 +37,15 @@ public interface PostRepository {
      * 把它接到任何带外部传入 authorId 的端点上，等于把下架内容公开。
      */
     PageResult<Post> findPageByAuthor(Long authorId, int page, int size);
+
+    /**
+     * 作者可见帖子计数（他人主页 {@code /u/:id} 资料卡的「帖子 N」）：条件与 {@link #findPageByAuthors}
+     * **逐字同源**（{@code author_id = ? AND status='PUBLISHED' AND is_deleted=0}）。
+     *
+     * <p>同源不是洁癖而是唯一判据：资料卡上的数字与它下方那份列表若由两处各写一遍条件，
+     * 迟早出现「帖子 12」而列表只有 10 条的对不上——这类偏差在前端看不出来，只能靠口径同源堵死。
+     */
+    long countVisibleByAuthor(Long authorId);
 
     /**
      * 站内搜索（F-FORUM-008）：标题全文（ngram）+ tags 冗余列 LIKE 兜底，只搜 PUBLISHED 且未删除，
@@ -141,4 +151,14 @@ public interface PostRepository {
      * 时间序倒排（与 {@link #findPage} 的 LATEST 同序、id DESC 兜底）。空集合由实现短路，不发 {@code IN ()}。
      */
     PageResult<Post> findPageByAuthors(Collection<Long> authorIds, int page, int size);
+
+    /**
+     * Similar-post recommendation (publish-time assist): full-text search on title within the given board,
+     * excluding the caller's own posts. Only PUBLISHED + not-deleted posts are considered.
+     * Results ordered by relevance DESC, created_at DESC, id DESC, capped at {@code limit}.
+     *
+     * <p>返回窄载体 {@link SimilarPostRow}（不装配完整聚合）：推荐条目只需 id / title / replyCount / accepted / createdAt，
+     * SELECT * 再丢弃是纯浪费（CR-077 Warning #7）。
+     */
+    List<SimilarPostRow> findSimilar(String title, Long boardId, Long excludeAuthorId, int limit);
 }

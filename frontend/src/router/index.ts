@@ -10,7 +10,9 @@ const router = createRouter({
     { path: '/post/:id', name: 'post', component: () => import('../views/PostDetailView.vue'), meta: { title: '帖子详情' } },
     { path: '/publish', name: 'publish', component: () => import('../views/PublishView.vue'), meta: { title: '发布', requiresAuth: true } },
     { path: '/search', name: 'search', component: () => import('../views/SearchView.vue'), meta: { title: '搜索' } },
-    { path: '/u/:id', name: 'profile', component: () => import('../components/Placeholder.vue'), props: { title: '个人主页' }, meta: { title: '个人主页' } },
+    // 他人主页（F-ACC-002）：**不设 requiresAuth**——两个后端端点都是公开的，
+    // 未登录也该能打开从帖子详情点过来的作者名；关注按钮由页内自己引到登录回跳
+    { path: '/u/:id', name: 'profile', component: () => import('../views/ProfileView.vue'), meta: { title: '个人主页' } },
     { path: '/notifications', name: 'notifications', component: () => import('../views/NotificationsView.vue'), meta: { title: '通知', requiresAuth: true } },
     { path: '/favorites', name: 'favorites', component: () => import('../views/MyFavoritesView.vue'), meta: { title: '我的收藏', requiresAuth: true } },
     { path: '/settings', name: 'settings', component: () => import('../views/SettingsView.vue'), meta: { title: '设置', requiresAuth: true } },
@@ -26,6 +28,10 @@ router.beforeEach((to) => {
     return true
   }
   const auth = useAuthStore()
+  // BUG-004：Date.now() 非响应式，过期判定做成命令式，进受保护路由前先清掉过期会话
+  if (auth.hasExpired()) {
+    auth.logout()
+  }
   if (auth.isLoggedIn) {
     return true
   }

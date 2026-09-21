@@ -1,5 +1,7 @@
 package com.campuslink.module.notification.application;
 
+import com.campuslink.common.exception.ApiException;
+import com.campuslink.common.result.ResultCode;
 import com.campuslink.module.account.application.AccountApplicationService;
 import com.campuslink.module.forum.application.ForumQueryApplicationService;
 import com.campuslink.module.forum.application.cmd.ForumResults.PostBrief;
@@ -23,9 +25,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -37,13 +41,16 @@ import static org.mockito.Mockito.when;
 
 /**
  * 通知用例（F-SOC-001）：触发侧自触发抑制、读侧跨上下文组装（昵称 / 标题 / 楼层号）与回落文案、
- * 分页与未读过滤归仓储、全部已读回显新标记条数。
+ * 分页与未读过滤归仓储、全部已读回显新标记条数、单条已读的幂等与归属判定。
  */
 @ExtendWith(MockitoExtension.class)
 class NotificationApplicationServiceTest {
 
     private static final Instant CREATED_AT = Instant.parse("2026-09-14T08:00:00Z");
     private static final long RECIPIENT = 42L;
+    private static final long NOTIFICATION_ID = 5L;
+    /** 另一个已登录账号：用于验证"他人通知"分支 */
+    private static final long SOMEONE_ELSE = 999L;
 
     @Mock
     private NotificationRepository notificationRepository;
@@ -207,8 +214,67 @@ class NotificationApplicationServiceTest {
         assertThat(service.markAllRead(RECIPIENT)).isEqualTo(new MarkAllReadResult(5));
     }
 
+    @Test
+    @DisplayName("单条已读：本人的未读通知被标记，UPDATE 连同接收人一起下推仓储")
+    void markReadFlagsOwnUnreadNotification() {
+        when(notificationRepository.findById(NOTIFICATION_ID))
+                .thenReturn(Optional.of(ownedBy(RECIPIENT, false)));
+
+        service.markRead(NOTIFICATION_ID, RECIPIENT);
+
+        verify(notificationRepository).markRead(NOTIFICATION_ID, RECIPIENT);
+    }
+
+    /**
+     * 幂等不是"重复写一次也无所谓"，而是**一条 SQL 都不发**：前端是乐观更新 + fire-and-forget，
+     * 同一条通知被点两次（或刷新后重点）是常态，此时再走 UPDATE 只会白写一次库。
+     */
+    @Test
+    @DisplayName("单条已读幂等：已读通知再调不报错也不再发 UPDATE")
+    void markReadIsIdempotentWhenAlreadyRead() {
+        when(notificationRepository.findById(NOTIFICATION_ID))
+                .thenReturn(Optional.of(ownedBy(RECIPIENT, true)));
+
+        service.markRead(NOTIFICATION_ID, RECIPIENT);
+
+        verify(notificationRepository, never()).markRead(anyLong(), anyLong());
+    }
+
+    @Test
+    @DisplayName("通知不存在 → 3001，且不触达 UPDATE")
+    void markReadOfMissingNotificationIsNotFound() {
+        when(notificationRepository.findById(NOTIFICATION_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.markRead(NOTIFICATION_ID, RECIPIENT))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_FOUND));
+        verify(notificationRepository, never()).markRead(anyLong(), anyLong());
+    }
+
+    /**
+     * 他人的通知给 404 而不是 403：403 会向任意已登录账号确认"这个 id 上确实有一条通知"，
+     * 而他人通知的存在性本身也是隐私。本用例守的是"两种情形不区分"这一条：改成 403 会让它变红。
+     */
+    @Test
+    @DisplayName("通知属于他人 → 与不存在同一个 3001（不泄露存在性），且绝不改到别人的行")
+    void markReadOfSomeoneElsesNotificationIsNotFound() {
+        when(notificationRepository.findById(NOTIFICATION_ID))
+                .thenReturn(Optional.of(ownedBy(SOMEONE_ELSE, false)));
+
+        assertThatThrownBy(() -> service.markRead(NOTIFICATION_ID, RECIPIENT))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_FOUND));
+        verify(notificationRepository, never()).markRead(anyLong(), anyLong());
+    }
+
     private static Notification notification(Long id, NotificationType type, NotificationTargetType targetType,
                                              Long targetId, boolean read) {
         return Notification.rehydrate(id, RECIPIENT, type, 7L, targetType, targetId, read, CREATED_AT);
+    }
+
+    /** 单条已读用：接收人可变（归属分支必须能造出"别人的通知"），其余字段固定为楼层回复类 */
+    private static Notification ownedBy(long recipientId, boolean read) {
+        return Notification.rehydrate(NOTIFICATION_ID, recipientId, NotificationType.REPLY, 7L,
+                NotificationTargetType.REPLY, 11L, read, CREATED_AT);
     }
 }

@@ -164,6 +164,21 @@ export const listMyReplies = (page = 1, size = 20) =>
 export const listFollowingPosts = (page = 1, size = 20) =>
   get<PageVo<PostSummaryVo>>(`/posts/following?page=${page}&size=${size}`)
 
+/** 相似帖子推荐（发帖页，F-FORUM-009）：标题≥6字时后端按 ngram 检索相似帖，最多返回 3 条 */
+export interface SimilarPostVo {
+  id: number
+  title: string
+  boardCode: string
+  boardName: string
+  replyCount: number
+  accepted: boolean
+  createdAt: string
+}
+
+/** 获取相似帖子：title 为当前输入标题（≥6 字），前端最多触发 2 次（服务端未限流） */
+export const getSimilarPosts = (title: string) =>
+  get<SimilarPostVo[]>(`/posts/similar?title=${encodeURIComponent(title)}`)
+
 /**
  * 站内搜索（公开，F-FORUM-008）：keyword 2~50 字（后端 ngram 分词，单字不受理 → 1001），
  * boardCode / days（仅 7、30、90）可选筛选，按相关度 + 时间排序。

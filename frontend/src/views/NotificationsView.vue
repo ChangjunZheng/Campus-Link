@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { listNotifications, markAllRead, type NotificationVo } from '../api/notifications'
+import { listNotifications, markAllRead, markNotificationRead, type NotificationVo } from '../api/notifications'
 import { refreshUnreadCount } from '../composables/useUnreadNotifications'
 import { formatRelativeTime } from '../utils/time'
 
@@ -55,6 +55,31 @@ async function readAll() {
   } finally {
     marking.value = false
   }
+}
+
+/**
+ * 点击单条通知即视为已读（CR-078 功能 C）。
+ *
+ * <p><b>乐观更新</b>：先把本地这条置为已读（未读底色与小圆点立刻消失），再 fire-and-forget 通知服务端。
+ * 刻意**不 await**：可跳转的行点完 RouterLink 就会导航，等响应只会让跳转变卡；失败也不回滚
+ * （角标与列表下次刷新自然恢复真实状态），所以异常在这里吞掉、不弹 ElMessage——
+ * 一条没标上的已读不值得打断用户阅读帖子。
+ *
+ * <p><b>角标必须显式刷新</b>：路由切换时 composable 也会补一次读，但那次读很可能跑在
+ * POST /read 落库**之前**，于是角标仍旧计数、要等 30s 轮询才收敛，故放在标记成功之后再来一次。
+ */
+function onActivate(n: NotificationVo) {
+  if (n.read) return
+  n.read = true
+  void markNotificationRead(n.id)
+    .then(async () => {
+      await refreshUnreadCount()
+      // 「只看未读」视图下这条已不再符合筛选条件，重拉一次才不自相矛盾
+      if (onlyUnread.value) await loadNotifications()
+    })
+    .catch(() => {
+      // 静默：已读是提示不是主链路，见上文说明
+    })
 }
 
 /** 动作短语：type 决定动词，targetType 决定对象是帖子还是楼层 */
@@ -122,11 +147,17 @@ loadNotifications()
 
     <template v-else>
       <ul>
+        <!--
+          整行可点：链接的 ::after 铺满整个 li（stretched-link），于是行内任何位置都是一个**真链接**
+          ——保留原生语义（Tab 可聚焦、Ctrl / 中键新标签页打开），不用把 li 改成 div+click 那种不可聚焦的假按钮。
+          li 上的 @click 只管“已读”，导航交给链接自己完成（事件冒泡不阻止默认行为）。
+        -->
         <li
           v-for="n in items"
           :key="n.id"
-          class="flex items-start gap-2.5 border-b-[0.5px] border-divider px-5 py-3 transition-colors duration-fast ease-standard last:border-b-0"
-          :class="n.read ? 'hover:bg-bg-hover' : 'bg-primary-soft'"
+          class="relative flex items-start gap-2.5 border-b-[0.5px] border-divider px-5 py-3 transition-colors duration-fast ease-standard last:border-b-0"
+          :class="n.read ? 'hover:bg-bg-hover' : 'cursor-pointer bg-primary-soft'"
+          @click="onActivate(n)"
         >
           <!-- 未读用小圆点占位，保证已读 / 未读行首对齐（不为对齐再用 invisible 字符） -->
           <span
@@ -139,16 +170,31 @@ loadNotifications()
               {{ actionOf(n) }}
               <template v-if="n.floorNo">#{{ n.floorNo }} 楼</template>
             </p>
+            <!-- after:inset-0 把点击区拉到整行（定位祖先是 relative 的 li）；hover 因此也覆盖整行 -->
             <RouterLink
               v-if="targetOf(n)"
               :to="targetOf(n)!"
-              class="mt-1 block truncate text-title-sm text-link hover:underline"
+              class="mt-1 block truncate text-title-sm text-link hover:underline after:absolute after:inset-0 after:content-['']"
             >
               {{ n.postTitle }}
             </RouterLink>
             <p v-else class="mt-1 truncate text-title-sm text-ink-meta">{{ n.postTitle }}</p>
             <p class="mt-1 text-caption text-ink-meta">{{ formatRelativeTime(n.createdAt) }}</p>
           </div>
+          <!--
+            原帖已删 / 已下架的行没有链接可铺，整行对键盘用户就不可达了；给它一个真的按钮，
+            否则这类通知只能靠“全部已读”清掉。已读后自动消失，不给列表添噪。
+          -->
+          <el-button
+            v-if="!targetOf(n) && !n.read"
+            text
+            size="small"
+            type="primary"
+            class="ml-auto shrink-0 self-center"
+            @click.stop="onActivate(n)"
+          >
+            标为已读
+          </el-button>
         </li>
       </ul>
       <div v-if="total > size" class="flex justify-center px-5 py-4">

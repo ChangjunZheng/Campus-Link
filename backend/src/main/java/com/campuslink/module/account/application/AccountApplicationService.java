@@ -17,6 +17,7 @@ import com.campuslink.module.account.domain.gateway.SensitiveCodec;
 import com.campuslink.module.account.domain.gateway.TokenIssuer;
 import com.campuslink.module.account.domain.gateway.VerificationTicketStore;
 import com.campuslink.module.account.domain.model.Account;
+import com.campuslink.module.account.domain.model.AccountStatus;
 import com.campuslink.module.account.domain.model.EmailAddress;
 import com.campuslink.module.account.domain.model.StudentId;
 import com.campuslink.module.account.domain.service.StudentVerificationService;
@@ -141,5 +142,25 @@ public class AccountApplicationService {
     public Account accountOf(Long accountId) {
         return accountRepository.findById(accountId)
                 .orElseThrow(() -> new ApiException(ResultCode.USER_NOT_FOUND));
+    }
+
+    /**
+     * 按 id 取**可公开露出**的账号（他人主页 {@code /u/:id} 与它的公开帖子列表共用这一道门）：
+     * 不存在与已注销（{@code DEACTIVATED}）一律 2007 / 404，两种情形对外不区分——与帖子侧
+     * {@code requireVisiblePost} 把「不存在 / 已删 / 未发布」全归 3001 是同一条纪律：不给按 id 探测账号状态的口子。
+     *
+     * <p>与 {@link #accountOf} 的差别只多一道注销门，不合并成一个方法是因为两者的调用方语义不同：
+     * {@code accountOf} 答「这个 id 有没有对应账号」（关注 / 令牌校验用，注销中的账号仍是关注关系的一方），
+     * 本方法答「这个账号能不能被路人看见」。
+     *
+     * <p>{@code BANNED} **不在这里拦**：封禁限的是发言与登录，不是把已发布内容从站内抹掉
+     * （全站列表 / 搜索 / 热榜从不按作者状态过滤）；主页若单独消失，列表里那个作者名就点不开了。
+     */
+    public Account publicAccountOf(long accountId) {
+        Account account = accountOf(accountId);
+        if (account.getStatus() == AccountStatus.DEACTIVATED) {
+            throw new ApiException(ResultCode.USER_NOT_FOUND);
+        }
+        return account;
     }
 }

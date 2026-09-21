@@ -13,6 +13,8 @@ import com.campuslink.module.notification.infrastructure.persistence.mapper.Noti
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
+
 /** 适配器：NotificationRepository 端口的 MyBatis-Plus 实现 */
 @Repository
 @RequiredArgsConstructor
@@ -23,6 +25,12 @@ public class NotificationRepositoryImpl implements NotificationRepository {
     @Override
     public void save(Notification notification) {
         notificationMapper.insert(toDo(notification));
+    }
+
+    @Override
+    public Optional<Notification> findById(long notificationId) {
+        return Optional.ofNullable(notificationMapper.selectById(notificationId))
+                .map(NotificationRepositoryImpl::toDomain);
     }
 
     @Override
@@ -53,6 +61,16 @@ public class NotificationRepositoryImpl implements NotificationRepository {
                 .set(NotificationDO::getIsRead, true)
                 .eq(NotificationDO::getUserId, userId)
                 .eq(NotificationDO::getIsRead, false));
+    }
+
+    @Override
+    public boolean markRead(long notificationId, long userId) {
+        // 与 markAllRead 同一口径：is_read=0 前置条件 + 接收人条件，只可能命中本人的那一行未读记录
+        return notificationMapper.update(null, new LambdaUpdateWrapper<NotificationDO>()
+                .set(NotificationDO::getIsRead, true)
+                .eq(NotificationDO::getId, notificationId)
+                .eq(NotificationDO::getUserId, userId)
+                .eq(NotificationDO::getIsRead, false)) > 0;
     }
 
     private static NotificationDO toDo(Notification notification) {

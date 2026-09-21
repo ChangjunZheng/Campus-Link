@@ -15,6 +15,7 @@ public class AppProperties {
     private CodeSender codeSender = new CodeSender();
     private Cors cors = new Cors();
     private Hot hot = new Hot();
+    private Ai ai = new Ai();
 
     @Data
     public static class Jwt {
@@ -60,6 +61,25 @@ public class AppProperties {
     @Data
     public static class Cors {
         private String allowedOrigins = "http://localhost:5173";
+    }
+
+    /**
+     * AI-assisted features (currently: similar-post recommendation at publish time).
+     * All sub-features default to enabled with conservative thresholds; disable via config without code change.
+     */
+    @Data
+    public static class Ai {
+        private Similar similar = new Similar();
+
+        @Data
+        public static class Similar {
+            /** Feature toggle: when false, findSimilarPosts always returns an empty list (silent degradation) */
+            private boolean enabled = true;
+            /** Minimum title length (chars) to trigger a lookup; shorter titles yield empty results without hitting the DB */
+            private int minTitleLength = 6;
+            /** Maximum number of similar posts to return */
+            private int maxResults = 3;
+        }
     }
 
     /**

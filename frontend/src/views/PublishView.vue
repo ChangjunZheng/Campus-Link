@@ -1,14 +1,16 @@
 <script setup lang="ts">
-import { nextTick, onMounted, reactive, ref } from 'vue'
+import { nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { listBoards, publishPost, type BoardVo } from '../api/forum'
+import { getSimilarPosts, listBoards, publishPost, type BoardVo, type SimilarPostVo } from '../api/forum'
 import { useNarrowScreen } from '../composables/useNarrowScreen'
+import { useDraft } from '../composables/useDraft'
 import SvgIcon from '../components/SvgIcon.vue'
 
 const route = useRoute()
 const router = useRouter()
 
 const narrow = useNarrowScreen()
+const { saveDraft, loadDraft, clearDraft } = useDraft()
 const boards = ref<BoardVo[]>([])
 const submitting = ref(false)
 const contentEl = ref<HTMLTextAreaElement | null>(null)
@@ -18,11 +20,155 @@ const form = reactive({
   contentMd: '',
 })
 
+/* ─── 草稿箱状态 ─── */
+const draftRestored = ref(false)
+const draftTime = ref('')
+let draftTimer: ReturnType<typeof setTimeout> | null = null
+
+/* ─── 相似帖子推荐（F-FORUM-009）：标题≥6字时防抖查询，最多触发 2 次 ─── */
+const SIMILAR_MIN_TITLE_LENGTH = 6  // 与后端 campuslink.ai.similar.min-title-length 同源
+const MAX_SIMILAR_QUERIES = 2       // 前端最多触发 2 次（服务端未限流）
+
+const similarPosts = ref<SimilarPostVo[]>([])
+const queryCount = ref(0)
+let debounceTimer: ReturnType<typeof setTimeout> | null = null
+let reqSeq = 0  // 请求序号，用于乱序保护
+
+watch(() => form.title, (newTitle) => {
+  if (debounceTimer) clearTimeout(debounceTimer)
+  const trimmed = newTitle.trim()
+  if (trimmed.length < SIMILAR_MIN_TITLE_LENGTH) {
+    // 标题不成立时才清空
+    similarPosts.value = []
+    return
+  }
+  if (queryCount.value >= MAX_SIMILAR_QUERIES) return  // 配额耗尽：停止查询，保留上次结果
+  debounceTimer = setTimeout(async () => {
+    const seq = ++reqSeq
+    queryCount.value++  // 发起即计数
+    try {
+      const data = await getSimilarPosts(trimmed)
+      if (seq === reqSeq) {  // 只接受最新响应
+        similarPosts.value = data
+      }
+    } catch {
+      if (seq === reqSeq) {
+        similarPosts.value = []
+      }
+    }
+  }, 800)
+})
+
+/** beforeunload 兜底：页面关闭 / 刷新时同步写盘（localStorage.setItem 是同步的） */
+function handleBeforeUnload() {
+  if (form.boardCode && (form.title.trim() || form.contentMd.trim())) {
+    saveDraft({
+      boardCode: form.boardCode,
+      title: form.title,
+      contentMd: form.contentMd,
+      updatedAt: new Date().toISOString(),
+    })
+  }
+}
+
+onUnmounted(() => {
+  if (debounceTimer) clearTimeout(debounceTimer)
+  // flush 而非丢弃：2s 防抖窗口内导航走也落盘
+  if (draftTimer) {
+    clearTimeout(draftTimer)
+    draftTimer = null
+    if (form.boardCode && (form.title.trim() || form.contentMd.trim())) {
+      saveDraft({
+        boardCode: form.boardCode,
+        title: form.title,
+        contentMd: form.contentMd,
+        updatedAt: new Date().toISOString(),
+      })
+    }
+  }
+  window.removeEventListener('beforeunload', handleBeforeUnload)
+})
+
+/* ─── 草稿自动保存（2s 防抖）：调度时捕获快照，回调使用快照而非实时 form ─── */
+watch(
+  () => [form.title, form.contentMd, form.boardCode],
+  () => {
+    if (draftTimer) clearTimeout(draftTimer)
+    if (!form.boardCode) return
+    if (!form.title.trim() && !form.contentMd.trim()) return
+    // 捕获调度时刻的快照，避免回调执行时 form 已被版块切换覆写
+    const snapshot = { boardCode: form.boardCode, title: form.title, contentMd: form.contentMd }
+    draftTimer = setTimeout(() => {
+      saveDraft({ ...snapshot, updatedAt: new Date().toISOString() })
+      draftTimer = null
+    }, 2000)
+  },
+)
+
+/** 尝试恢复指定版块的草稿；有内容才恢复并显示提示 */
+function tryRestoreDraft(boardCode: string) {
+  const draft = loadDraft(boardCode)
+  if (draft && (draft.title.trim() || draft.contentMd.trim())) {
+    form.title = draft.title
+    form.contentMd = draft.contentMd
+    draftRestored.value = true
+    draftTime.value = draft.updatedAt
+  } else {
+    draftRestored.value = false
+    draftTime.value = ''
+  }
+}
+
+/** 切换版块前先 flush 旧版块待存内容，防止 clearTimeout 导致永久丢失 */
+function flushPendingDraft(boardCode: string) {
+  if (draftTimer) {
+    clearTimeout(draftTimer)
+    draftTimer = null
+    // 立刻按旧 boardCode 保存当前编辑器中的内容
+    if (form.title.trim() || form.contentMd.trim()) {
+      saveDraft({ boardCode, title: form.title, contentMd: form.contentMd, updatedAt: new Date().toISOString() })
+    }
+  }
+}
+
+/** 版块切换：先 flush 旧版块草稿，再尝试恢复新版块草稿 */
+watch(() => form.boardCode, (newCode, prevCode) => {
+  if (prevCode) flushPendingDraft(prevCode)
+  if (!newCode) return
+  tryRestoreDraft(newCode)
+})
+
+/** 相对时间格式化：分钟 / 小时 / 天 */
+function formatDraftTime(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime()
+  const minutes = Math.floor(diff / 60_000)
+  if (minutes < 1) return '刚刚'
+  if (minutes < 60) return `${minutes}分钟前`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}小时前`
+  const days = Math.floor(hours / 24)
+  if (days === 1) return '昨天'
+  if (days < 30) return `${days}天前`
+  return new Date(iso).toLocaleDateString()
+}
+
+/** 清除草稿 + 清空表单 + 隐藏提示条 */
+function discardDraft() {
+  clearDraft(form.boardCode)
+  form.title = ''
+  form.contentMd = ''
+  draftRestored.value = false
+  draftTime.value = ''
+}
+
 onMounted(async () => {
+  window.addEventListener('beforeunload', handleBeforeUnload)
   try {
     boards.value = await listBoards()
     const fromQuery = String(route.query.board || '')
     form.boardCode = boards.value.some((b) => b.code === fromQuery) ? fromQuery : boards.value[0]?.code || ''
+    // 首次加载：尝试恢复当前版块草稿（watch boardCode 不会在此触发因为初始化赋值）
+    tryRestoreDraft(form.boardCode)
   } catch (e) {
     ElMessage.error(e instanceof Error ? e.message : '版块加载失败')
   }
@@ -64,6 +210,8 @@ async function submit() {
       title: form.title.trim(),
       contentMd: form.contentMd,
     })
+    clearDraft(form.boardCode)
+    draftRestored.value = false
     ElMessage.success('发布成功')
     router.push(`/post/${res.id}`)
   } catch (e) {
@@ -88,6 +236,16 @@ async function submit() {
       <el-button type="primary" :loading="submitting" @click="submit">发 布</el-button>
     </div>
 
+    <!-- 草稿恢复提示 -->
+    <div v-if="draftRestored" class="mx-5 mb-3 flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+      <span class="text-sm text-amber-700">
+        已恢复上次未发布的草稿（保存于 {{ formatDraftTime(draftTime) }}）
+      </span>
+      <button type="button" class="text-xs text-amber-500 hover:text-amber-700" @click="discardDraft">
+        清除
+      </button>
+    </div>
+
     <div class="mx-auto max-w-reading px-6 max-md:px-4">
       <!-- 标题：超大无边框输入（CSDN / 掘金式） -->
       <input
@@ -96,6 +254,26 @@ async function submit() {
         placeholder="输入标题（1~100 字）"
         class="block w-full border-0 bg-transparent py-6 text-[26px] leading-snug font-medium text-ink outline-none placeholder:text-ink-meta max-md:text-[22px]"
       />
+    </div>
+
+    <!-- 相似帖子推荐（F-FORUM-009） -->
+    <div v-if="similarPosts.length" class="mx-5 mb-3 rounded-lg border border-blue-200 bg-blue-50 p-3">
+      <div class="mb-2 flex items-center justify-between">
+        <span class="text-sm font-medium text-blue-700">发现相似问题，也许已有答案</span>
+        <button type="button" class="text-xs text-gray-400 hover:text-gray-600" @click="similarPosts = []">忽略</button>
+      </div>
+      <a
+        v-for="post in similarPosts"
+        :key="post.id"
+        :href="'/post/' + post.id"
+        target="_blank"
+        rel="noopener"
+        class="block truncate py-1.5 text-sm text-gray-700 hover:text-blue-600"
+      >
+        <span v-if="post.accepted" class="mr-1 font-medium text-green-600">[已采纳]</span>
+        {{ post.title }}
+        <span class="ml-2 text-xs text-gray-400">{{ post.replyCount }} 回复</span>
+      </a>
     </div>
 
     <!-- 工具条：通栏（CSDN 式），样式来自全局 .cl-md-tool -->

@@ -1,4 +1,4 @@
-import { get, put } from './client'
+import { get, post, put } from './client'
 import type { PageVo } from './forum'
 
 /** 通知类型码，与后端 notifications.type 落库值一致（quote 尚未实现，故不在此列出） */
@@ -49,3 +49,9 @@ export const getUnreadCount = () => get<UnreadCountVo>('/notifications/unread-co
 
 /** 全部标记已读：updated 为本次新标记的条数 */
 export const markAllRead = () => put<{ updated: number }>('/notifications/read-all')
+
+/**
+ * 单条标记已读（幂等，CR-078 功能 C）：无请求体也无出参。
+ * 已读再调仍 200；不存在与非本人一律 404 / 3001（后端不区分二者，避免泄露他人通知的存在性）。
+ */
+export const markNotificationRead = (id: number) => post<void>(`/notifications/${id}/read`)

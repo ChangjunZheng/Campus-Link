@@ -4,6 +4,7 @@ import com.campuslink.common.exception.ApiException;
 import com.campuslink.common.result.ResultCode;
 import com.campuslink.module.account.application.AccountApplicationService;
 import com.campuslink.module.account.application.ProfileApplicationService;
+import com.campuslink.module.account.application.UserProfileApplicationService;
 import com.campuslink.module.account.application.cmd.AccountCommands.UpdateProfileCommand;
 import com.campuslink.module.account.domain.model.Account;
 import com.campuslink.module.account.domain.model.AccountRole;
@@ -40,7 +41,8 @@ class UserControllerProfileTest {
 
     private final AccountApplicationService accountApplicationService = mock(AccountApplicationService.class);
     private final ProfileApplicationService profileApplicationService = mock(ProfileApplicationService.class);
-    private final UserController controller = new UserController(accountApplicationService, profileApplicationService);
+    private final UserController controller = new UserController(accountApplicationService,
+            profileApplicationService, mock(UserProfileApplicationService.class));
 
     @Test
     @DisplayName("匿名改资料 → 4001，且不触达编辑用例（不写库、不记审计）")

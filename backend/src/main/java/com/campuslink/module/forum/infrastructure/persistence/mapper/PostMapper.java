@@ -6,6 +6,8 @@ import com.campuslink.module.forum.infrastructure.persistence.PostDO;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
+import java.util.List;
+
 /** posts 表 Mapper（包名约束见 {@link BoardMapper}） */
 public interface PostMapper extends BaseMapper<PostDO> {
 
@@ -29,4 +31,27 @@ public interface PostMapper extends BaseMapper<PostDO> {
                          @Param("keyword") String keyword,
                          @Param("boardId") Long boardId,
                          @Param("days") Integer days);
+
+    /**
+     * Similar-post recommendation (publish-time assist): full-text search on title (ngram),
+     * restricted to PUBLISHED + not-deleted posts in the given board, excluding the caller's own posts.
+     * Results ordered by relevance DESC, created_at DESC, id DESC, capped at {@code limit}.
+     *
+     * <p>显式列清单（CR-077 Warning #7）：只取推荐条目需要的 6 列，避免 SELECT * 拉出 content_md / content_html 等大字段。
+     */
+    @Select("""
+            SELECT id, board_id, title, reply_count, is_accepted, created_at,
+                   MATCH(title) AGAINST(#{keyword} IN NATURAL LANGUAGE MODE) AS relevance
+            FROM posts
+            WHERE status = 'PUBLISHED' AND is_deleted = 0
+              AND board_id = #{boardId}
+              AND author_id != #{excludeAuthorId}
+              AND MATCH(title) AGAINST(#{keyword} IN NATURAL LANGUAGE MODE)
+            ORDER BY relevance DESC, created_at DESC, id DESC
+            LIMIT #{limit}
+            """)
+    List<PostDO> findSimilar(@Param("keyword") String keyword,
+                             @Param("boardId") Long boardId,
+                             @Param("excludeAuthorId") Long excludeAuthorId,
+                             @Param("limit") int limit);
 }

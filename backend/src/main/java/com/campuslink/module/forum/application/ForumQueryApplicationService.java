@@ -3,6 +3,7 @@ package com.campuslink.module.forum.application;
 import com.campuslink.common.exception.ApiException;
 import com.campuslink.common.markdown.MarkdownRenderer;
 import com.campuslink.common.result.ResultCode;
+import com.campuslink.config.AppProperties;
 import com.campuslink.module.account.application.AccountApplicationService;
 import com.campuslink.module.account.application.FollowApplicationService;
 import com.campuslink.module.forum.application.cmd.ForumResults.MyPostSummary;
@@ -12,6 +13,7 @@ import com.campuslink.module.forum.application.cmd.ForumResults.PostDetail;
 import com.campuslink.module.forum.application.cmd.ForumResults.PostSummary;
 import com.campuslink.module.forum.application.cmd.ForumResults.ReplyBrief;
 import com.campuslink.module.forum.application.cmd.ForumResults.ReplyItem;
+import com.campuslink.module.forum.application.cmd.ForumResults.SimilarPostResult;
 import com.campuslink.module.forum.domain.exception.BoardNotFoundException;
 import com.campuslink.module.forum.domain.exception.PostNotFoundException;
 import com.campuslink.module.forum.domain.gateway.BoardRepository;
@@ -26,6 +28,7 @@ import com.campuslink.module.forum.domain.model.MyReplyRow;
 import com.campuslink.module.forum.domain.model.Post;
 import com.campuslink.module.forum.domain.model.PostSortOrder;
 import com.campuslink.module.forum.domain.model.Reply;
+import com.campuslink.module.forum.domain.model.SimilarPostRow;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -60,6 +63,9 @@ public class ForumQueryApplicationService {
     /** 「关注」Feed 的作者数上限（CR-074 R2）：单校规模无忧，超限截断并在产品侧引导取关（本期不做） */
     private static final int FOLLOWING_FEED_AUTHOR_CAP = 500;
 
+    /** 相似帖子标题长度上限（CR-077 Critical #1）：超过即 1001，与搜索关键词上限同理——防超长串放大全文检索 */
+    private static final int SIMILAR_TITLE_MAX_CHARS = 100;
+
     private final BoardRepository boardRepository;
     private final PostRepository postRepository;
     private final ReplyRepository replyRepository;
@@ -68,6 +74,7 @@ public class ForumQueryApplicationService {
     private final AccountApplicationService accountApplicationService;
     private final FollowApplicationService followApplicationService;
     private final MarkdownRenderer markdownRenderer;
+    private final AppProperties appProperties;
 
     public List<Board> listBoards() {
         return boardRepository.findAllEnabled();
@@ -227,6 +234,39 @@ public class ForumQueryApplicationService {
     }
 
     /**
+     * 他人主页的公开帖子分页（{@code GET /api/v1/users/{id}/posts}）：可见性口径与全站列表
+     * **完全一致**（{@code status='PUBLISHED' AND is_deleted=0}），出参也复用 {@link PostSummary}——
+     * 于是主页那份时间线与首页 / 版块 / 搜索里的同一条帖子长得一样，前端得以复用同一个列表项组件。
+     *
+     * <p>⚠️ 与 {@link #listMyPosts} 的口径**相反**，别弄混：那条是作者本人视角（下架的也要露出、带 status），
+     * 本条是路人视角（下架的一律不出现）。两者分别走仓储的 {@code findPageByAuthor}（单数）与
+     * {@code findPageByAuthors}（复数），接错一个就是把平台已处置的内容重新公开。
+     *
+     * <p>复用 {@code findPageByAuthors}（单元素集合）而不新写一条 SQL：它的 WHERE 与
+     * {@code countVisibleByAuthor} 共用同一个构造点，资料卡的「帖子 N」与这份列表因此同源。
+     *
+     * <p>作者存在性在本方法里过一道门（而不是交给控制器）：不存在 / 已注销 → 2007 / 404，
+     * 不对外区分。跳上下文只调 account 的 application（ADR-012 / 守护测试 G4）。
+     */
+    public PageResult<PostSummary> listVisiblePostsByAuthor(long authorId, int page, int size) {
+        accountApplicationService.publicAccountOf(authorId);
+        int currentPage = normalizePage(page);
+        int pageSize = normalizeSize(size);
+        PageResult<Post> found = postRepository.findPageByAuthors(List.of(authorId), currentPage, pageSize);
+        return new PageResult<>(toSummaries(found.items()), found.total(), currentPage, pageSize);
+    }
+
+    /**
+     * 作者可见帖子数（他人主页资料卡的「帖子 N」）。
+     *
+     * <p>不做作者存在性校验：唯一调用方（account 的 {@code UserProfileApplicationService}）已先过一道
+     * 同一口径的门，在这里再查一次 users 是纯浪费。把它接到其它调用方时需自己补上那道门。
+     */
+    public long countVisiblePostsByAuthor(long authorId) {
+        return postRepository.countVisibleByAuthor(authorId);
+    }
+
+    /**
      * 帖子标题批量读（F-SOC-001 通知读时组装）：只回**可见**帖子的标题，读不到的 id 不出现在结果中。
      *
      * <p>过滤条件与 {@link #postDetail} 同源（{@link Post#isVisible()}）——CR-066 之前这里只排墓碑行
@@ -252,6 +292,39 @@ public class ForumQueryApplicationService {
     public Map<Long, ReplyBrief> replyBriefsOf(Collection<Long> replyIds) {
         return replyRepository.findByIds(replyIds).stream()
                 .collect(Collectors.toMap(Reply::getId, reply -> new ReplyBrief(reply.getPostId(), reply.getFloorNo())));
+    }
+
+    /**
+     * Similar-post recommendation (publish-time assist, silent degradation):
+     * returns an empty list when the feature is disabled, the title is too short, or the Q&A board is missing.
+     * Title is trimmed before length checks; exceeding {@value #SIMILAR_TITLE_MAX_CHARS} chars throws 1001.
+     *
+     * <p>CR-077 Critical #1: trim + explicit max-length validation replaces the non-functional {@code @Size} on
+     * {@code @RequestParam} (which would trigger an unhandled {@code HandlerMethodValidationException} → 500).
+     * <p>CR-077 Warning #7: no longer calls {@code toSummaries()} — constructs the narrow
+     * {@link SimilarPostResult} directly from the board already fetched and the row data.
+     */
+    public List<SimilarPostResult> findSimilarPosts(String title, Long currentUserId) {
+        AppProperties.Ai.Similar cfg = appProperties.getAi().getSimilar();
+        if (!cfg.isEnabled()) {
+            return List.of();
+        }
+        String t = (title == null) ? "" : title.trim();
+        if (t.length() > SIMILAR_TITLE_MAX_CHARS) {
+            throw new ApiException(ResultCode.INVALID_PARAM);
+        }
+        if (t.length() < cfg.getMinTitleLength()) {
+            return List.of();
+        }
+        Board board = boardRepository.findByCode("qna").orElse(null);
+        if (board == null) {
+            return List.of();
+        }
+        List<SimilarPostRow> rows = postRepository.findSimilar(t, board.getId(), currentUserId, cfg.getMaxResults());
+        return rows.stream()
+                .map(row -> new SimilarPostResult(row.id(), row.title(), board.getCode(), board.getName(),
+                        row.replyCount(), row.accepted(), row.createdAt()))
+                .toList();
     }
 
     /** 不可读（不存在 / 已删除 / 非 PUBLISHED）统一 404 / 3001，三种情况不对外区分——防按 id 探测 */

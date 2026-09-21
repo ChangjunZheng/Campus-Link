@@ -26,11 +26,13 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * 通知中心 3 个受保护端点（CR-050，F-SOC-001）的授权三态：全部是**本人私有数据**，匿名一律 4001
- * 且不触达用例；已登录则 userId 取自 principal 透传，不接受任何入参代传（防越权读他人通知）。
+ * 通知中心 4 个受保护端点（CR-050 / CR-078，F-SOC-001）的授权三态：全部是**本人私有数据**，匿名一律 4001
+ * 且不触达用例；已登录则 userId 取自 principal 透传，不接受任何入参代传（防越权读写他人通知）。
  * 为什么框架已按注解拦截仍需这组断言，见 PostControllerAuthTest。
  */
 class NotificationControllerAuthTest {
+
+    private static final long NOTIFICATION_ID = 5L;
 
     private final NotificationApplicationService notificationApplicationService =
             mock(NotificationApplicationService.class);
@@ -65,6 +67,15 @@ class NotificationControllerAuthTest {
     }
 
     @Test
+    @DisplayName("匿名单条已读 → 4001，不得把别人的通知标成已读")
+    void anonymousMarkReadIsUnauthorized() {
+        assertThatThrownBy(() -> controller.markRead(NOTIFICATION_ID, null))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_LOGGED_IN));
+        verify(notificationApplicationService, never()).markRead(anyLong(), anyLong());
+    }
+
+    @Test
     @DisplayName("principal 不是用户 ID → 4001（匿名令牌的字符串主体不得被当成已登录）")
     void nonUserIdPrincipalIsUnauthorized() {
         Authentication anonymousToken = new UsernamePasswordAuthenticationToken("anonymousUser", null, List.of());
@@ -87,6 +98,16 @@ class NotificationControllerAuthTest {
         assertThat(controller.markAllRead(user()).data().updated()).isEqualTo(3);
 
         verify(notificationApplicationService).list(eq(42L), eq(true), anyInt(), anyInt());
+    }
+
+    @Test
+    @DisplayName("已登录单条已读 → code=0 且 data 为空，通知 id 原样下推、userId 取自 principal")
+    void authenticatedMarkReadPassesThrough() {
+        var response = controller.markRead(NOTIFICATION_ID, user());
+
+        assertThat(response.code()).isEqualTo(0);
+        assertThat(response.data()).isNull();
+        verify(notificationApplicationService).markRead(NOTIFICATION_ID, 42L);
     }
 
     private static Authentication user() {

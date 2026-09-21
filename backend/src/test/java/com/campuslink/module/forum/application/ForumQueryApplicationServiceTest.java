@@ -3,6 +3,7 @@ package com.campuslink.module.forum.application;
 import com.campuslink.common.exception.ApiException;
 import com.campuslink.common.markdown.MarkdownRenderer;
 import com.campuslink.common.result.ResultCode;
+import com.campuslink.config.AppProperties;
 import com.campuslink.module.account.application.AccountApplicationService;
 import com.campuslink.module.forum.application.cmd.ForumResults.MyPostSummary;
 import com.campuslink.module.forum.application.cmd.ForumResults.MyReplyItem;
@@ -11,6 +12,7 @@ import com.campuslink.module.forum.application.cmd.ForumResults.PostDetail;
 import com.campuslink.module.forum.application.cmd.ForumResults.PostSummary;
 import com.campuslink.module.forum.application.cmd.ForumResults.ReplyBrief;
 import com.campuslink.module.forum.application.cmd.ForumResults.ReplyItem;
+import com.campuslink.module.forum.application.cmd.ForumResults.SimilarPostResult;
 import com.campuslink.module.forum.domain.gateway.BoardRepository;
 import com.campuslink.module.forum.domain.gateway.FavoriteRepository;
 import com.campuslink.module.forum.domain.gateway.LikeRepository;
@@ -25,6 +27,7 @@ import com.campuslink.module.forum.domain.model.PostSortOrder;
 import com.campuslink.module.forum.domain.model.PostStatus;
 import com.campuslink.module.forum.domain.model.Reply;
 import com.campuslink.module.forum.domain.model.ReplyStatus;
+import com.campuslink.module.forum.domain.model.SimilarPostRow;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -71,13 +74,15 @@ class ForumQueryApplicationServiceTest {
     @Mock
     private com.campuslink.module.account.application.FollowApplicationService followApplicationService;
 
+    private AppProperties appProperties;
     private ForumQueryApplicationService service;
 
     @BeforeEach
     void setUp() {
+        appProperties = new AppProperties();
         service = new ForumQueryApplicationService(boardRepository, postRepository, replyRepository,
                 likeRepository, favoriteRepository, accountApplicationService, followApplicationService,
-                new MarkdownRenderer());
+                new MarkdownRenderer(), appProperties);
     }
 
     @Test
@@ -424,5 +429,79 @@ class ForumQueryApplicationServiceTest {
 
     private static Reply reply(Long id, Long authorId, int floorNo) {
         return Reply.rehydrate(id, 9L, authorId, floorNo, "内容", "<p>内容</p>", false, 0, CREATED_AT);
+    }
+
+    // ── Similar-post recommendation (findSimilarPosts) ──────────────────────────────────────────
+
+    @Test
+    @DisplayName("相似帖子：功能开关关闭时返回空列表，不查仓储")
+    void findSimilarPostsReturnsEmptyWhenDisabled() {
+        appProperties.getAi().getSimilar().setEnabled(false);
+
+        List<SimilarPostResult> result = service.findSimilarPosts("如何学习Java编程", 42L);
+
+        assertThat(result).isEmpty();
+        verify(postRepository, never()).findSimilar(any(), any(), any(), anyInt());
+    }
+
+    @Test
+    @DisplayName("相似帖子：标题为 null 时返回空列表，不查仓储")
+    void findSimilarPostsReturnsEmptyForNullTitle() {
+        List<SimilarPostResult> result = service.findSimilarPosts(null, 42L);
+
+        assertThat(result).isEmpty();
+        verify(postRepository, never()).findSimilar(any(), any(), any(), anyInt());
+    }
+
+    @Test
+    @DisplayName("相似帖子：标题长度 < minTitleLength(6) 时返回空列表，不查仓储")
+    void findSimilarPostsReturnsEmptyForShortTitle() {
+        List<SimilarPostResult> result = service.findSimilarPosts("Java", 42L);
+
+        assertThat(result).isEmpty();
+        verify(postRepository, never()).findSimilar(any(), any(), any(), anyInt());
+    }
+
+    @Test
+    @DisplayName("相似帖子：标题超过 100 字符时抛 1001（CR-077 Critical #1）")
+    void findSimilarPostsThrowsForOverlongTitle() {
+        String longTitle = "a".repeat(101);
+
+        assertThatThrownBy(() -> service.findSimilarPosts(longTitle, 42L))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.INVALID_PARAM));
+        verify(postRepository, never()).findSimilar(any(), any(), any(), anyInt());
+    }
+
+    @Test
+    @DisplayName("相似帖子：Q&A 版块不存在时返回空列表，不查仓储")
+    void findSimilarPostsReturnsEmptyWhenQnaBoardMissing() {
+        when(boardRepository.findByCode("qna")).thenReturn(Optional.empty());
+
+        List<SimilarPostResult> result = service.findSimilarPosts("如何学习Java编程", 42L);
+
+        assertThat(result).isEmpty();
+        verify(postRepository, never()).findSimilar(any(), any(), any(), anyInt());
+    }
+
+    @Test
+    @DisplayName("相似帖子：正常情况下返回相似帖子列表，排除当前用户自己的帖子")
+    void findSimilarPostsReturnsResultsExcludingOwnPosts() {
+        when(boardRepository.findByCode("qna")).thenReturn(Optional.of(board(1L, "qna", "技术问答")));
+        when(postRepository.findSimilar("如何学习Java编程", 1L, 42L, 3))
+                .thenReturn(List.of(
+                        new SimilarPostRow(10L, 1L, "Java入门", 2, false, CREATED_AT),
+                        new SimilarPostRow(11L, 1L, "Java进阶", 1, true, CREATED_AT)));
+
+        List<SimilarPostResult> result = service.findSimilarPosts("如何学习Java编程", 42L);
+
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).id()).isEqualTo(10L);
+        assertThat(result.get(0).boardCode()).isEqualTo("qna");
+        assertThat(result.get(0).boardName()).isEqualTo("技术问答");
+        assertThat(result.get(1).id()).isEqualTo(11L);
+        assertThat(result.get(1).accepted()).isTrue();
+        // excludeAuthorId=42 passed to repository — own posts excluded at SQL level
+        verify(postRepository).findSimilar("如何学习Java编程", 1L, 42L, 3);
     }
 }

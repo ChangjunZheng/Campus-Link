@@ -1,5 +1,8 @@
 const BASE = '/api/v1'
 
+/** 后端未认证错误码：401 / 4001（见 common/result/ResultCode.NOT_LOGGED_IN） */
+const UNAUTHORIZED_CODE = 4001
+
 /** 后端统一响应：{ code, message, data, traceId }，code=0 成功（技术方案第 5 节） */
 export interface ApiResponse<T> {
   code: number
@@ -18,6 +21,15 @@ export class ApiError extends Error {
     super(message)
     this.name = 'ApiError'
   }
+}
+
+/**
+ * 401 全局处理器（BUG-004）：由 main.ts 注册（清会话 + 提示 + 跳登录）。
+ * client.ts 不直接 import router/store，规避与二者的 ESM 循环依赖。
+ */
+let unauthorizedHandler: (() => void) | null = null
+export function setUnauthorizedHandler(handler: (() => void) | null): void {
+  unauthorizedHandler = handler
 }
 
 function authHeaders(): Record<string, string> {
@@ -41,6 +53,10 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
   }
   const body = (await res.json()) as ApiResponse<T>
   if (body.code !== 0) {
+    // 未认证：先触发全局退出处理器（清会话 + 跳登录），再按既有语义抛错，调用方的 catch 不受影响
+    if (body.code === UNAUTHORIZED_CODE) {
+      unauthorizedHandler?.()
+    }
     throw new ApiError(body.code, body.message || `请求失败（${body.code}）`, body.traceId)
   }
   return body.data

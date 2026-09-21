@@ -10,6 +10,7 @@ import com.campuslink.module.forum.domain.model.HotScoreInput;
 import com.campuslink.module.forum.domain.model.Post;
 import com.campuslink.module.forum.domain.model.PostSortOrder;
 import com.campuslink.module.forum.domain.model.PostStatus;
+import com.campuslink.module.forum.domain.model.SimilarPostRow;
 import com.campuslink.module.forum.infrastructure.persistence.mapper.PostMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -62,14 +63,32 @@ public class PostRepositoryImpl implements PostRepository {
         if (authorIds == null || authorIds.isEmpty()) {
             return new PageResult<>(List.of(), 0, page, size);
         }
-        IPage<PostDO> result = postMapper.selectPage(new Page<>(page, size), new LambdaQueryWrapper<PostDO>()
+        IPage<PostDO> result = postMapper.selectPage(new Page<>(page, size), visibleQuery()
                 .in(PostDO::getAuthorId, authorIds)
-                .eq(PostDO::getStatus, PostStatus.PUBLISHED.name())
-                .eq(PostDO::getIsDeleted, false)
                 .orderByDesc(PostDO::getCreatedAt)
                 .orderByDesc(PostDO::getId));
         return new PageResult<>(result.getRecords().stream().map(PostConverter::toDomain).toList(),
                 result.getTotal(), page, size);
+    }
+
+    @Override
+    public long countVisibleByAuthor(Long authorId) {
+        // 与 findPageByAuthors 共用 visibleQuery()：他人主页资料卡的「帖子 N」与它下方那份列表因此不可能对不上
+        return postMapper.selectCount(visibleQuery().eq(PostDO::getAuthorId, authorId));
+    }
+
+    /**
+     * 可见帖子条件（{@code status='PUBLISHED' AND is_deleted=0}）的**单一构造点**：
+     * {@link #findPageByAuthors}（列表）与 {@link #countVisibleByAuthor}（计数）共用，
+     * 使端口 javadoc 里那句「逐字同源」由代码而不是由注释保证。
+     *
+     * <p>刻意不抽给 {@link #findPage}：那条还带版块与两种排序的分支，合并后反而看不清主干；
+     * 而同源性有硬要求的只有「同一个作者的计数 vs 列表」这一对。
+     */
+    private static LambdaQueryWrapper<PostDO> visibleQuery() {
+        return new LambdaQueryWrapper<PostDO>()
+                .eq(PostDO::getStatus, PostStatus.PUBLISHED.name())
+                .eq(PostDO::getIsDeleted, false);
     }
 
     @Override
@@ -194,7 +213,7 @@ public class PostRepositoryImpl implements PostRepository {
 
     @Override
     public int resetHotScoresBefore(Instant since) {
-        // 只碰"已经不是候选"且分数非 0 的行：窗口外的老帖、已删除、非 PUBLISHED
+        // 只碰“已经不是候选”且分数非 0 的行：窗口外的老帖、已删除、非 PUBLISHED
         return postMapper.update(null, new LambdaUpdateWrapper<PostDO>()
                 .set(PostDO::getHotScore, 0d)
                 .ne(PostDO::getHotScore, 0d)
@@ -202,5 +221,14 @@ public class PostRepositoryImpl implements PostRepository {
                         .eq(PostDO::getIsDeleted, true)
                         .or().ne(PostDO::getStatus, PostStatus.PUBLISHED.name())
                         .or().lt(PostDO::getCreatedAt, since)));
+    }
+
+    @Override
+    public List<SimilarPostRow> findSimilar(String title, Long boardId, Long excludeAuthorId, int limit) {
+        return postMapper.findSimilar(title, boardId, excludeAuthorId, limit).stream()
+                .map(d -> new SimilarPostRow(d.getId(), d.getBoardId(), d.getTitle(),
+                        d.getReplyCount() == null ? 0 : d.getReplyCount(),
+                        Boolean.TRUE.equals(d.getIsAccepted()), d.getCreatedAt()))
+                .toList();
     }
 }

@@ -5,6 +5,7 @@ import com.campuslink.common.result.ResultCode;
 import com.campuslink.module.forum.application.ForumQueryApplicationService;
 import com.campuslink.module.forum.application.PostApplicationService;
 import com.campuslink.module.forum.application.cmd.ForumResults.PublishedPost;
+import com.campuslink.module.forum.application.cmd.ForumResults.SimilarPostResult;
 import com.campuslink.module.forum.application.cmd.PublishPostCommand;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -12,6 +13,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
+import java.time.Instant;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -142,6 +144,33 @@ class PostControllerAuthTest {
 
         assertThat(response.data().list()).isEmpty();
         verify(forumQueryService).listMyPosts(42L, 1, 20);
+    }
+
+    @Test
+    @DisplayName("匿名访问相似帖子推荐 → 4001，且不触达查询用例")
+    void anonymousSimilarIsUnauthorized() {
+        assertThatThrownBy(() -> controller.similar("如何学习Java编程", null))
+                .isInstanceOfSatisfying(ApiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ResultCode.NOT_LOGGED_IN));
+
+        verify(forumQueryService, never()).findSimilarPosts(any(), any());
+    }
+
+    @Test
+    @DisplayName("已登录访问相似帖子推荐 → 放行，用户 ID 从 principal 取")
+    void similarPassesPrincipalToService() {
+        Instant now = Instant.parse("2026-09-12T08:00:00Z");
+        when(forumQueryService.findSimilarPosts(eq("如何学习Java编程"), eq(42L)))
+                .thenReturn(List.of(new SimilarPostResult(10L, "Java入门", "qna", "技术问答",
+                        2, false, now)));
+
+        var response = controller.similar("如何学习Java编程", user());
+
+        assertThat(response.code()).isEqualTo(0);
+        assertThat(response.data()).hasSize(1);
+        assertThat(response.data().get(0).id()).isEqualTo(10L);
+        assertThat(response.data().get(0).title()).isEqualTo("Java入门");
+        verify(forumQueryService).findSimilarPosts("如何学习Java编程", 42L);
     }
 
     private static Authentication user() {

@@ -83,4 +83,14 @@ public final class ForumResults {
      */
     public record HotRefreshResult(int refreshed, int reset, long elapsedMillis) {
     }
+
+    /**
+     * 相似帖子推荐条目（CR-077）：窄出参，只含判断“是否已有等价问题”所需的最小字段集。
+     *
+     * <p>刻意不复用 {@link PostSummary}——后者带昵称 / 摘要 / likeCount / viewCount / coverUrl，
+     * 推荐场景不需要这些，调 {@code toSummaries()} 只是白白发起批量查询和 Markdown 渲染。
+     */
+    public record SimilarPostResult(Long id, String title, String boardCode, String boardName,
+                                    int replyCount, boolean accepted, Instant createdAt) {
+    }
 }

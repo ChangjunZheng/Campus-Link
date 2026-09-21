@@ -17,12 +17,14 @@ import com.campuslink.module.forum.application.cmd.ForumResults.MyPostSummary;
 import com.campuslink.module.forum.application.cmd.ForumResults.PostDetail;
 import com.campuslink.module.forum.application.cmd.ForumResults.PostSummary;
 import com.campuslink.module.forum.application.cmd.ForumResults.PublishedPost;
+import com.campuslink.module.forum.application.cmd.ForumResults.SimilarPostResult;
 import com.campuslink.module.forum.application.cmd.PublishPostCommand;
 import com.campuslink.module.forum.domain.gateway.PageResult;
 import com.campuslink.module.forum.web.vo.MyPostSummaryVo;
 import com.campuslink.module.forum.web.vo.PageVo;
 import com.campuslink.module.forum.web.vo.PostDetailVo;
 import com.campuslink.module.forum.web.vo.PostSummaryVo;
+import com.campuslink.module.forum.web.vo.SimilarPostVo;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -37,6 +39,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 /**
  * 帖子接口（web 层）：只做协议转换，用例逻辑在 application 层。
@@ -102,6 +106,18 @@ public class PostController {
         PageResult<PostSummary> result = forumQueryService.searchPosts(keyword, boardCode, days, page, size);
         return ApiResponse.ok(new PageVo<>(result.items().stream().map(PostSummaryVo::from).toList(),
                 result.total(), result.page(), result.size()));
+    }
+
+    @Operation(summary = "相似帖子推荐（受保护）——发帖时根据标题检索已有的相似问题")
+    @SecurityRequirement(name = ApiDocs.BEARER_AUTH)
+    @ErrorCodes({ResultCode.NOT_LOGGED_IN, ResultCode.INVALID_PARAM})
+    @GetMapping("/similar")
+    public ApiResponse<List<SimilarPostVo>> similar(
+            @RequestParam String title,
+            Authentication authentication) {
+        Long userId = CurrentUser.requireId(authentication);
+        List<SimilarPostResult> results = forumQueryService.findSimilarPosts(title, userId);
+        return ApiResponse.ok(results.stream().map(SimilarPostVo::from).toList());
     }
 
     @Operation(summary = "帖子详情（公开）：返回服务端渲染好的 contentHtml；登录请求附带 likedByMe / favoritedByMe，匿名时恒 false；阅读数按「每帖每账号每日一次」去重累加（CR-074）")

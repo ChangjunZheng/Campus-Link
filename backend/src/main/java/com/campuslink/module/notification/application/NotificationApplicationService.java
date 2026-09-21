@@ -1,5 +1,7 @@
 package com.campuslink.module.notification.application;
 
+import com.campuslink.common.exception.ApiException;
+import com.campuslink.common.result.ResultCode;
 import com.campuslink.module.account.application.AccountApplicationService;
 import com.campuslink.module.forum.application.ForumQueryApplicationService;
 import com.campuslink.module.forum.application.cmd.ForumResults.PostBrief;
@@ -22,7 +24,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * 通知用例（F-SOC-001）：5 个触发入口 + 我的通知 / 未读数 / 全部已读。
+ * 通知用例（F-SOC-001）：5 个触发入口 + 我的通知 / 未读数 / 全部已读 / 单条已读。
  *
  * <p><b>触发侧</b>由 forum 的 application 服务在动作成功后直接调用本服务（同事务写入，不用 Spring 事件——
  * 事件要么异步丢通知、要么被迫同步仍不如直调清晰）。接收人由调用方给出：forum 侧当时已握有帖子 / 楼层聚合，
@@ -108,6 +110,29 @@ public class NotificationApplicationService {
     /** 全部已读：返回本次新标记的条数（无未读时为 0，不报错） */
     public MarkAllReadResult markAllRead(long userId) {
         return new MarkAllReadResult(notificationRepository.markAllRead(userId));
+    }
+
+    /**
+     * 单条已读（幂等，F-SOC-001）。
+     *
+     * <p><b>不存在与"存在但属于他人"给同一个 404</b>：后者若回 403，就等于向任意已登录账号确认了
+     * "这个 id 上确实有一条通知"——他人通知的存在性本身也是隐私，故不区分。
+     *
+     * <p><b>已读短路</b>：再调直接返回（HTTP 仍 200），不重复 UPDATE；前端是乐观更新 +
+     * fire-and-forget，同一行被点两次是常态，不能因此报错。
+     *
+     * <p>不记审计：口径同 {@link #markAllRead}，标记自己的通知已读非安全敏感操作。
+     */
+    public void markRead(long notificationId, long userId) {
+        Notification notification = notificationRepository.findById(notificationId)
+                .orElseThrow(() -> new ApiException(ResultCode.NOT_FOUND));
+        if (!Objects.equals(notification.getUserId(), userId)) {
+            throw new ApiException(ResultCode.NOT_FOUND);
+        }
+        if (notification.isRead()) {
+            return;
+        }
+        notificationRepository.markRead(notificationId, userId);
     }
 
     private void notify(NotificationType type, long actorId, NotificationTargetType targetType,
